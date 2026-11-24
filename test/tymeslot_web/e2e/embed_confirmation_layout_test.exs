@@ -24,24 +24,24 @@ defmodule TymeslotWeb.E2E.EmbedConfirmationLayoutTest do
 
   @height 800
 
-  feature "embedded rhythm confirmation keeps an arranged location entry unclipped",
-          %{session: session} do
+  test "embedded rhythm confirmation keeps an arranged location entry unclipped",
+       %{session: session} do
     {profile, slug} = create_user_with_arranged_location()
 
     session =
       session
-      |> resize_window(1000, @height)
+      |> set_viewport_size(%{width: 1000, height: @height})
       |> visit("/#{profile.username}/#{slug}?theme=2")
       |> wait_for_live()
       |> pick_first_slot()
       |> submit_booking_form()
-      |> assert_has(css("[data-testid='location-arranged-note']"))
+      |> assert_has(by_css("[data-testid='location-arranged-note']"))
       |> mark_embedded()
 
     for width <- [640, 800, 1000], reduce: session do
       acc ->
         acc
-        |> resize_window(width, @height)
+        |> set_viewport_size(%{width: width, height: @height})
         |> assert_location_entry_unclipped("rhythm embedded confirmation width=#{width}px")
     end
   end

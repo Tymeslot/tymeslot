@@ -43,16 +43,16 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
   # calendar internally, so the Back/Next actions stay on-screen at all of these.
   @short_sizes [{1280, 360}, {1024, 400}, {812, 375}, {1280, 700}, {1440, 820}, {1366, 660}]
 
-  feature "overview step fits without horizontal overflow at every matrix size",
-          %{session: session} do
+  test "overview step fits without horizontal overflow at every matrix size",
+       %{session: session} do
     {profile, _slug} = create_user_with_meeting_type()
 
     Enum.reduce(@widths, session, fn width, acc ->
       acc
-      |> resize_window(width, @height)
+      |> set_viewport_size(%{width: width, height: @height})
       |> visit("/#{profile.username}")
       |> wait_for_live()
-      |> assert_has(css(".overview-content-area"))
+      |> assert_has(by_css(".overview-content-area"))
       |> assert_no_horizontal_overflow("overview width=#{width}px")
     end)
   end
@@ -60,14 +60,14 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
   # Twenty walks (every shipped theme at every width), each waiting for the
   # schedule's day, time or slot to show: past ExUnit's default minute.
   @tag timeout: 180_000
-  feature "overview + schedule fit without horizontal overflow in every theme",
-          %{session: session} do
+  test "overview + schedule fit without horizontal overflow in every theme",
+       %{session: session} do
     {profile, _slug} = create_user_with_meeting_type()
 
     for theme <- ThemeTestMatrix.all(), width <- @widths, reduce: session do
       acc ->
         acc
-        |> resize_window(width, @height)
+        |> set_viewport_size(%{width: width, height: @height})
         |> visit("/#{profile.username}?theme=#{theme.id}")
         |> wait_for_live()
         |> assert_no_horizontal_overflow("#{theme.name} overview width=#{width}px")
@@ -76,8 +76,8 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     end
   end
 
-  feature "length step fits without horizontal overflow in every theme",
-          %{session: session} do
+  test "length step fits without horizontal overflow in every theme",
+       %{session: session} do
     # A type offering several lengths asks for one between the overview and
     # the schedule, a step with a layout of its own.
     # The onboarded organiser has types of their own, so the one with several
@@ -87,20 +87,20 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     for theme <- ThemeTestMatrix.all(), width <- @widths, reduce: session do
       acc ->
         acc
-        |> resize_window(width, @height)
+        |> set_viewport_size(%{width: width, height: @height})
         |> visit("/#{profile.username}?theme=#{theme.id}")
         |> wait_for_live()
         |> pick_first("[data-testid='duration-option'][data-duration='#{slug}']")
-        |> assert_has(css("[data-testid='next-step']:not([disabled])"))
+        |> assert_has(by_css("[data-testid='next-step']:not([disabled])"))
         |> click_next_step()
-        |> assert_has(css("[data-testid='length-step']"))
-        |> assert_has(css("[data-testid='length-option']", count: 3))
+        |> assert_has(by_css("[data-testid='length-step']"))
+        |> assert(count(filter(by_css("[data-testid='length-option']"), visible: true), 3))
         |> assert_no_horizontal_overflow("#{theme.name} length width=#{width}px")
     end
   end
 
-  feature "length step keeps its actions reachable on wide-short viewports (every theme)",
-          %{session: session} do
+  test "length step keeps its actions reachable on wide-short viewports (every theme)",
+       %{session: session} do
     {profile, slug} = create_user_with_several_lengths()
 
     for theme <- ThemeTestMatrix.all(), {width, height} <- @short_sizes, reduce: session do
@@ -108,17 +108,17 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         context = "#{theme.name} length #{width}x#{height}"
 
         acc
-        |> resize_window(width, height)
+        |> set_viewport_size(%{width: width, height: height})
         |> visit("/#{profile.username}/#{slug}?theme=#{theme.id}")
         |> wait_for_live()
-        |> assert_has(css("[data-testid='length-step']"))
+        |> assert_has(by_css("[data-testid='length-step']"))
         |> assert_no_horizontal_overflow(context)
         |> assert_cta_reachable(context)
     end
   end
 
-  feature "overview stays operable with introductory text at its length caps (every theme)",
-          %{session: session} do
+  test "overview stays operable with introductory text at its length caps (every theme)",
+       %{session: session} do
     # An organiser may fill the heading and both welcome lines to the character
     # limit the changeset allows. The caps were chosen so that the tallest legal
     # introduction still leaves the primary action reachable on the shortest
@@ -130,7 +130,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         context = "#{theme.name} overview max text #{width}x#{height}"
 
         acc
-        |> resize_window(width, height)
+        |> set_viewport_size(%{width: width, height: height})
         |> visit("/#{profile.username}?theme=#{theme.id}")
         |> wait_for_live()
         |> assert_no_horizontal_overflow(context)
@@ -138,8 +138,8 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     end
   end
 
-  feature "schedule actions never overlap the calendar on wide-short viewports (classic journeys)",
-          %{session: session} do
+  test "schedule actions never overlap the calendar on wide-short viewports (classic journeys)",
+       %{session: session} do
     {profile, slug} = create_user_with_meeting_type()
 
     # The schedule step with its own actions row and Next is the classic
@@ -153,10 +153,10 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         context = "#{theme.name} schedule #{width}x#{height}"
 
         acc
-        |> resize_window(width, height)
+        |> set_viewport_size(%{width: width, height: height})
         |> visit("/#{profile.username}/#{slug}?theme=#{theme.id}")
         |> wait_for_live()
-        |> assert_has(css("[data-testid='schedule-actions']"))
+        |> assert_has(by_css("[data-testid='schedule-actions']"))
         |> assert_no_horizontal_overflow(context)
         |> assert_no_actions_calendar_overlap(context)
         |> assert_cta_reachable(context)
@@ -166,8 +166,8 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
   # A walk per theme with a journey of its own (Paper, Folio) at every short
   # size, each to the details: past ExUnit's default minute.
   @tag timeout: 180_000
-  feature "a theme with a journey of its own keeps its slot and submit reachable on short viewports",
-          %{session: session} do
+  test "a theme with a journey of its own keeps its slot and submit reachable on short viewports",
+       %{session: session} do
     # Paper opens the details below the picker, and Folio below the calendar
     # on its continuous page, so there is no schedule actions row or Next to
     # measure: the first time on offer, and after picking it the details'
@@ -181,23 +181,31 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         context = "#{theme.name} journey #{width}x#{height}"
 
         acc
-        |> resize_window(width, height)
+        |> set_viewport_size(%{width: width, height: height})
         |> visit("/#{profile.username}/#{slug}?theme=#{theme.id}")
         |> wait_for_live()
-        |> assert_has(css("[data-fact='slot'], [data-fact='date']", minimum: 1))
+        |> assert_has(
+          by_css("[data-fact='slot'], [data-fact='date']")
+          |> filter(visible: true)
+          |> first()
+        )
         |> assert_no_horizontal_overflow(context)
         |> click_first_free_date()
-        |> assert_has(css("[data-fact='slot'], [data-fact='time']", minimum: 1))
+        |> assert_has(
+          by_css("[data-fact='slot'], [data-fact='time']")
+          |> filter(visible: true)
+          |> first()
+        )
         |> assert_reachable("[data-fact='slot'], [data-fact='time']", "first time at #{context}")
         |> pick_first_free_slot()
-        |> assert_has(css("[data-testid='submit-booking']"))
+        |> assert_has(by_css("[data-testid='submit-booking']"))
         |> assert_reachable("[data-testid='submit-booking']", "submit at #{context}")
         |> assert_no_horizontal_overflow("details at #{context}")
     end
   end
 
-  feature "schedule pins the actions row inside the viewport at short heights (app-shell themes)",
-          %{session: session} do
+  test "schedule pins the actions row inside the viewport at short heights (app-shell themes)",
+       %{session: session} do
     # A viewport-locked schedule step (app shell): the calendar's internal
     # scroll is the single scroll region, and the header + actions are pinned.
     # So at every short height, down to extreme landscape, the actions row
@@ -211,17 +219,17 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         context = "#{theme.name} schedule #{width}x#{height}"
 
         acc
-        |> resize_window(width, height)
+        |> set_viewport_size(%{width: width, height: height})
         |> visit("/#{profile.username}/#{slug}?theme=#{theme.id}")
         |> wait_for_live()
-        |> assert_has(css("[data-testid='schedule-actions']"))
+        |> assert_has(by_css("[data-testid='schedule-actions']"))
         |> assert_actions_within_viewport(context)
         |> assert_no_vertical_page_scroll(context)
     end
   end
 
-  feature "embedded schedule flows to its natural height instead of the viewport's (every theme)",
-          %{session: session} do
+  test "embedded schedule flows to its natural height instead of the viewport's (every theme)",
+       %{session: session} do
     # In an embed the viewport is the iframe, which iframe_embed.js sizes from
     # the content. A schedule step locked to the viewport would measure the
     # previous step's height and keep it, hiding the slots in a squeezed inner
@@ -235,19 +243,19 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         context = "#{theme.name} embedded schedule #{width}x463"
 
         acc
-        |> resize_window(width, 463)
+        |> set_viewport_size(%{width: width, height: 463})
         |> visit("/#{profile.username}?theme=#{theme.id}")
         |> wait_for_live()
         |> mark_embedded()
         |> advance_to_schedule()
         |> pick_first_visible_day()
-        |> assert_has(css("[data-testid='time-slot']", minimum: 1))
+        |> assert_has(by_css("[data-testid='time-slot']") |> filter(visible: true) |> first())
         |> assert_no_inner_scroll_region(context)
     end
   end
 
-  feature "a fixed-date type's dates scroll with the calendar at short heights (every theme)",
-          %{session: session} do
+  test "a fixed-date type's dates scroll with the calendar at short heights (every theme)",
+       %{session: session} do
     # The list of dates sits above the calendar. Were the calendar the only
     # scroll region, a long list would keep its height and squeeze the
     # calendar to nothing between the header and the actions.
@@ -258,11 +266,11 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         context = "#{theme.name} fixed-date schedule #{width}x#{height}"
 
         acc
-        |> resize_window(width, height)
+        |> set_viewport_size(%{width: width, height: height})
         |> visit("/#{profile.username}/#{slug}?theme=#{theme.id}")
         |> wait_for_live()
-        |> assert_has(css("[data-testid='session-list']"))
-        |> assert_has(css("[data-testid='schedule-actions']"))
+        |> assert_has(by_css("[data-testid='session-list']"))
+        |> assert_has(by_css("[data-testid='schedule-actions']"))
         |> assert_no_horizontal_overflow(context)
         |> assert_calendar_scrolls_with_session_list(context)
         |> assert_cta_reachable(context)
@@ -278,8 +286,8 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     end
   end
 
-  feature "branding banner stays within the viewport when the page content fits",
-          %{session: session} do
+  test "branding banner stays within the viewport when the page content fits",
+       %{session: session} do
     # Inject a stand-in for the SaaS branding banner via the theme-extensions
     # bridge (Core can't load the SaaS branding CSS). The banner sits in the
     # theme grid's footer row; without the `:has(.branding-footer)` rule the
@@ -299,40 +307,40 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     # bug). Below ~900px the schedule itself fills the viewport and the banner
     # legitimately sits below the fold, which wouldn't isolate the padding bug.
     session
-    |> resize_window(1280, 1100)
+    |> set_viewport_size(%{width: 1280, height: 1100})
     |> visit("/#{profile.username}/#{slug}")
     |> wait_for_live()
-    |> assert_has(css(".branding-footer"))
+    |> assert_has(by_css(".branding-footer"))
     |> assert_no_horizontal_overflow("quill schedule with branding banner")
     |> assert_branding_footer_within_viewport("quill schedule with banner")
   end
 
-  feature "custom-questions yes/no tiles render at 320px without overflow",
-          %{session: session} do
+  test "custom-questions yes/no tiles render at 320px without overflow",
+       %{session: session} do
     {profile, slug} = create_user_with_yes_no_question()
 
     session
-    |> resize_window(640, @height)
+    |> set_viewport_size(%{width: 640, height: @height})
     |> visit("/#{profile.username}/#{slug}")
     |> wait_for_live()
     |> pick_first_slot()
-    |> assert_has(css(".custom-question-yes-no"))
-    |> resize_window(320, @height)
-    |> assert_has(css(".custom-question-yes-no-tile.is-yes"))
-    |> assert_has(css(".custom-question-yes-no-tile.is-no"))
+    |> assert_has(by_css(".custom-question-yes-no"))
+    |> set_viewport_size(%{width: 320, height: @height})
+    |> assert_has(by_css(".custom-question-yes-no-tile.is-yes"))
+    |> assert_has(by_css(".custom-question-yes-no-tile.is-no"))
     |> assert_no_horizontal_overflow("custom-questions yes/no width=320px")
   end
 
-  feature "booking form name+email stack vertically at 320px", %{session: session} do
+  test "booking form name+email stack vertically at 320px", %{session: session} do
     {profile, slug} = create_user_with_meeting_type()
 
     session
-    |> resize_window(640, @height)
+    |> set_viewport_size(%{width: 640, height: @height})
     |> visit("/#{profile.username}/#{slug}")
     |> wait_for_live()
     |> pick_first_slot()
-    |> assert_has(css("[data-testid='booking-form']"))
-    |> resize_window(320, @height)
+    |> assert_has(by_css("[data-testid='booking-form']"))
+    |> set_viewport_size(%{width: 320, height: @height})
     |> assert_no_horizontal_overflow("booking form width=320px")
     |> assert_name_email_stacked("booking form width=320px")
   end

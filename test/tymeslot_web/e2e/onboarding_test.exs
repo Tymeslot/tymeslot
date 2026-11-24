@@ -22,6 +22,7 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
 
   import TymeslotWeb.OnboardingTestHelpers, only: [stub_free_calendar: 0]
 
+  alias Fluffy.Playwright.Keyboard
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
@@ -52,11 +53,11 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
     :ok
   end
 
-  feature "a new host walks the wizard to the dashboard at desktop width", %{session: session} do
+  test "a new host walks the wizard to the dashboard at desktop width", %{session: session} do
     walk_the_wizard(session, {1440, 1050})
   end
 
-  feature "a new host walks the wizard to the dashboard at phone width", %{session: session} do
+  test "a new host walks the wizard to the dashboard at phone width", %{session: session} do
     walk_the_wizard(session, {375, 812})
   end
 
@@ -71,7 +72,7 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
     |> look_step()
     |> live_step(user)
     |> wait_for_dashboard()
-    |> assert_has(css("#dashboard-root"))
+    |> assert_has(by_css("#dashboard-root"))
 
     assert %DateTime{} = Repo.get!(UserSchema, user.id).onboarding_completed_at
 
@@ -98,31 +99,31 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
   # Resized before the first page, so every page is laid out at this width.
   defp log_in(session, user, {width, height}) do
     session
-    |> resize_window(width, height)
+    |> set_viewport_size(%{width: width, height: height})
     |> visit("/auth/login")
     |> wait_for_live()
-    |> fill_in(text_field("email"), with: user.email)
-    |> fill_in(css("#password-input"), with: default_password())
-    |> click(css("button[type='submit']"))
+    |> fill(by_label("Email Address"), user.email)
+    |> fill(by_css("#password-input"), default_password())
+    |> click(by_css("button[type='submit']"))
   end
 
   # Link: the suggested one is kept.
   defp link_step(session) do
     session
-    |> assert_has(css("#onboarding-step-heading-profile"))
+    |> assert_has(by_css("#onboarding-step-heading-profile"))
     |> wait_for_live()
-    |> assert_has(css("#onboarding-stage"))
+    |> assert_has(by_css("#onboarding-stage"))
     |> assert_fits()
-    |> click(css(@continue))
+    |> click(by_css(@continue))
   end
 
   # Calendar: required, so Continue waits for one. Connecting it is the
   # inserted integration and a fresh visit, as the OAuth return is.
   defp calendar_step(session, user) do
     session
-    |> assert_has(css("#onboarding-step-heading-connect_calendar"))
-    |> assert_has(css("#onboarding-stage"))
-    |> assert_has(css("#{@continue}[disabled]"))
+    |> assert_has(by_css("#onboarding-step-heading-connect_calendar"))
+    |> assert_has(by_css("#onboarding-stage"))
+    |> assert_has(by_css("#{@continue}[disabled]"))
     |> assert_fits()
 
     insert(:calendar_integration, user: user)
@@ -130,63 +131,64 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
     session
     |> visit("/onboarding/connect_calendar")
     |> wait_for_live()
-    |> assert_has(css(~s([data-week-state="ready"]), visible: :any))
-    |> click(css("#{@continue}:not([disabled])"))
+    |> assert(attached(by_css(~s([data-week-state="ready"]))))
+    |> click(by_css("#{@continue}:not([disabled])"))
   end
 
   defp meeting_step(session) do
     session
-    |> assert_has(css("#onboarding-step-heading-meeting"))
+    |> assert_has(by_css("#onboarding-step-heading-meeting"))
     |> assert_fits()
-    |> fill_in(css("#meeting-name"), with: "Consultation")
+    |> fill(by_css("#meeting-name"), "Consultation")
     # Typed, not chosen: the matching chip lights once the server has the
     # name, and leaving the field saves it.
-    |> assert_has(css(~s(#meeting-name-suggestions-1[aria-pressed="true"])))
-    |> send_keys([:tab])
+    |> assert_has(by_css(~s(#meeting-name-suggestions-1[aria-pressed="true"])))
+    |> Keyboard.press("Tab")
     |> press("#meeting-duration-45")
-    |> assert_has(css(~s(#meeting-duration-45[aria-pressed="true"])))
+    |> assert_has(by_css(~s(#meeting-duration-45[aria-pressed="true"])))
     |> press("#meeting-location-video")
-    |> assert_has(css(~s(#meeting-location-video[aria-pressed="true"])))
+    |> assert_has(by_css(~s(#meeting-location-video[aria-pressed="true"])))
     |> press("#meeting-hours-preset-mornings")
-    |> assert_has(css(~s(#meeting-hours-preset-mornings[aria-pressed="true"])))
-    |> click(css(@continue))
+    |> assert_has(by_css(~s(#meeting-hours-preset-mornings[aria-pressed="true"])))
+    |> click(by_css(@continue))
   end
 
   # Look: a theme other than the one already chosen.
   defp look_step(session) do
     session
-    |> assert_has(css("#onboarding-step-heading-choose_theme"))
+    |> assert_has(by_css("#onboarding-step-heading-choose_theme"))
     |> assert_fits()
     |> press(~s(button[data-testid="theme-thumbnail"][aria-pressed="false"]))
-    |> assert_has(css(~s(button[data-testid="theme-thumbnail"][aria-pressed="true"])))
-    |> click(css(@continue))
+    |> assert_has(by_css(~s(button[data-testid="theme-thumbnail"][aria-pressed="true"])))
+    |> click(by_css(@continue))
   end
 
   # Live: Go to dashboard does nothing until the link is kept with Copy link.
   defp live_step(session, user) do
     session =
       session
-      |> assert_has(css("#onboarding-step-heading-ready"))
-      |> assert_has(css("#onboarding-stage"))
-      |> assert_has(css(~s(#onboarding-finish[aria-disabled="true"])))
+      |> assert_has(by_css("#onboarding-step-heading-ready"))
+      |> assert_has(by_css("#onboarding-stage"))
+      |> assert_has(by_css(~s(#onboarding-finish[aria-disabled="true"])))
       |> assert_fits()
-      |> press("#onboarding-finish")
-      |> assert_has(css("#onboarding-finish-helper", text: "Send or keep your link first"))
-      |> assert_has(css("#onboarding-step-heading-ready"))
+      |> press_locked("#onboarding-finish")
+      |> assert_has(
+        filter(by_css("#onboarding-finish-helper"), has_text: "Send or keep your link first")
+      )
+      |> assert_has(by_css("#onboarding-step-heading-ready"))
 
     assert Repo.get!(UserSchema, user.id).onboarding_completed_at == nil
 
     session
     |> press("#onboarding-keep-copy:not([disabled])")
-    |> assert_has(css("#onboarding-finish:not([aria-disabled])"))
+    |> assert_has(by_css("#onboarding-finish:not([aria-disabled])"))
     |> press("#onboarding-finish")
   end
 
   # Read where the page has settled: the step's slide-in has run by the time
   # its heading is found.
   defp assert_fits(session) do
-    session = execute_script(session, @layout_js, [], &send(self(), {:layout, &1}))
-    assert_received {:layout, layout}
+    layout = evaluate_script(session, @layout_js)
 
     assert layout["way_in_view"], "the way on is off screen"
 
@@ -203,12 +205,19 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
   # A phone shows the step under the stage and above a pinned Continue bar,
   # so a control is scrolled to the middle of the screen first, as a thumb
   # would, for the press to reach it rather than the bar.
-  defp press(session, selector) do
-    session
-    |> execute_script(
-      "document.querySelector(arguments[0]).scrollIntoView({block: 'center'})",
+  defp press(session, selector), do: scroll_and_click(session, selector, [])
+
+  # A button locked with aria-disabled, which Playwright's click waits out.
+  defp press_locked(session, selector), do: scroll_and_click(session, selector, force: true)
+
+  defp scroll_and_click(session, selector, options) do
+    evaluate_script(
+      session,
+      "document.querySelector(arg[0]).scrollIntoView({block: 'center'})",
+      nil,
       [selector]
     )
-    |> click(css(selector, at: 0))
+
+    click(session, by_css(selector) |> filter(visible: true) |> first(), options)
   end
 end

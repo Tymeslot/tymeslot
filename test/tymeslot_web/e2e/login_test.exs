@@ -4,50 +4,50 @@ defmodule TymeslotWeb.E2E.LoginTest do
   @moduletag :e2e
   @moduletag :auth
 
-  feature "user can log in with valid credentials", %{session: session} do
+  test "user can log in with valid credentials", %{session: session} do
     user = create_onboarded_user()
 
     session
     |> visit("/auth/login")
     |> wait_for_live()
-    |> fill_in(text_field("email"), with: user.email)
-    |> fill_in(css("#password-input"), with: default_password())
-    |> click(css("button[type='submit']"))
+    |> fill(by_label("Email Address"), user.email)
+    |> fill(by_css("#password-input"), default_password())
+    |> click(by_css("button[type='submit']"))
     |> wait_for_dashboard()
+    |> assert_has(by_css("#dashboard-root"))
   end
 
-  feature "login with invalid credentials shows error", %{session: session} do
+  test "login with invalid credentials shows error", %{session: session} do
     user = create_onboarded_user()
 
     session
     |> visit("/auth/login")
     |> wait_for_live()
-    |> fill_in(text_field("email"), with: user.email)
-    |> fill_in(css("#password-input"), with: "WrongPassword99!")
-    |> click(css("button[type='submit']"))
-    |> assert_has(css(".bg-red-50"))
+    |> fill(by_label("Email Address"), user.email)
+    |> fill(by_css("#password-input"), "WrongPassword99!")
+    |> click(by_css("button[type='submit']"))
+    |> assert_has(filter(by_css(".bg-red-50"), visible: true))
   end
 
   # The login form leaves validation to the app (`novalidate`): an empty
   # submit reaches the server and comes back with the app's own message,
   # not the browser's bubble.
-  feature "an empty login is answered by the app's own message", %{session: session} do
+  test "an empty login is answered by the app's own message", %{session: session} do
     session
     |> visit("/auth/login")
     |> wait_for_live()
-    |> refute_has(css(".bg-red-50"))
-    |> click(css("button[type='submit']"))
-    |> assert_has(css(".bg-red-50"))
-
-    assert current_path(session) == "/auth/login"
+    |> refute_has(filter(by_css(".bg-red-50"), visible: true))
+    |> click(by_css("button[type='submit']"))
+    |> assert_has(filter(by_css(".bg-red-50"), visible: true))
+    |> assert(page_url(&(&1.path == "/auth/login")))
   end
 
-  feature "login page fits the narrowest supported viewport", %{session: session} do
+  test "login page fits the narrowest supported viewport", %{session: session} do
     session
     |> resize_to_mobile()
     |> visit("/auth/login")
     |> wait_for_live()
-    |> assert_has(css("#password-input"))
+    |> assert_has(by_css("#password-input"))
     |> assert_no_horizontal_overflow("login page at 320px")
   end
 end

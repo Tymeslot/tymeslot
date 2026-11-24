@@ -10,7 +10,7 @@ defmodule TymeslotWeb.E2E.SignupTest do
   @moduletag :e2e
   @moduletag :auth
 
-  feature "user can sign up, verify email, and reach dashboard", %{session: session} do
+  test "user can sign up, verify email, and reach dashboard", %{session: session} do
     email = "e2e-signup-#{System.unique_integer([:positive])}@example.com"
 
     # Sign up
@@ -18,14 +18,14 @@ defmodule TymeslotWeb.E2E.SignupTest do
       session
       |> visit("/auth/signup")
       |> wait_for_live()
-      |> fill_in(css("input[name='user[email]']"), with: email)
-      |> fill_in(css("#password-input"), with: default_password())
-      |> click(css("button[type='submit']"))
+      |> fill(by_css("input[name='user[email]']"), email)
+      |> fill(by_css("#password-input"), default_password())
+      |> click(by_css("button[type='submit']"))
 
     # Should land on verify-email page — wait for the "Back to Login" button
     # (unique to the verify-email page; the signup page also has a login button but
     # with text "Log in", not "Back to Login")
-    session = assert_has(session, css("button", text: "Back to Login"))
+    session = assert_has(session, filter(by_css("button"), has_text: "Back to Login"))
 
     # Verify programmatically with a freshly issued link token (simulating
     # clicking the email link)
@@ -41,19 +41,19 @@ defmodule TymeslotWeb.E2E.SignupTest do
     session
     |> visit("/auth/login")
     |> wait_for_live()
-    |> fill_in(text_field("email"), with: email)
-    |> fill_in(css("#password-input"), with: default_password())
-    |> click(css("button[type='submit']"))
+    |> fill(by_label("Email Address"), email)
+    |> fill(by_css("#password-input"), default_password())
+    |> click(by_css("button[type='submit']"))
     |> wait_for_dashboard()
-    |> assert_has(css("#dashboard-root"))
+    |> assert_has(by_css("#dashboard-root"))
   end
 
-  feature "signup page fits the narrowest supported viewport", %{session: session} do
+  test "signup page fits the narrowest supported viewport", %{session: session} do
     session
     |> resize_to_mobile()
     |> visit("/auth/signup")
     |> wait_for_live()
-    |> assert_has(css("input[name='user[email]']"))
+    |> assert_has(by_css("input[name='user[email]']"))
     |> assert_no_horizontal_overflow("signup page at 320px")
   end
 end

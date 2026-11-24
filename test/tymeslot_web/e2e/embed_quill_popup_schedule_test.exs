@@ -25,29 +25,31 @@ defmodule TymeslotWeb.E2E.EmbedQuillPopupScheduleTest do
 
   @quill_theme_id "1"
 
-  feature "embedded quill keeps next step in the frame and scrolls only the frame",
-          %{session: session} do
+  test "embedded quill keeps next step in the frame and scrolls only the frame",
+       %{session: session} do
     profile = create_user_with_meeting_type()
 
     session =
       session
-      |> resize_window(640, 600)
+      |> set_viewport_size(%{width: 640, height: 600})
       |> visit("/#{profile.username}?theme=#{@quill_theme_id}")
       |> wait_for_live()
       |> advance_to_schedule()
       |> mark_embedded()
-      |> assert_has(css("[data-testid='time-slot']", minimum: 1))
-      # Brought into sight as a visitor would. chromedriver's own scroll stops
+      |> assert_has(by_css("[data-testid='time-slot']") |> filter(visible: true) |> first())
+      # Brought into sight as a visitor would. The browser's own scroll stops
       # with a time at the bottom edge, ignoring scroll-padding, where the
       # pinned actions take its click. Instant, since smooth scrolling would
       # still be moving (BookerSteps.click_next_step/1).
-      |> execute_script("""
-      document.documentElement.style.scrollBehavior = 'auto';
-      document.querySelector("[data-testid='time-slot']").scrollIntoView({block: 'center'});
-      """)
+      |> tap(
+        &evaluate_script(&1, """
+        document.documentElement.style.scrollBehavior = 'auto';
+        document.querySelector("[data-testid='time-slot']").scrollIntoView({block: 'center'});
+        """)
+      )
       |> pick_first("[data-testid='time-slot']")
-      |> assert_has(css("[data-testid='next-step']:not([disabled])"))
-      |> execute_script("window.scrollTo(0, 0);")
+      |> assert_has(by_css("[data-testid='next-step']:not([disabled])"))
+      |> tap(&evaluate_script(&1, "window.scrollTo(0, 0);"))
 
     layout =
       evaluate_script(session, """

@@ -94,6 +94,15 @@ jobs:
       - name: calendar_integration
         if: ${{ !cancelled() }}
         run: mix test --only calendar_integration test/tymeslot_web/integration/outlook_calendar_integration_test.exs
+      # The browser features, through Fluffy and Playwright's Chromium.
+      # `mix test.e2e` builds the assets the browser loads and serves the
+      # endpoint; failed tests leave traces and screenshots in test-results/.
+      - name: Install Chromium
+        if: ${{ !cancelled() }}
+        run: mix playwright.install chromium --with-deps
+      - name: e2e
+        if: ${{ !cancelled() }}
+        run: mix test.e2e
       # Last on purpose: dirty_seed_migration_test.exs drops and recreates the
       # database outside the sandbox, so anything sharing the run with it can
       # lose its connection.
@@ -128,9 +137,3 @@ jobs:
             echo "::warning title=Cloudron package drift::packages/tymeslot-app on git.cloudron.io has drifted from Dockerfile.docker; see this step's log."
             exit 1
           }
-      # `:e2e` is deliberately absent. The 11 Wallaby features need a Chrome
-      # binary and a matching chromedriver, and no workflow in this repo
-      # installs either; config/test.exs also pins the browser to a developer's
-      # snap path with no environment override. Provisioning that is its own
-      # change — a job that cannot pass would only teach people to ignore this
-      # one.

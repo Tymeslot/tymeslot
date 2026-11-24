@@ -18,7 +18,7 @@ defmodule TymeslotWeb.E2E.EmbedTopLevelTest do
   @moduletag :e2e
   @moduletag :themes
 
-  feature "the embed URL opened in its own tab connects its LiveView", %{session: session} do
+  test "the embed URL opened in its own tab connects its LiveView", %{session: session} do
     user = create_onboarded_user()
     insert(:calendar_integration, user_id: user.id, user: user)
 
@@ -34,7 +34,7 @@ defmodule TymeslotWeb.E2E.EmbedTopLevelTest do
 
     session
     |> visit("/#{profile.username}?embed=1")
-    |> assert_has(css("[data-phx-main].phx-connected"))
-    |> refute_has(css("html[data-embedded]"))
+    |> assert_has(by_css("[data-phx-main].phx-connected"))
+    |> refute_has(by_css("html[data-embedded]"))
   end
 end

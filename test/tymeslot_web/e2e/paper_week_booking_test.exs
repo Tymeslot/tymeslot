@@ -20,37 +20,36 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias TymeslotWeb.Endpoint
-  alias Wallaby.Element
 
   @moduletag :e2e
   @moduletag :themes
 
   @free_slot "[data-testid='week-slot']:not([disabled])"
 
-  feature "a visitor books through Paper's week view on a phone", %{session: session} do
+  test "a visitor books through Paper's week view on a phone", %{session: session} do
     profile = create_paper_week_profile()
 
     session =
       session
-      |> resize_window(390, 844)
+      |> set_viewport_size(%{width: 390, height: 844})
       |> visit("/#{profile.username}")
       |> wait_for_live()
-      |> advance_to_schedule()
-      |> assert_has(css(@free_slot, minimum: 1))
+      |> advance_to_schedule(nil)
+      |> assert_has(by_css(@free_slot) |> filter(visible: true) |> first())
       |> assert_no_horizontal_overflow("Paper week view at 390px")
 
-    assert page_scroll_width(session) <= 390
-    assert days_in_view(session) == 3
-    assert details_above_week?(session)
-    assert truncated_slots(session) == 0
+    assert page_scroll_width(session, nil) <= 390
+    assert days_in_view(session, nil) == 3
+    assert details_above_week?(session, nil)
+    assert truncated_slots(session, nil) == 0
 
-    {date, time} = book(session, "paper-phone@example.com")
+    {date, time} = book(session, nil, "paper-phone@example.com")
 
     assert_booked_at("paper-phone@example.com", date, time)
   end
 
-  feature "a visitor books through Paper's week view framed in an inline embed",
-          %{session: session} do
+  test "a visitor books through Paper's week view framed in an inline embed",
+       %{session: session} do
     profile = create_paper_week_profile()
 
     path =
@@ -64,21 +63,26 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
 
     session =
       session
-      |> resize_window(1280, 900)
+      |> set_viewport_size(%{width: 1280, height: 900})
       |> visit("/#{profile.username}")
       |> frame(path, "1000px")
-      |> assert_has(css("html[data-embedded][data-embed-layout='column']"))
-      |> advance_to_schedule()
-      |> assert_has(css(@free_slot, minimum: 1))
-      |> assert_no_horizontal_overflow("Paper week view in a 1000px embed")
+      |> assert_has(by_css(embed_frame(), "html[data-embedded][data-embed-layout='column']"))
+      |> advance_to_schedule(embed_frame())
+      |> assert_has(by_css(embed_frame(), @free_slot) |> filter(visible: true) |> first())
+      |> assert_no_horizontal_overflow("Paper week view in a 1000px embed", embed_frame())
 
-    assert page_scroll_width(session) <= 1000
-    assert days_in_view(session) == 7
-    assert details_above_week?(session)
-    assert truncated_slots(session) == 0
+    assert page_scroll_width(session, embed_frame()) <= 1000
+    assert days_in_view(session, embed_frame()) == 7
+    assert details_above_week?(session, embed_frame())
+    assert truncated_slots(session, embed_frame()) == 0
 
     {date, time} =
-      book(session, "paper-embed@example.com", &assert_posted_height_covers_submit/1)
+      book(
+        session,
+        embed_frame(),
+        "paper-embed@example.com",
+        &assert_posted_height_covers_submit/1
+      )
 
     assert_booked_at("paper-embed@example.com", date, time)
   end
@@ -117,65 +121,68 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
 
   # ── Navigation ─────────────────────────────────────────────────────────
 
-  defp advance_to_schedule(session) do
+  defp advance_to_schedule(session, frame) do
     session
-    |> find(css("[data-testid='duration-option']", count: :any))
-    |> List.first()
-    |> Element.click()
-
-    session
-    |> assert_has(css("[data-testid='paper-schedule'][data-calendar-view='week']"))
-    |> assert_has(css("[data-testid='paper-week'] [data-testid='week-grid']"))
+    |> click(css_in(frame, "[data-testid='duration-option']") |> filter(visible: true) |> first())
+    |> assert_has(css_in(frame, "[data-testid='paper-schedule'][data-calendar-view='week']"))
+    |> assert_has(css_in(frame, "[data-testid='paper-week'] [data-testid='week-grid']"))
   end
 
   # Picks the first free time on screen, checks the actions bar names it and
   # the details open below with no Next, runs `after_pick` there, and books
   # it. Returns the day and the time the clicked slot carries,
   # `{iso_date, time}`.
-  defp book(session, email, after_pick \\ fn _session -> :ok end) do
-    slot =
-      session
-      |> find(css(@free_slot, count: :any))
-      |> List.first()
+  defp book(session, frame, email, after_pick \\ fn _session -> :ok end) do
+    slot = css_in(frame, @free_slot) |> filter(visible: true) |> first()
 
-    picked = {Element.attr(slot, "data-date"), Element.attr(slot, "data-time")}
-    label = Element.text(slot)
-    Element.click(slot)
+    picked =
+      {get_attribute(session, slot, "data-date"), get_attribute(session, slot, "data-time")}
+
+    label = inner_text(session, slot)
+    click(session, slot)
 
     session =
       session
-      |> assert_has(css("[data-testid='paper-selection'] .paper-selection__time", text: label))
-      |> assert_has(css("[data-testid='paper-book'] [data-testid='booking-form']"))
+      |> assert_has(
+        filter(css_in(frame, "[data-testid='paper-selection'] .paper-selection__time"),
+          has_text: label
+        )
+      )
+      |> assert_has(css_in(frame, "[data-testid='paper-book'] [data-testid='booking-form']"))
 
-    refute_has(session, css("[data-testid='next-step']"))
+    refute_has(session, css_in(frame, "[data-testid='next-step']"))
 
     after_pick.(session)
 
     # The details open with the focus on their heading, so Change time is what
     # has to move it back to the chosen time.
-    session =
-      session
-      |> execute_script(
-        "return document.activeElement !== null && document.activeElement.id === \"paper-book-heading\"",
-        [],
-        fn focused -> assert focused, "The details did not take the focus on opening" end
-      )
-      |> click(css("[data-testid='paper-change-time']"))
-      |> execute_script(
-        "return document.activeElement !== null && document.activeElement.matches(\"[data-fact='slot'][aria-pressed='true']\")",
-        [],
-        fn focused -> assert focused, "Change time left the focus off the chosen time" end
-      )
+    assert script_value(
+             session,
+             frame,
+             "return document.activeElement !== null && document.activeElement.id === \"paper-book-heading\"",
+             []
+           ),
+           "The details did not take the focus on opening"
+
+    session = click(session, css_in(frame, "[data-testid='paper-change-time']"))
+
+    assert script_value(
+             session,
+             frame,
+             "return document.activeElement !== null && document.activeElement.matches(\"[data-fact='slot'][aria-pressed='true']\")",
+             []
+           ),
+           "Change time left the focus off the chosen time"
 
     # Enter in the email field submits: the field sends its value only on
     # blur, and implicit submission must not wait for the server to see it.
     session =
       session
-      |> fill_in(css("input[name='booking[name]']"), with: "Paper Booker")
-      |> fill_in(css("input[name='booking[email]']"), with: email)
-      |> send_keys(css("input[name='booking[email]']"), [:enter])
+      |> fill(css_in(frame, "input[name='booking[name]']"), "Paper Booker")
+      |> fill(css_in(frame, "input[name='booking[email]']"), email)
+      |> press(css_in(frame, "input[name='booking[email]']"), "Enter")
 
-    assert_has(session, css("[data-testid='paper-confirmation']"))
+    assert_has(session, css_in(frame, "[data-testid='paper-confirmation']"))
     picked
   end
 
@@ -194,15 +201,16 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
   # inside its sideways scroll, screen-reader headings included, which the
   # overflow check (looking for elements past the edge outside a scroll
   # container) does not see.
-  defp page_scroll_width(session) do
-    script_value(session, "return document.documentElement.scrollWidth;", [])
+  defp page_scroll_width(session, frame) do
+    script_value(session, frame, "return document.documentElement.scrollWidth;", [])
   end
 
   # How many days lie wholly inside the days' visible box: the rest are
   # reached by the sideways scroll.
-  defp days_in_view(session) do
+  defp days_in_view(session, frame) do
     script_value(
       session,
+      frame,
       """
       const days = document.querySelector(".week-grid__days");
       const box = days.getBoundingClientRect();
@@ -217,9 +225,10 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
 
   # Below seven usable columns beside them, the details are a row above
   # the week.
-  defp details_above_week?(session) do
+  defp details_above_week?(session, frame) do
     script_value(
       session,
+      frame,
       """
       const details = document.querySelector(".paper-card--week .paper-details").getBoundingClientRect();
       const week = document.querySelector("[data-testid='paper-week']").getBoundingClientRect();
@@ -230,9 +239,10 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
   end
 
   # Times whose text does not fit their button.
-  defp truncated_slots(session) do
+  defp truncated_slots(session, frame) do
     script_value(
       session,
+      frame,
       """
       return [...document.querySelectorAll("[data-testid='week-slot']")]
         .filter((slot) => slot.getClientRects().length > 0 && slot.scrollWidth > slot.clientWidth)
@@ -251,6 +261,7 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
     bottom =
       script_value(
         session,
+        embed_frame(),
         """
         const rect = document.querySelector("[data-testid='submit-booking']").getBoundingClientRect();
         return Math.ceil(rect.bottom + window.scrollY);
@@ -258,16 +269,16 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
         []
       )
 
-    session
-    |> focus_parent_frame()
-    |> execute_script("window.paperResize.need = arguments[0]; window.paperResize.check();", [
+    script_value(session, nil, "window.paperResize.need = arg[0]; window.paperResize.check();", [
       bottom
     ])
-    |> assert_has(css("#paper-resize-ok"))
-    |> focus_frame(css("#embed-frame"))
+
+    assert_has(session, by_css("#paper-resize-ok"))
   end
 
   defp host_origin, do: Endpoint.url()
+
+  defp embed_frame, do: frame_locator("#embed-frame")
 
   # Frames `path` in a fresh iframe of the given width on the host page and
   # waits for its LiveView to connect (a rejected embed redirects to
@@ -279,8 +290,9 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
   # page only far enough to clip the details' submit at the frame's edge, and
   # the click is lost.
   defp frame(session, path, width) do
-    session
-    |> execute_script(
+    script_value(
+      session,
+      nil,
       """
       const resize = { last: null, need: null };
       resize.check = () => {
@@ -306,22 +318,17 @@ defmodule TymeslotWeb.E2E.PaperWeekBookingTest do
       const frame = document.createElement("iframe");
       frame.id = "embed-frame";
       frame.referrerPolicy = "no-referrer";
-      frame.style.width = arguments[1];
+      frame.style.width = arg[1];
       frame.style.height = "2000px";
-      frame.src = arguments[0];
+      frame.src = arg[0];
       document.body.appendChild(frame);
       """,
       [path, width]
     )
-    |> focus_frame(css("#embed-frame"))
-    |> assert_has(css("[data-phx-main].phx-connected"))
+
+    assert_has(session, by_css(embed_frame(), "[data-phx-main].phx-connected"))
   end
 
-  defp script_value(session, script, args) do
-    me = self()
-    ref = make_ref()
-    execute_script(session, script, args, fn value -> send(me, {:script_value, ref, value}) end)
-    assert_receive {:script_value, ^ref, value}, 5_000
-    value
-  end
+  defp script_value(session, frame, script, args),
+    do: evaluate_script(session, script, frame, args)
 end

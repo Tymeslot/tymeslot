@@ -328,30 +328,18 @@ config :tymeslot, Tymeslot.Integrations.HealthCheck,
   yield_timeout: 100,
   stream_timeout: 200
 
-# Wallaby E2E browser test configuration
-# otp_app + ecto_repos let Wallaby.Feature auto-checkout the sandbox and pass
-# the token in request headers so Phoenix.Ecto.SQL.Sandbox can allow the browser
-# request process to share the test's DB connection.
-# base_url is set dynamically in test_helper.exs via TymeslotWeb.Endpoint.url/0
-# so it respects the TEST_PORT env var.
-# Failure screenshots go to the system temp directory, not into the checkout:
-# they are disposable artefacts of a failed run, and writing them under test/
-# would leave untracked PNGs behind. Wallaby mkdir_p's the directory itself,
-# so nothing has to create it.
-# CHROME_BINARY names the browser on machines without the snap, as in SaaS.
-# Wallaby's own lookup of google-chrome on PATH does not help: a configured
-# binary replaces whatever it found, even when the path does not exist.
-config :wallaby,
-  otp_app: :tymeslot,
-  ecto_repos: [Tymeslot.Repo],
-  driver: Wallaby.Chrome,
-  screenshot_on_failure: true,
-  screenshot_dir: Path.join(System.tmp_dir!(), "tymeslot-screenshots"),
-  chromedriver: [
-    headless: true,
-    binary:
-      System.get_env("CHROME_BINARY", "/snap/chromium/current/usr/lib/chromium-browser/chrome")
-  ]
+# Fluffy E2E browser test configuration
+# ecto_repos lets Fluffy pass the test's sandbox metadata in browser requests
+# so Phoenix.Ecto.SQL.Sandbox and Fluffy.Sandbox can allow the request and
+# LiveView processes to share the test's DB connection. The browser reaches
+# the endpoint on its own listener, so TEST_PORT is respected.
+# Traces and screenshots of failed tests go to test-results/.
+config :fluffy, endpoint: TymeslotWeb.Endpoint, ecto_repos: [Tymeslot.Repo]
+
+config :playwright, :test,
+  browser_name: :chromium,
+  trace: :retain_on_failure,
+  screenshot: :only_on_failure
 
 # A calendar grid write guardian left driving after its test's LiveView has
 # gone gives up on writes that never answer within seconds, not minutes.

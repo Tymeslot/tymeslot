@@ -20,21 +20,15 @@ defmodule TymeslotWeb.E2E.FlashAutoDismissTest do
     previous_catalogs = Application.get_env(:tymeslot, :announcement_catalogs)
     Application.put_env(:tymeslot, :announcement_catalogs, [AnnouncementsSingleTestCatalog])
 
-    # The flash outlives Wallaby's default wait, and the assertion that it has
-    # gone must be allowed to wait it out.
-    previous_wait = Application.get_env(:wallaby, :max_wait_time)
-    Application.put_env(:wallaby, :max_wait_time, 10_000)
-
     on_exit(fn ->
       Application.put_env(:tymeslot, :announcement_catalogs, previous_catalogs)
-      restore_env(:wallaby, :max_wait_time, previous_wait)
     end)
 
     :ok
   end
 
-  feature "the sign-in flash dismisses itself and leaves the announcement modal open",
-          %{session: session} do
+  test "the sign-in flash dismisses itself and leaves the announcement modal open",
+       %{session: session} do
     {session, user} =
       log_in_via_browser(session, %{
         # Before the test announcement was published, so it is unseen.
@@ -43,23 +37,26 @@ defmodule TymeslotWeb.E2E.FlashAutoDismissTest do
       })
 
     session
-    |> assert_has(css("#app-flash-group-info"))
-    |> assert_has(css("#announcement-modal-modal", text: "Single test announcement"))
-    # Removed once the dismissal has reached the server and come back.
-    |> assert_has(css("#app-flash-group-info", count: 0, visible: :any))
-    |> assert_has(css("#announcement-modal-modal", text: "Single test announcement"))
+    |> assert_has(by_css("#app-flash-group-info"))
+    |> assert_has(
+      filter(by_css("#announcement-modal-modal"), has_text: "Single test announcement")
+    )
+    # Removed once the dismissal has reached the server and come back. The
+    # flash outlives the default wait, and the assertion that it has gone must
+    # be allowed to wait it out.
+    |> assert(count(by_css("#app-flash-group-info"), 0), timeout: 10_000)
+    |> assert_has(
+      filter(by_css("#announcement-modal-modal"), has_text: "Single test announcement")
+    )
 
     assert [%{key: "test_solo"}] = Announcements.list_for(Repo.reload!(user))
 
     # The modal is still the user's to close, and closing it is what marks the
     # announcement seen.
     session
-    |> click(button("Got it"))
-    |> assert_has(css("#announcement-modal-modal", count: 0, visible: :any))
+    |> click(by_role(:button, name: "Got it"))
+    |> assert(count(by_css("#announcement-modal-modal"), 0))
 
     assert Announcements.list_for(Repo.reload!(user)) == []
   end
-
-  defp restore_env(app, key, nil), do: Application.delete_env(app, key)
-  defp restore_env(app, key, value), do: Application.put_env(app, key, value)
 end

@@ -15,6 +15,7 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
   import TymeslotWeb.E2E.BookerSteps
 
   alias Ecto.Changeset
+  alias Fluffy.Playwright.Keyboard
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.Slugs
@@ -28,7 +29,7 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
   @question "cf-start"
 
   describe "the create-event modal" do
-    feature "dates and times chosen by keyboard, by mouse and by typing reach the server", %{
+    test "dates and times chosen by keyboard, by mouse and by typing reach the server", %{
       session: session
     } do
       session = open_create_modal(session)
@@ -38,61 +39,70 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
       next_day = end_date |> Date.from_iso8601!() |> Date.add(1) |> Date.to_iso8601()
 
       session
-      |> click(css("#create-event-end-date-trigger"))
+      |> click(by_css("#create-event-end-date-trigger"))
       |> assert_open("create-event-end-date")
       |> assert_active_date(end_date)
-      |> send_keys([:right_arrow, :enter])
+      |> Keyboard.press("ArrowRight")
+      |> Keyboard.press("Enter")
       |> assert_closed("create-event-end-date")
       |> assert_active_element("create-event-end-date-trigger")
       |> assert_hidden("end-date", next_day)
 
       # Mouse: the time list, then the half-past option.
       session
-      |> click(css("#create-event-start-time-trigger"))
-      |> assert_has(css("#create-event-start-time-time-panel [role='option']", minimum: 96))
-      |> click(css("#create-event-start-time-time-panel [role='option']", text: "10:30 AM"))
+      |> click(by_css("#create-event-start-time-trigger"))
+      |> assert_has(
+        by_css("#create-event-start-time-time-panel [role='option']")
+        |> filter(visible: true)
+        |> nth(95)
+      )
+      |> click(
+        filter(by_css("#create-event-start-time-time-panel [role='option']"),
+          has_text: "10:30 AM"
+        )
+      )
       |> assert_closed("create-event-start-time")
       |> assert_hidden("start-time", "10:30")
 
       # Typing: a 12-hour time in a field showing either clock, committed by Tab.
       session
-      |> fill_in(css("#create-event-end-time"), with: "3:45 pm")
-      |> send_keys([:tab])
+      |> fill(by_css("#create-event-end-time"), "3:45 pm")
+      |> Keyboard.press("Tab")
       |> assert_hidden("end-time", "15:45")
 
       # The server has taken them: an unrelated re-render keeps every value.
       session
-      |> click(css("#create-event-title"))
-      |> send_keys(["Picker lunch"])
+      |> click(by_css("#create-event-title"))
+      |> Keyboard.type("Picker lunch")
 
       assert_hidden(session, "end-date", next_day)
       assert_hidden(session, "start-time", "10:30")
 
       assert_text_value(session, "create-event-start-time", time_text("10:30"))
 
-      click(session, css("[phx-click='save_event']"))
+      click(session, by_css("[phx-click='save_event']"))
 
-      eventually(fn -> not has?(session, css("#create-event-modal")) end, timeout: 5000)
+      refute_has(session, by_css("#create-event-modal"), timeout: 5000)
     end
 
-    feature "Escape closes the calendar and leaves the modal open", %{session: session} do
+    test "Escape closes the calendar and leaves the modal open", %{session: session} do
       session = open_create_modal(session)
 
       session
-      |> click(css("#create-event-start-date-trigger"))
+      |> click(by_css("#create-event-start-date-trigger"))
       |> assert_open("create-event-start-date")
-      |> send_keys([:escape])
+      |> Keyboard.press("Escape")
       |> assert_closed("create-event-start-date")
-      |> assert_has(css("#create-event-modal"))
+      |> assert_has(by_css("#create-event-modal"))
     end
 
-    feature "pressing the button of an open calendar closes it", %{session: session} do
+    test "pressing the button of an open calendar closes it", %{session: session} do
       session = open_create_modal(session)
 
       session
-      |> click(css("#create-event-start-date-trigger"))
+      |> click(by_css("#create-event-start-date-trigger"))
       |> assert_open("create-event-start-date")
-      |> click(css("#create-event-start-date-trigger"))
+      |> click(by_css("#create-event-start-date-trigger"))
       |> assert_closed("create-event-start-date")
 
       assert [false] =
@@ -101,15 +111,14 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
                """)
     end
 
-    feature "a field out of view opens nothing and leaves Escape to the page", %{session: session} do
+    test "a field out of view opens nothing and leaves Escape to the page", %{session: session} do
       session = open_create_modal(session)
 
-      session =
-        execute_script(session, """
-        const control = document.querySelector("#create-event-start-date-field [data-picker-part]");
-        control.getBoundingClientRect = () => ({top: -500, bottom: -460, left: 0, width: 100});
-        document.getElementById("create-event-start-date-trigger").click();
-        """)
+      evaluate_script(session, """
+      const control = document.querySelector("#create-event-start-date-field [data-picker-part]");
+      control.getBoundingClientRect = () => ({top: -500, bottom: -460, left: 0, width: 100});
+      document.getElementById("create-event-start-date-trigger").click();
+      """)
 
       assert ["false", false] =
                evaluate_script(session, """
@@ -130,16 +139,18 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
                """)
     end
 
-    feature "a browser without popovers shows the native control and no panel", %{
+    test "a browser without popovers shows the native control and no panel", %{
       session: session
     } do
       session = open_create_modal(session)
 
       assert ["none", "none", "block"] =
                session
-               |> execute_script("""
-               document.getElementById("create-event-start-date-field").dataset.pickerForceNative = "";
-               """)
+               |> tap(
+                 &evaluate_script(&1, """
+                 document.getElementById("create-event-start-date-field").dataset.pickerForceNative = "";
+                 """)
+               )
                |> evaluate_script("""
                const field = document.getElementById("create-event-start-date-field");
                const display = (selector) => getComputedStyle(field.querySelector(selector)).display;
@@ -149,7 +160,7 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
   end
 
   describe "a question's limits in the question editor" do
-    feature "switching the question from Date to Time gives the limit a time list", %{
+    test "switching the question from Date to Time gives the limit a time list", %{
       session: session
     } do
       {session, user} = log_in_via_browser(session)
@@ -159,17 +170,19 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
         session
         |> visit("/dashboard/meeting-settings")
         |> wait_for_live()
-        |> click(css("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']"))
-        |> click(css("[role='tab']", text: "Questions"))
-        |> click(css("button", text: "Add question"))
-        |> assert_has(css("#definition_type-trigger"))
+        |> click(by_css("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']"))
+        |> click(filter(by_css("[role='tab']"), has_text: "Questions"))
+        |> click(filter(by_css("button"), has_text: "Add question"))
+        |> assert_has(by_css("#definition_type-trigger"))
         |> choose_type("Date")
-        |> assert_has(css("#definition_max-field[data-picker-kind='date']"))
+        |> assert_has(by_css("#definition_max-field[data-picker-kind='date']"))
         |> choose_type("Time")
-        |> assert_has(css("#definition_max-field[data-picker-kind='time']"))
-        |> click(css("#definition_max-trigger"))
+        |> assert_has(by_css("#definition_max-field[data-picker-kind='time']"))
+        |> click(by_css("#definition_max-trigger"))
         |> assert_open("definition_max")
-        |> click(css("#definition_max-time-panel [role='option']", text: "3:45 PM"))
+        |> click(
+          filter(by_css("#definition_max-time-panel [role='option']"), has_text: "3:45 PM")
+        )
 
       eventually(
         fn ->
@@ -184,7 +197,7 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
   end
 
   describe "a booking page's Date question" do
-    feature "a day chosen in the panel answers the question and the booking goes through", %{
+    test "a day chosen in the panel answers the question and the booking goes through", %{
       session: session
     } do
       {profile, slug} = organiser_with_date_question()
@@ -195,10 +208,10 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
         |> visit("/#{profile.username}/#{slug}?theme=1")
         |> wait_for_live()
         |> pick_first_slot()
-        |> assert_has(css("#cq-input-#{@question}-trigger"))
-        |> click(css("#cq-input-#{@question}-trigger"))
+        |> assert_has(by_css("#cq-input-#{@question}-trigger"))
+        |> click(by_css("#cq-input-#{@question}-trigger"))
         |> assert_open("cq-input-#{@question}")
-        |> click(css("#cq-input-#{@question}-date-panel [data-date='#{tomorrow}']"))
+        |> click(by_css("#cq-input-#{@question}-date-panel [data-date='#{tomorrow}']"))
         |> assert_closed("cq-input-#{@question}")
 
       assert [^tomorrow] =
@@ -220,13 +233,13 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
       )
 
       session
-      |> click(css("[data-intent='continue']"))
+      |> click(by_css("[data-intent='continue']"))
       |> submit_booking_form()
 
       assert_answer_stored(profile, tomorrow)
     end
 
-    feature "typing the date also answers, and Enter moves on", %{session: session} do
+    test "typing the date also answers, and Enter moves on", %{session: session} do
       {profile, slug} = organiser_with_date_question()
       date = Date.add(Date.utc_today(), 2)
 
@@ -234,13 +247,13 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
       |> visit("/#{profile.username}/#{slug}?theme=2")
       |> wait_for_live()
       |> pick_first_slot()
-      |> assert_has(css("#cq-input-#{@question}"))
-      |> fill_in(css("#cq-input-#{@question}"), with: Date.to_iso8601(date))
-      |> send_keys([:enter])
-      |> assert_has(css("[data-testid='booking-form']"))
+      |> assert_has(by_css("#cq-input-#{@question}"))
+      |> fill(by_css("#cq-input-#{@question}"), Date.to_iso8601(date))
+      |> Keyboard.press("Enter")
+      |> assert_has(by_css("[data-testid='booking-form']"))
     end
 
-    feature "the panel stays inside a phone-width embed iframe", %{session: session} do
+    test "the panel stays inside a phone-width embed iframe", %{session: session} do
       {profile, slug} = organiser_with_date_question()
 
       profile =
@@ -248,36 +261,45 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
         |> Changeset.change(allowed_embed_domains: [URI.parse(Endpoint.url()).host])
         |> Repo.update!()
 
+      frame = frame_locator("#embed-frame")
+
       session =
         session
         |> visit("/#{profile.username}/#{slug}?theme=1")
         |> wait_for_live()
-        |> execute_script(
-          """
-          const frame = document.createElement("iframe");
-          frame.id = "embed-frame";
-          frame.referrerPolicy = "no-referrer";
-          frame.style.width = "360px";
-          frame.style.height = "640px";
-          frame.src = arguments[0];
-          document.body.replaceChildren(frame);
-          """,
-          ["/#{profile.username}/#{slug}?theme=2&embed=1&parent-origin=#{Endpoint.url()}"]
+        |> tap(
+          &evaluate_script(
+            &1,
+            """
+            const frame = document.createElement("iframe");
+            frame.id = "embed-frame";
+            frame.referrerPolicy = "no-referrer";
+            frame.style.width = "360px";
+            frame.style.height = "640px";
+            frame.src = arg[0];
+            document.body.replaceChildren(frame);
+            """,
+            nil,
+            ["/#{profile.username}/#{slug}?theme=2&embed=1&parent-origin=#{Endpoint.url()}"]
+          )
         )
-        |> focus_frame(css("#embed-frame"))
-        |> assert_has(css("[data-phx-main].phx-connected"))
-        |> pick_first_slot()
-        |> assert_has(css("#cq-input-#{@question}-trigger"))
-        |> click(css("#cq-input-#{@question}-trigger"))
-        |> assert_open("cq-input-#{@question}")
+        |> assert_has(by_css(frame, "[data-phx-main].phx-connected"))
+        |> pick_first_slot(frame)
+        |> assert_has(by_css(frame, "#cq-input-#{@question}-trigger"))
+        |> click(by_css(frame, "#cq-input-#{@question}-trigger"))
+        |> assert_open("cq-input-#{@question}", frame)
 
       [rect] =
-        evaluate_script(session, """
-        const r = document.getElementById("cq-input-#{@question}-date-panel").getBoundingClientRect();
-        return [{top: r.top, bottom: r.bottom, left: r.left, right: r.right,
-                 width: document.documentElement.clientWidth,
-                 height: document.documentElement.clientHeight}];
-        """)
+        evaluate_script(
+          session,
+          """
+          const r = document.getElementById("cq-input-#{@question}-date-panel").getBoundingClientRect();
+          return [{top: r.top, bottom: r.bottom, left: r.left, right: r.right,
+                   width: document.documentElement.clientWidth,
+                   height: document.documentElement.clientHeight}];
+          """,
+          frame
+        )
 
       assert rect["top"] >= 0 and rect["left"] >= 0
       assert rect["right"] <= rect["width"]
@@ -288,8 +310,8 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
 
   defp choose_type(session, label) do
     session
-    |> click(css("#definition_type-trigger"))
-    |> click(css("#definition_type-panel [role='option']", text: label))
+    |> click(by_css("#definition_type-trigger"))
+    |> click(filter(by_css("#definition_type-panel [role='option']"), has_text: label))
   end
 
   defp open_create_modal(session) do
@@ -299,15 +321,15 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
     session
     |> visit("/dashboard/calendar")
     |> wait_for_live()
-    |> assert_has(css("#calendar-create-zone"))
+    |> assert_has(by_css("#calendar-create-zone"))
     |> simulate_grid_drag()
-    |> assert_has(css("#create-event-start-date-field"))
+    |> assert_has(by_css("#create-event-start-date-field"))
   end
 
   # As `dashboard_calendar_test.exs` opens it: the hook snaps real mouse events
   # to the grid.
   defp simulate_grid_drag(session) do
-    execute_script(session, """
+    evaluate_script(session, """
     const col = document.querySelector('[data-day-col]');
     const rect = col.getBoundingClientRect();
     const x = rect.left + Math.floor(rect.width / 2);
@@ -349,17 +371,19 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
     session
   end
 
-  defp assert_open(session, id) do
+  defp assert_open(session, id, frame \\ nil) do
     assert_has(
       session,
-      css("##{id}-date-panel [data-date], ##{id}-time-panel [role='option']", minimum: 1)
+      css_in(frame, "##{id}-date-panel [data-date], ##{id}-time-panel [role='option']")
+      |> filter(visible: true)
+      |> first()
     )
 
-    assert_has(session, css("##{id}-trigger[aria-expanded='true']"))
+    assert_has(session, css_in(frame, "##{id}-trigger[aria-expanded='true']"))
   end
 
   defp assert_closed(session, id) do
-    assert_has(session, css("##{id}-trigger[aria-expanded='false']"))
+    assert_has(session, by_css("##{id}-trigger[aria-expanded='false']"))
   end
 
   defp assert_active_date(session, iso) do

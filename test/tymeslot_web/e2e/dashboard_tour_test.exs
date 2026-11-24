@@ -11,29 +11,29 @@ defmodule TymeslotWeb.E2E.DashboardTourTest do
   # pushes `tour:viewport-too-small`, which dismisses the overlay *without*
   # marking the user seen — so a mobile visitor still gets the tour the next
   # time they open the dashboard on a large enough screen. These two scenarios
-  # exercise that branching end-to-end through ChromeDriver.
+  # exercise that branching end-to-end in a real browser.
 
-  feature "desktop viewport: tour appears, Next advances the step, Skip dismisses",
-          %{session: session} do
-    session = resize_window(session, 1280, 800)
+  test "desktop viewport: tour appears, Next advances the step, Skip dismisses",
+       %{session: session} do
+    session = set_viewport_size(session, %{width: 1280, height: 800})
 
     {session, user} =
       log_in_via_browser(session, %{dashboard_tour_seen_at: nil})
 
     session
-    |> assert_has(css("#dashboard-tour"))
-    |> assert_has(css("#dashboard-tour[data-step-index='0']"))
-    |> click(button("Next"))
-    |> assert_has(css("#dashboard-tour[data-step-index='1']"))
-    |> click(button("Skip"))
+    |> assert_has(by_css("#dashboard-tour"))
+    |> assert_has(by_css("#dashboard-tour[data-step-index='0']"))
+    |> click(by_role(:button, name: "Next", exact: true))
+    |> assert_has(by_css("#dashboard-tour[data-step-index='1']"))
+    |> click(by_role(:button, name: "Skip"))
     |> assert_tour_removed()
 
     assert %DateTime{} = Repo.reload!(user).dashboard_tour_seen_at
   end
 
-  feature "mobile viewport: hook reports too small, overlay is dismissed without marking seen",
-          %{session: session} do
-    session = resize_window(session, 390, 844)
+  test "mobile viewport: hook reports too small, overlay is dismissed without marking seen",
+       %{session: session} do
+    session = set_viewport_size(session, %{width: 390, height: 844})
 
     {session, user} =
       log_in_via_browser(session, %{dashboard_tour_seen_at: nil})
@@ -51,11 +51,9 @@ defmodule TymeslotWeb.E2E.DashboardTourTest do
   end
 
   # The overlay carries `phx-remove={JS.transition(..., time: 700)}`, so LiveView
-  # fades it out before dropping it from the DOM. `refute_has/2` is not a waiter
-  # — it retries only until an element *appears*, and so fires mid-fade while the
-  # overlay is still there. A `count: 0` query retries until the element is gone,
-  # and `visible: :any` ignores both the fade and the sub-1024px `display: none`.
+  # fades it out before dropping it from the DOM. A count of 0 retries until the
+  # element is gone, ignoring both the fade and the sub-1024px `display: none`.
   defp assert_tour_removed(session) do
-    assert_has(session, css("#dashboard-tour", count: 0, visible: :any))
+    assert(session, count(by_css("#dashboard-tour"), 0))
   end
 end

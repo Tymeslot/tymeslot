@@ -74,9 +74,11 @@ defmodule TymeslotWeb.Endpoint do
       ]
     ]
 
-  # Allow Wallaby browser tests to share the Ecto sandbox connection
+  # Allow browser tests to share the Ecto sandbox connection
   if Application.compile_env(:tymeslot, :environment) == :test do
-    plug Phoenix.Ecto.SQL.Sandbox
+    plug Phoenix.Ecto.SQL.Sandbox,
+      header: Fluffy.Sandbox.header(),
+      sandbox: Fluffy.Sandbox.allowance()
   end
 
   # Serve at "/" the static files from "priv/static" directory.

@@ -4,23 +4,23 @@ defmodule TymeslotWeb.E2E.CreateEventTypeTest do
   @moduletag :e2e
   @moduletag :meeting_types
 
-  feature "user can create a meeting type from the dashboard", %{session: session} do
+  test "user can create a meeting type from the dashboard", %{session: session} do
     {session, _user} = log_in_via_browser(session)
 
     session =
       session
       |> visit("/dashboard/meeting-settings")
       |> wait_for_live()
-      |> click(css("button", text: "Add Meeting Type"))
-      |> fill_in(css("input[name='meeting_type[name]']"), with: "Quick Chat")
-      |> fill_in(css("input[name='meeting_type[duration]']"), with: "30")
-      |> click(css("button[type='submit']", text: "Create meeting type"))
+      |> click(filter(by_css("button"), has_text: "Add Meeting Type"))
+      |> fill(by_css("input[name='meeting_type[name]']"), "Quick Chat")
+      |> fill(by_css("input[name='meeting_type[duration]']"), "30")
+      |> click(filter(by_css("button[type='submit']"), has_text: "Create meeting type"))
       # Creating switches the same form to editing the new type.
-      |> assert_has(css("[aria-live='polite']", text: "All changes saved"))
-      |> click(css("button", text: "Done"))
+      |> assert_has(filter(by_css("[aria-live='polite']"), has_text: "All changes saved"))
+      |> click(filter(by_css("button"), has_text: "Done"))
 
     # Should see the new type in the list (name is in an h2)
-    session = assert_has(session, css("h2", text: "Quick Chat"))
+    session = assert_has(session, filter(by_css("h2"), has_text: "Quick Chat"))
 
     # The populated list at the narrowest supported viewport. Asserting on the
     # row keeps this honest: an empty list would fit trivially.
@@ -28,7 +28,7 @@ defmodule TymeslotWeb.E2E.CreateEventTypeTest do
     |> resize_to_mobile()
     |> visit("/dashboard/meeting-settings")
     |> wait_for_live()
-    |> assert_has(css("h2", text: "Quick Chat"))
+    |> assert_has(filter(by_css("h2"), has_text: "Quick Chat"))
     |> assert_no_horizontal_overflow("meeting settings at 320px")
   end
 end

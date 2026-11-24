@@ -4,7 +4,7 @@ defmodule TymeslotWeb.E2E.AccountSettingsTest do
   @moduletag :e2e
   @moduletag :profiles
 
-  feature "user changes password from account settings", %{session: session} do
+  test "user changes password from account settings", %{session: session} do
     # A realistic address, longer than the factory's `user<n>@example.com`. An
     # email has no natural break points, so the account card only fits at 320px
     # if the layout breaks it. With the factory default the check below passed
@@ -25,16 +25,17 @@ defmodule TymeslotWeb.E2E.AccountSettingsTest do
     # required fields through to the server instead of blocking the submit.
     session =
       session
-      |> click(css("button[phx-click='toggle_password_form']"))
-      |> click(css("form[phx-submit='update_password'] button[type='submit']"))
-      |> assert_has(css("#account-password-form .form-field-error", minimum: 1))
-      |> fill_in(css("input[name='password_form[current_password]']"), with: default_password())
-      |> fill_in(css("input[name='password_form[new_password]']"), with: new_password)
-      |> fill_in(
-        css("input[name='password_form[new_password_confirmation]']"),
-        with: new_password
+      |> click(by_css("button[phx-click='toggle_password_form']"))
+      |> click(by_css("form[phx-submit='update_password'] button[type='submit']"))
+      |> assert_has(
+        by_css("#account-password-form .form-field-error")
+        |> filter(visible: true)
+        |> first()
       )
-      |> click(css("form[phx-submit='update_password'] button[type='submit']"))
+      |> fill(by_css("input[name='password_form[current_password]']"), default_password())
+      |> fill(by_css("input[name='password_form[new_password]']"), new_password)
+      |> fill(by_css("input[name='password_form[new_password_confirmation]']"), new_password)
+      |> click(by_css("form[phx-submit='update_password'] button[type='submit']"))
 
     # Changing your own password revokes every session, so the user is signed out
     # and lands back on the login page.
@@ -46,16 +47,18 @@ defmodule TymeslotWeb.E2E.AccountSettingsTest do
     # here with a "session expired" notice instead.
     session =
       session
-      |> assert_has(css("#password-input"))
-      |> assert_has(css("#app-flash-group-info", text: "Your password has been changed"))
+      |> assert_has(by_css("#password-input"))
+      |> assert_has(
+        filter(by_css("#app-flash-group-info"), has_text: "Your password has been changed")
+      )
       |> wait_for_live()
 
     # The new password is the one that now works.
     session =
       session
-      |> fill_in(text_field("email"), with: user.email)
-      |> fill_in(css("#password-input"), with: new_password)
-      |> click(css("button[type='submit']"))
+      |> fill(by_label("Email Address"), user.email)
+      |> fill(by_css("#password-input"), new_password)
+      |> click(by_css("button[type='submit']"))
       |> wait_for_dashboard()
 
     # Same screen at the narrowest supported viewport, reusing this session
@@ -64,7 +67,7 @@ defmodule TymeslotWeb.E2E.AccountSettingsTest do
     |> resize_to_mobile()
     |> visit("/dashboard/account")
     |> wait_for_live()
-    |> assert_has(css("button[phx-click='toggle_password_form']"))
+    |> assert_has(by_css("button[phx-click='toggle_password_form']"))
     |> assert_no_horizontal_overflow("account settings at 320px")
   end
 end

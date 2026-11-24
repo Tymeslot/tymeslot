@@ -128,8 +128,7 @@ defmodule Tymeslot.MixProject do
       {:ex_machina, "~> 2.8", only: :test},
       {:stripity_stripe, "~> 3.3"},
       # Pinned to 4.x, which every remaining requirement accepts: Swoosh
-      # declares it optional, Wallaby's httpoison and web_driver_client (and
-      # the Tesla it pulls in) are test-only, and stripity_stripe uses hackney
+      # declares it optional, and stripity_stripe uses hackney
       # as its non-optional HTTP client for every Stripe API call.
       # stripity_stripe is hackney's only runtime consumer: Swoosh sends
       # through Finch (config :swoosh, :api_client), and everything else
@@ -180,7 +179,7 @@ defmodule Tymeslot.MixProject do
       # Plug for setting conn.remote_ip from proxy headers
       {:remote_ip, "~> 1.1"},
       {:stream_data, "~> 1.1", only: :test},
-      {:wallaby, "~> 0.30", only: :test, runtime: false},
+      {:fluffy, "~> 0.9.0-rc.5", only: :test},
       {:phoenix_ecto, "~> 4.6"}
     ]
   end
@@ -207,9 +206,10 @@ defmodule Tymeslot.MixProject do
       # time and matches a release, which boots with every module loaded.
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test --preload-modules"],
       # Every `:e2e` test module lives in this repo, and `test_helper.exs` starts
-      # the endpoint and Wallaby only when E2E is set, so the tag is unrunnable
-      # without this alias. Needs a local Chrome and chromedriver, which is why
-      # it is not part of the default gate or of CI. The browser loads the
+      # the endpoint only when E2E is set, so the tag is unrunnable without this
+      # alias. Needs Playwright's Chromium (`mix playwright.install chromium`),
+      # which is why it is not part of the default gate; CI runs it nightly in
+      # excluded-suites.yml. The browser loads the
       # bundles in priv/static, which nothing else rebuilds outside a running
       # dev server's watchers, so without `assets.build` a JavaScript or CSS
       # change goes untested and the run passes against the stale build.
@@ -255,8 +255,8 @@ defmodule Tymeslot.MixProject do
     keys
   end
 
-  # `test_helper.exs` reads this to decide whether to start the HTTP endpoint and
-  # Wallaby, which the browser needs to connect to.
+  # `test_helper.exs` reads this to decide whether to start the HTTP endpoint,
+  # which the browser needs to connect to.
   defp set_e2e_env(_args), do: System.put_env("E2E", "true")
 
   # `mix setup` builds the assets with the esbuild and Tailwind binaries and

@@ -30,8 +30,8 @@ defmodule TymeslotWeb.E2E.EmbedPrimaryColourTest do
   @override "#e11d48"
   @parent_origin "http://embedder.test"
 
-  feature "the embed's primary colour reaches the rendered page in every theme",
-          %{session: session} do
+  test "the embed's primary colour reaches the rendered page in every theme",
+       %{session: session} do
     profile = create_embeddable_profile()
     session = visit(session, "/#{profile.username}")
 
@@ -53,8 +53,8 @@ defmodule TymeslotWeb.E2E.EmbedPrimaryColourTest do
     end
   end
 
-  feature "a language switch inside the frame keeps the page embedded and its colour",
-          %{session: session} do
+  test "a language switch inside the frame keeps the page embedded and its colour",
+       %{session: session} do
     # The switcher issues a full redirect inside the iframe. It used to rebuild
     # the URL without the embed parameters, so the page came back without its
     # embed token and fell back to the organiser's theme, layout and colour.
@@ -69,18 +69,20 @@ defmodule TymeslotWeb.E2E.EmbedPrimaryColourTest do
       session
       |> visit("/#{profile.username}")
       |> frame(path)
-      |> click(css(".lang-switcher button[phx-click='toggle_language_dropdown']"))
-      |> click(css("button[phx-click='change_locale'][phx-value-locale='de']"))
-      |> assert_has(css("html[lang='de'][data-embedded][data-embed-layout='column']"))
-      |> assert_has(css("[data-phx-main].phx-connected"))
+      |> click(
+        by_css(embed_frame(), ".lang-switcher button[phx-click='toggle_language_dropdown']")
+      )
+      |> click(by_css(embed_frame(), "button[phx-click='change_locale'][phx-value-locale='de']"))
+      |> assert_has(
+        by_css(embed_frame(), "html[lang='de'][data-embedded][data-embed-layout='column']")
+      )
+      |> assert_has(by_css(embed_frame(), "[data-phx-main].phx-connected"))
 
     {session, primary} = root_property(session, "--theme-primary")
     assert primary == @override, "after the switch the page resolved #{primary}"
 
-    {session, html_class} = root_attribute(session, "class")
+    {_session, html_class} = root_attribute(session, "class")
     assert html_class =~ "theme-#{theme_id} "
-
-    focus_default_frame(session)
   end
 
   # Frames `path` in a fresh iframe on the host page, waits for its LiveView to
@@ -93,12 +95,14 @@ defmodule TymeslotWeb.E2E.EmbedPrimaryColourTest do
     {session, primary} = root_property(session, "--theme-primary")
     {session, solid} = root_property(session, "--theme-primary-solid")
 
-    {focus_default_frame(session), primary, solid}
+    {session, primary, solid}
   end
 
+  defp embed_frame, do: frame_locator("#embed-frame")
+
   defp frame(session, path) do
-    session
-    |> execute_script(
+    evaluate_script(
+      session,
       """
       document.getElementById("embed-frame")?.remove();
       const frame = document.createElement("iframe");
@@ -106,44 +110,37 @@ defmodule TymeslotWeb.E2E.EmbedPrimaryColourTest do
       frame.referrerPolicy = "no-referrer";
       frame.style.width = "1000px";
       frame.style.height = "800px";
-      frame.src = arguments[0];
+      frame.src = arg[0];
       document.body.appendChild(frame);
       """,
+      nil,
       [path]
     )
-    |> focus_frame(css("#embed-frame"))
-    |> assert_has(css("[data-phx-main].phx-connected"))
+
+    assert_has(session, by_css(embed_frame(), "[data-phx-main].phx-connected"))
   end
 
   defp root_attribute(session, name) do
-    me = self()
-    ref = make_ref()
-
-    session =
-      execute_script(
+    value =
+      evaluate_script(
         session,
-        "return document.documentElement.getAttribute(arguments[0]);",
-        [name],
-        fn value -> send(me, {:attribute, ref, value}) end
+        "return document.documentElement.getAttribute(arg[0]);",
+        embed_frame(),
+        [name]
       )
 
-    assert_receive {:attribute, ^ref, value}, 5_000
     {session, value}
   end
 
   defp root_property(session, name) do
-    me = self()
-    ref = make_ref()
-
-    session =
-      execute_script(
+    value =
+      evaluate_script(
         session,
-        "return getComputedStyle(document.documentElement).getPropertyValue(arguments[0]).trim();",
-        [name],
-        fn value -> send(me, {:property, ref, value}) end
+        "return getComputedStyle(document.documentElement).getPropertyValue(arg[0]).trim();",
+        embed_frame(),
+        [name]
       )
 
-    assert_receive {:property, ^ref, value}, 5_000
     {session, value}
   end
 

@@ -165,3 +165,6 @@ uploads/
 # reads it. A committed copy only goes stale and misleads whoever opens it to
 # learn the schema.
 priv/repo/structure.sql
+
+# Playwright traces and screenshots of failed browser tests
+/test-results/

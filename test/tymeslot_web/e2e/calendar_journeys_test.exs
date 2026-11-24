@@ -23,6 +23,7 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
 
   import Tymeslot.TestHelpers.Eventually
 
+  alias Fluffy.Playwright.Keyboard
   alias Tymeslot.CalendarMock
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
@@ -110,21 +111,21 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
 
   defp open_calendar(session, query) do
     session
-    |> resize_window(1280, 800)
+    |> set_viewport_size(%{width: 1280, height: 800})
     |> visit("/dashboard/calendar#{query}")
     |> wait_for_live()
-    |> assert_has(css("#calendar-canvas[aria-busy='false']"))
+    |> assert_has(by_css("#calendar-canvas[aria-busy='false']"))
   end
 
   # Presses on the empty middle of the day's column, a third of the way down
   # the visible grid, and drags 80px down.
   defp drag_to_create(session, iso) do
-    execute_script(
+    evaluate_script(
       session,
       @pointer <>
         """
-        const column = document.querySelector(`.cal-col[data-day="${arguments[0]}"]`);
-        if (!column) throw new Error('no column for ' + arguments[0]);
+        const column = document.querySelector(`.cal-col[data-day="${arg[0]}"]`);
+        if (!column) throw new Error('no column for ' + arg[0]);
         const scroller = canvas.querySelector('[data-scroll]').getBoundingClientRect();
         const top = canvas.querySelector('.cal-top')?.getBoundingClientRect().bottom ?? scroller.top;
         const rect = column.getBoundingClientRect();
@@ -135,18 +136,21 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
         send(column, 'pointermove', x, y + 80, 1);
         send(column, 'pointerup', x, y + 80, 0);
         """,
+      nil,
       [iso]
     )
+
+    session
   end
 
   # Presses on the middle of the event's block and drops it at the same
   # height in the other day's column.
   defp drag_event(session, title, from, to) do
-    execute_script(
+    evaluate_script(
       session,
       @pointer <>
         """
-        const [title, from, to] = arguments;
+        const [title, from, to] = arg;
         const block = [...document.querySelectorAll(`.cal-col[data-day="${from}"] .cal-ev[data-editable]`)]
           .find((b) => b.textContent.includes(title));
         if (!block) throw new Error(`no movable "${title}" on ${from}`);
@@ -161,11 +165,14 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
         send(block, 'pointermove', x1, y, 1);
         send(block, 'pointerup', x1, y, 0);
         """,
+      nil,
       [title, from, to]
     )
+
+    session
   end
 
-  feature "a drag over an empty slot opens quick create, and Save adds the event", %{
+  test "a drag over an empty slot opens quick create, and Save adds the event", %{
     session: session
   } do
     {session, _user, _integration} = organiser(session)
@@ -173,18 +180,20 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
 
     session
     |> open_calendar("?view=day&date=#{iso}")
-    |> refute_has(css("#calendar-quick-create"))
+    |> refute_has(by_css("#calendar-quick-create"))
     |> drag_to_create(iso)
-    |> assert_has(css("#calendar-quick-create"))
-    |> fill_in(css("#calendar-qc-field"), with: "Planning session")
-    |> click(css("#calendar-quick-create [data-qc-save]"))
-    |> assert_has(css("#calendar-toast", text: "Added"))
-    |> assert_has(css(".cal-col[data-day='#{iso}'] .cal-ev", text: "Planning session"))
+    |> assert_has(by_css("#calendar-quick-create"))
+    |> fill(by_css("#calendar-qc-field"), "Planning session")
+    |> click(by_css("#calendar-quick-create [data-qc-save]"))
+    |> assert_has(filter(by_css("#calendar-toast"), has_text: "Added"))
+    |> assert_has(
+      filter(by_css(".cal-col[data-day='#{iso}'] .cal-ev"), has_text: "Planning session")
+    )
 
     assert_receive {:created, %{summary: "Planning session"}}, 5_000
   end
 
-  feature "a drag to the next day moves the event, and Undo puts it back", %{session: session} do
+  test "a drag to the next day moves the event, and Undo puts it back", %{session: session} do
     {session, _user, integration} = organiser(session)
     tuesday = ahead(2)
     wednesday = Date.add(tuesday, 1)
@@ -199,10 +208,14 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
     session =
       session
       |> open_calendar("?view=week&date=#{tue}")
-      |> assert_has(css(".cal-col[data-day='#{tue}'] .cal-ev", text: "Roadmap review"))
+      |> assert_has(
+        filter(by_css(".cal-col[data-day='#{tue}'] .cal-ev"), has_text: "Roadmap review")
+      )
       |> drag_event("Roadmap review", tue, wed)
-      |> assert_has(css("#calendar-toast", text: "Moved to"))
-      |> assert_has(css(".cal-col[data-day='#{wed}'] .cal-ev", text: "Roadmap review"))
+      |> assert_has(filter(by_css("#calendar-toast"), has_text: "Moved to"))
+      |> assert_has(
+        filter(by_css(".cal-col[data-day='#{wed}'] .cal-ev"), has_text: "Roadmap review")
+      )
 
     assert_receive {:updated, ^uid}, 5_000
 
@@ -211,10 +224,20 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
     )
 
     session
-    |> click(css("#calendar-undo"))
-    |> assert_has(css("#calendar-toast", text: "Moved back to"))
-    |> assert_has(css(".cal-col[data-day='#{tue}'] .cal-ev", text: "Roadmap review"))
-    |> assert_has(css(".cal-col[data-day='#{wed}'] .cal-ev", text: "Roadmap review", count: 0))
+    |> click(by_css("#calendar-undo"))
+    |> assert_has(filter(by_css("#calendar-toast"), has_text: "Moved back to"))
+    |> assert_has(
+      filter(by_css(".cal-col[data-day='#{tue}'] .cal-ev"), has_text: "Roadmap review")
+    )
+    |> assert(
+      count(
+        filter(by_css(".cal-col[data-day='#{wed}'] .cal-ev"),
+          has_text: "Roadmap review",
+          visible: true
+        ),
+        0
+      )
+    )
 
     assert_receive {:updated, ^uid}, 5_000
 
@@ -223,7 +246,7 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
     )
   end
 
-  feature "the side panel renames an event", %{session: session} do
+  test "the side panel renames an event", %{session: session} do
     {session, _user, integration} = organiser(session)
     day = ahead(2)
     iso = Date.to_iso8601(day)
@@ -232,20 +255,20 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
 
     session
     |> open_calendar("?view=day&date=#{iso}")
-    |> click(css(".cal-col .cal-ev", text: "Original title"))
-    |> assert_has(css("#calendar-preview", text: "Original title"))
-    |> click(css("#calendar-preview-edit"))
-    |> assert_has(css("#calendar-panel"))
-    |> clear(css("#calendar-panel-title"))
-    |> fill_in(css("#calendar-panel-title"), with: "Renamed in browser")
-    |> send_keys([:enter])
-    |> assert_has(css(".cal-col .cal-ev", text: "Renamed in browser"))
+    |> click(filter(by_css(".cal-col .cal-ev"), has_text: "Original title"))
+    |> assert_has(filter(by_css("#calendar-preview"), has_text: "Original title"))
+    |> click(by_css("#calendar-preview-edit"))
+    |> assert_has(by_css("#calendar-panel"))
+    |> clear(by_css("#calendar-panel-title"))
+    |> fill(by_css("#calendar-panel-title"), "Renamed in browser")
+    |> Keyboard.press("Enter")
+    |> assert_has(filter(by_css(".cal-col .cal-ev"), has_text: "Renamed in browser"))
 
     assert_receive {:updated, ^uid}, 5_000
     eventually(fn -> assert Repo.reload!(row).summary == "Renamed in browser" end, timeout: 5_000)
   end
 
-  feature "a click on an all-day bar opens its preview and no +N list", %{session: session} do
+  test "a click on an all-day bar opens its preview and no +N list", %{session: session} do
     {session, _user, integration} = organiser(session)
     day = ahead(3)
     next = Date.add(day, 1)
@@ -265,12 +288,12 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
 
     session
     |> open_calendar("?view=week&date=#{Date.to_iso8601(day)}")
-    |> click(css(".cal-allday .cal-adbar", text: "Company holiday"))
-    |> assert_has(css("#calendar-preview", text: "Company holiday"))
-    |> refute_has(css(".cal-list"))
+    |> click(filter(by_css(".cal-allday .cal-adbar"), has_text: "Company holiday"))
+    |> assert_has(filter(by_css("#calendar-preview"), has_text: "Company holiday"))
+    |> refute_has(by_css(".cal-list"))
   end
 
-  feature "quick create opens a closed Saturday for booking, and Undo closes it again", %{
+  test "quick create opens a closed Saturday for booking, and Undo closes it again", %{
     session: session
   } do
     {session, _user, _integration} = organiser(session)
@@ -278,21 +301,27 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
 
     session
     |> open_calendar("?view=day&date=#{iso}")
-    |> refute_has(css(".cal-col[data-day='#{iso}'] .cal-bookable"))
+    |> refute_has(by_css(".cal-col[data-day='#{iso}'] .cal-bookable"))
     |> drag_to_create(iso)
-    |> assert_has(css("#calendar-quick-create"))
-    |> click(css("#calendar-quick-create [data-qc-kind='open']"))
-    |> assert_has(css("#calendar-quick-create [data-qc-kind='open'][aria-pressed='true']"))
-    |> click(css("#calendar-quick-create [data-qc-repeat='once']"))
-    |> click(css("#calendar-quick-create [data-qc-save]"))
-    |> assert_has(css("#calendar-toast", text: "Open for "))
-    |> assert_has(css(".cal-col[data-day='#{iso}'] .cal-bookable", minimum: 1))
-    |> click(css("#calendar-undo"))
-    |> assert_has(css("#calendar-toast", text: "put back."))
-    |> assert_has(css(".cal-col[data-day='#{iso}'] .cal-bookable", count: 0))
+    |> assert_has(by_css("#calendar-quick-create"))
+    |> click(by_css("#calendar-quick-create [data-qc-kind='open']"))
+    |> assert_has(by_css("#calendar-quick-create [data-qc-kind='open'][aria-pressed='true']"))
+    |> click(by_css("#calendar-quick-create [data-qc-repeat='once']"))
+    |> click(by_css("#calendar-quick-create [data-qc-save]"))
+    |> assert_has(filter(by_css("#calendar-toast"), has_text: "Open for "))
+    |> assert_has(
+      by_css(".cal-col[data-day='#{iso}'] .cal-bookable")
+      |> filter(visible: true)
+      |> first()
+    )
+    |> click(by_css("#calendar-undo"))
+    |> assert_has(filter(by_css("#calendar-toast"), has_text: "put back."))
+    |> assert(
+      count(filter(by_css(".cal-col[data-day='#{iso}'] .cal-bookable"), visible: true), 0)
+    )
   end
 
-  feature "a booking request opens to Accept, which confirms it", %{session: session} do
+  test "a booking request opens to Accept, which confirms it", %{session: session} do
     {session, user, _integration} = organiser(session)
 
     consultation =
@@ -330,37 +359,45 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
 
     session
     |> open_calendar("?view=day&date=#{Date.to_iso8601(tomorrow)}")
-    |> click(css(".cal-col .cal-ev", text: "Anna Kowalski"))
-    |> assert_has(css("#calendar-preview-accept"))
-    |> assert_has(css("#calendar-preview-decline"))
-    |> click(css("#calendar-preview-accept"))
-    |> assert_has(css("#app-flash-group", text: "Booking confirmed. The invitee has been told."))
-    |> assert_has(css("#calendar-preview-cancel"))
-    |> assert_has(css("#calendar-preview-accept", count: 0))
+    |> click(filter(by_css(".cal-col .cal-ev"), has_text: "Anna Kowalski"))
+    |> assert_has(by_css("#calendar-preview-accept"))
+    |> assert_has(by_css("#calendar-preview-decline"))
+    |> click(by_css("#calendar-preview-accept"))
+    |> assert_has(
+      filter(by_css("#app-flash-group"),
+        has_text: "Booking confirmed. The invitee has been told."
+      )
+    )
+    |> assert_has(by_css("#calendar-preview-cancel"))
+    |> refute_has(by_css("#calendar-preview-accept"))
 
     eventually(fn -> assert Repo.get!(MeetingSchema, held.id).status == "confirmed" end,
       timeout: 5_000
     )
   end
 
-  feature "the side panel makes a Tymeslot meeting with a guest", %{session: session} do
+  test "the side panel makes a Tymeslot meeting with a guest", %{session: session} do
     {session, user, _integration} = organiser(session)
     iso = Date.to_iso8601(ahead(2))
 
     session
     |> open_calendar("?view=day&date=#{iso}")
     |> drag_to_create(iso)
-    |> assert_has(css("#calendar-quick-create"))
-    |> click(css("#calendar-quick-create [data-qc-more]"))
-    |> assert_has(css("#calendar-panel-new-form"))
-    |> fill_in(css("#calendar-panel-new-title"), with: "Kick-off")
-    |> fill_in(css("[id^='calendar-panel-guest-email-']"), with: "guest@example.com")
-    |> click(css("#calendar-panel-guest-add"))
-    |> click(css("#calendar-panel-meeting-toggle"))
-    |> fill_in(css("#calendar-panel-meeting-guest-name"), with: "Ada Lovelace")
-    |> click(css("#calendar-panel-create"))
-    |> assert_has(css("#app-flash-group", text: "Meeting created and invitation sent"))
-    |> assert_has(css(".cal-col[data-day='#{iso}'] .cal-ev:not(.is-draft)", text: "Kick-off"))
+    |> assert_has(by_css("#calendar-quick-create"))
+    |> click(by_css("#calendar-quick-create [data-qc-more]"))
+    |> assert_has(by_css("#calendar-panel-new-form"))
+    |> fill(by_css("#calendar-panel-new-title"), "Kick-off")
+    |> fill(by_css("[id^='calendar-panel-guest-email-']"), "guest@example.com")
+    |> click(by_css("#calendar-panel-guest-add"))
+    |> click(by_css("#calendar-panel-meeting-toggle"))
+    |> fill(by_css("#calendar-panel-meeting-guest-name"), "Ada Lovelace")
+    |> click(by_css("#calendar-panel-create"))
+    |> assert_has(
+      filter(by_css("#app-flash-group"), has_text: "Meeting created and invitation sent")
+    )
+    |> assert_has(
+      filter(by_css(".cal-col[data-day='#{iso}'] .cal-ev:not(.is-draft)"), has_text: "Kick-off")
+    )
 
     eventually(
       fn ->

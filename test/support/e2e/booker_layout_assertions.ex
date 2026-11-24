@@ -9,10 +9,10 @@ defmodule TymeslotWeb.E2E.BookerLayoutAssertions do
   import ExUnit.Assertions
   import TymeslotWeb.E2EHelpers, only: [evaluate_script: 2]
 
-  # Sub-pixel rounding in the WebDriver bridge can show a measurement one px
-  # over the viewport even when the element fits. `E2EHelpers` carries its own
-  # copy for `assert_no_horizontal_overflow/2`: the tolerance is a property of
-  # the bridge, not of either module.
+  # Sub-pixel rounding can show a measurement one px over the viewport even
+  # when the element fits. `E2EHelpers` carries its own copy for
+  # `assert_no_horizontal_overflow/2`: the tolerance is a property of the
+  # browser, not of either module.
   @overflow_tolerance 1
 
   @doc """
@@ -26,7 +26,7 @@ defmodule TymeslotWeb.E2E.BookerLayoutAssertions do
   the booker came via the overview, but the row it lives in is what has to stay
   pinned, and both buttons share its vertical extent.
   """
-  @spec assert_actions_within_viewport(Wallaby.Session.t(), String.t()) :: Wallaby.Session.t()
+  @spec assert_actions_within_viewport(Fluffy.Session.t(), String.t()) :: Fluffy.Session.t()
   def assert_actions_within_viewport(session, context) do
     value =
       evaluate_script(session, """
@@ -48,13 +48,13 @@ defmodule TymeslotWeb.E2E.BookerLayoutAssertions do
   end
 
   @doc """
-  The document is no taller than the viewport (a couple of px of WebDriver
-  rounding tolerated).
+  The document is no taller than the viewport (a couple of px of rounding
+  tolerated).
 
   Regression guard for the "double overflow": a viewport-locked schedule step
   must scroll only inside the calendar, never the page on top of it.
   """
-  @spec assert_no_vertical_page_scroll(Wallaby.Session.t(), String.t()) :: Wallaby.Session.t()
+  @spec assert_no_vertical_page_scroll(Fluffy.Session.t(), String.t()) :: Fluffy.Session.t()
   def assert_no_vertical_page_scroll(session, context) do
     [scroll_height, inner_height] =
       evaluate_script(
@@ -80,7 +80,7 @@ defmodule TymeslotWeb.E2E.BookerLayoutAssertions do
   An embedded booker has one scroll region, the host page: an inner scroller
   keeps content out of sight inside an iframe that should have grown instead.
   """
-  @spec assert_no_inner_scroll_region(Wallaby.Session.t(), String.t()) :: Wallaby.Session.t()
+  @spec assert_no_inner_scroll_region(Fluffy.Session.t(), String.t()) :: Fluffy.Session.t()
   def assert_no_inner_scroll_region(session, context) do
     scrolling =
       evaluate_script(session, """
@@ -106,8 +106,8 @@ defmodule TymeslotWeb.E2E.BookerLayoutAssertions do
   scroll region of its own while it overflows: whatever scrolls it (an element
   of the card, or the page) scrolls the list too.
   """
-  @spec assert_calendar_scrolls_with_session_list(Wallaby.Session.t(), String.t()) ::
-          Wallaby.Session.t()
+  @spec assert_calendar_scrolls_with_session_list(Fluffy.Session.t(), String.t()) ::
+          Fluffy.Session.t()
   def assert_calendar_scrolls_with_session_list(session, context) do
     value =
       evaluate_script(session, """
@@ -144,8 +144,8 @@ defmodule TymeslotWeb.E2E.BookerLayoutAssertions do
   row stands in for the calendar's first day: it sits at the top of the picker,
   as that day does, and is there before the week's times load.
   """
-  @spec assert_no_actions_calendar_overlap(Wallaby.Session.t(), String.t()) ::
-          Wallaby.Session.t()
+  @spec assert_no_actions_calendar_overlap(Fluffy.Session.t(), String.t()) ::
+          Fluffy.Session.t()
   def assert_no_actions_calendar_overlap(session, context) do
     overlap =
       evaluate_script(session, """
@@ -176,7 +176,7 @@ defmodule TymeslotWeb.E2E.BookerLayoutAssertions do
   the actions row's Next. Whichever of the two the page renders is the one
   measured.
   """
-  @spec assert_cta_reachable(Wallaby.Session.t(), String.t()) :: Wallaby.Session.t()
+  @spec assert_cta_reachable(Fluffy.Session.t(), String.t()) :: Fluffy.Session.t()
   def assert_cta_reachable(session, context) do
     value =
       evaluate_script(session, """
@@ -204,7 +204,7 @@ defmodule TymeslotWeb.E2E.BookerLayoutAssertions do
   The first element matching `selector` lives inside the scrollable page (its
   document bottom within the scroll height), not clipped beyond it.
   """
-  @spec assert_reachable(Wallaby.Session.t(), String.t(), String.t()) :: Wallaby.Session.t()
+  @spec assert_reachable(Fluffy.Session.t(), String.t(), String.t()) :: Fluffy.Session.t()
   def assert_reachable(session, selector, context) do
     value =
       evaluate_script(session, """
@@ -231,8 +231,8 @@ defmodule TymeslotWeb.E2E.BookerLayoutAssertions do
   inside the viewport, not pushed past 100vh by the content area's centering
   padding.
   """
-  @spec assert_branding_footer_within_viewport(Wallaby.Session.t(), String.t()) ::
-          Wallaby.Session.t()
+  @spec assert_branding_footer_within_viewport(Fluffy.Session.t(), String.t()) ::
+          Fluffy.Session.t()
   def assert_branding_footer_within_viewport(session, context) do
     value =
       evaluate_script(session, """
@@ -255,7 +255,7 @@ defmodule TymeslotWeb.E2E.BookerLayoutAssertions do
   @doc """
   The booking form's name and email fields sit one above the other.
   """
-  @spec assert_name_email_stacked(Wallaby.Session.t(), String.t()) :: Wallaby.Session.t()
+  @spec assert_name_email_stacked(Fluffy.Session.t(), String.t()) :: Fluffy.Session.t()
   def assert_name_email_stacked(session, context) do
     positions =
       evaluate_script(session, """
@@ -281,7 +281,7 @@ defmodule TymeslotWeb.E2E.BookerLayoutAssertions do
   than the entry. The ticket body clips its overflow, so a squeezed entry
   loses its label silently.
   """
-  @spec assert_location_entry_unclipped(Wallaby.Session.t(), String.t()) :: Wallaby.Session.t()
+  @spec assert_location_entry_unclipped(Fluffy.Session.t(), String.t()) :: Fluffy.Session.t()
   def assert_location_entry_unclipped(session, context) do
     widths =
       evaluate_script(session, """

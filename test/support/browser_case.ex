@@ -1,22 +1,21 @@
 defmodule TymeslotWeb.BrowserCase do
   @moduledoc """
-  Test case for Wallaby-based E2E browser tests.
+  Test case for Fluffy-based E2E browser tests.
 
-  Wraps `Wallaby.Feature` with project-specific setup: sandbox sharing,
+  Uses `Playwright.Test` with project-specific setup: sandbox sharing,
   global Mox configuration, stateful component reset, and factory imports.
 
-  Tests use the `feature` macro (from `Wallaby.Feature`) instead of `test`.
-  The macro manages browser session lifecycle and injects `%{session: session}`.
+  Each test gets a Playwright browser session as `%{session: session}`.
 
   ## Usage
 
       use TymeslotWeb.BrowserCase
       @moduletag :e2e
 
-      feature "user can log in", %{session: session} do
+      test "user can log in", %{session: session} do
         session
         |> visit("/auth/login")
-        |> fill_in(Query.text_field("email"), with: "user@example.com")
+        |> fill(by_css("#email"), "user@example.com")
         ...
       end
   """
@@ -28,27 +27,32 @@ defmodule TymeslotWeb.BrowserCase do
 
   import Tymeslot.ConfigTestHelpers
 
-  using do
+  using opts do
     quote do
-      use Wallaby.Feature
+      use Playwright.Test, unquote(opts)
+      use Fluffy.Assert
 
+      import Fluffy
+      import Fluffy.Locator
+      import Fluffy.Playwright, only: [hover: 2, inner_text: 2, set_viewport_size: 2]
       import Tymeslot.Factory
       import TymeslotWeb.E2EHelpers
-      import Wallaby.Query
 
       # A domain sweep (`--only auth`) would otherwise run every browser test
-      # it reaches, failing them where chromedriver is not running; see
+      # it reaches, failing them where the endpoint is not serving; see
       # `Tymeslot.Test.SuiteConfig.unless_included/1`.
       @moduletag skip: Tymeslot.Test.SuiteConfig.unless_included(:e2e)
+
+      setup do
+        %{session: start_session(:playwright)}
+      end
     end
   end
 
   setup tags do
-    # Do NOT call DataCase.setup_sandbox here — Wallaby.Feature handles sandbox
-    # checkout itself (via otp_app + ecto_repos config) and passes the metadata
-    # to the browser session. A double checkout would split the sandbox: factory
-    # data would land in one connection while Phoenix.Ecto.SQL.Sandbox routes the
-    # server to a different one, making inserted rows invisible to browser requests.
+    # Fluffy passes the sandbox metadata to the browser session (via the
+    # ecto_repos config), so browser requests share this owner's connection.
+    DataCase.setup_sandbox(tags)
     DataCase.reset_stateful_components(tags)
 
     # Force-disable legal agreements for Core E2E tests. A downstream overlay
