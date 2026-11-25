@@ -4,6 +4,7 @@ defmodule Tymeslot.PaymentsTest do
   @moduletag :payments
 
   import Ecto.Query, only: [from: 2]
+  import Mox, only: [verify_on_exit!: 1]
 
   alias Tymeslot.Factory
   alias Tymeslot.Payments
@@ -12,6 +13,8 @@ defmodule Tymeslot.PaymentsTest do
   alias Tymeslot.Repo
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
+
+  setup :verify_on_exit!
 
   describe "initiate_subscription/7" do
     test "successfully initiates subscription" do
