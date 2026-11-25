@@ -66,13 +66,14 @@ defmodule TymeslotWeb.E2E.UploadsTest do
 
     feature "a file that is not an image is refused and nothing is stored", %{session: session} do
       {session, user} = log_in_via_browser(session)
-      text_file = temp_file!("notes.txt", "not an image")
 
       session
       |> visit("/dashboard/settings")
       |> wait_for_live()
       |> assert_has(css(@avatar_img))
-      |> attach_file(css(@avatar_input, visible: false), path: text_file)
+      |> attach_file(css(@avatar_input, visible: false),
+        path: MediaFixtures.path("not_an_image.txt")
+      )
       |> assert_has(css("#avatar-upload-container", text: "Not accepted"))
 
       assert Profiles.get_profile(user.id).avatar == nil
@@ -171,12 +172,11 @@ defmodule TymeslotWeb.E2E.UploadsTest do
 
     feature "a file the browser cannot read as an image is refused", %{session: session} do
       {session, _admin} = log_in_via_browser(session, %{is_admin: true})
-      text_file = temp_file!("logo.png", "not an image")
 
       session
       |> visit("/admin/email")
       |> wait_for_live()
-      |> attach_file(css("#email-logo-picker"), path: text_file)
+      |> attach_file(css("#email-logo-picker"), path: MediaFixtures.path("not_an_image.png"))
       |> assert_has(
         css("#app-flash-group-error", text: "That image could not be read. Try a PNG or JPEG.")
       )
@@ -222,20 +222,5 @@ defmodule TymeslotWeb.E2E.UploadsTest do
       timeout: 5_000,
       message: "#{selector} never loaded its image"
     )
-  end
-
-  defp temp_file!(name, contents) do
-    dir =
-      Path.join(
-        System.tmp_dir!(),
-        "tymeslot_e2e_upload_src_#{System.unique_integer([:positive])}"
-      )
-
-    File.mkdir_p!(dir)
-    on_exit(fn -> File.rm_rf(dir) end)
-
-    path = Path.join(dir, name)
-    File.write!(path, contents)
-    path
   end
 end

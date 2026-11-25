@@ -18,7 +18,13 @@ defmodule Tymeslot.Test.MediaFixtures do
       and XMP;
     * `gps.mp4`: `©xyz`, 3GPP `loci` and Apple keyed location, a title, and
       creation times in the movie, track and media headers;
-    * `gps.webm`: location, title and device tags, and `DateUTC`.
+    * `gps.webm`: location, title and device tags, and `DateUTC`;
+    * `not_an_image.txt`, `not_an_image.png`: a line of plain text, one with
+      an extension no image picker accepts and one with an image's.
+
+  Browser tests attach files from here rather than from the system temporary
+  directory, which a sandboxed browser (Chromium installed as a snap) sees a
+  private copy of, so a file written there never reaches the page.
   """
 
   alias ExUnit.Callbacks
