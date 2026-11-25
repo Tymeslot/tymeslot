@@ -655,8 +655,7 @@ config :tymeslot,
 # Data retention windows for the cross-domain pruning worker
 # (Tymeslot.Workers.DataRetentionWorker), read via Application.compile_env. Because
 # compile_env requires identical compile-time and runtime values, this key must
-# have a single owner — keep only retention here. An external overlay that adds a
-# dunning schedule must use its own separate config key, never extend :payments.
+# have a single owner — keep only retention here.
 config :tymeslot, :payments,
   retention: [
     outgoing_webhook_days: 60,
