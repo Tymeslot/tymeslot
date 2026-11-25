@@ -573,10 +573,5 @@ msgstr "Stripe відхилив це повернення коштів. Пере
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Already refunded: %{refunded}, plus %{lost} lost in a dispute"
-msgstr "Уже повернено: %{refunded}, ще %{lost} втрачено внаслідок спору"
-
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Already refunded: nothing; %{lost} lost in a dispute"
-msgstr "Уже повернено: нічого; %{lost} втрачено внаслідок спору"
+msgid "Lost in a dispute:"
+msgstr "Втрачено внаслідок спору:"

@@ -569,10 +569,5 @@ msgstr "Stripe rechazó este reembolso. Revisa el pago en tu panel de Stripe."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Already refunded: %{refunded}, plus %{lost} lost in a dispute"
-msgstr "Ya reembolsado: %{refunded}, más %{lost} perdidos en una disputa"
-
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Already refunded: nothing; %{lost} lost in a dispute"
-msgstr "Ya reembolsado: nada; %{lost} perdidos en una disputa"
+msgid "Lost in a dispute:"
+msgstr "Perdido en una disputa:"

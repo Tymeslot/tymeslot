@@ -569,10 +569,5 @@ msgstr "Stripe hat diese Rückerstattung abgelehnt. Prüfen Sie die Zahlung in I
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Already refunded: %{refunded}, plus %{lost} lost in a dispute"
-msgstr "Bereits erstattet: %{refunded}, dazu %{lost} durch eine Anfechtung verloren"
-
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Already refunded: nothing; %{lost} lost in a dispute"
-msgstr "Bereits erstattet: nichts; %{lost} durch eine Anfechtung verloren"
+msgid "Lost in a dispute:"
+msgstr "Durch Anfechtung verloren:"

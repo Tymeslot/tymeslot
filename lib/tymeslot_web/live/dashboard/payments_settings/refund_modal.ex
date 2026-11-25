@@ -164,11 +164,15 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
         {dgettext("dashboard_payments", "Original charge:")}
         <strong>{format_amount(@payment.amount_cents, @payment.currency)}</strong>
       </p>
-      <.already_refunded
-        refunded={MeetingPayments.stripe_refunded_cents(@payment)}
-        lost={@payment.disputed_lost_cents}
-        currency={@payment.currency}
-      />
+      <p>
+        {dgettext("dashboard_payments", "Already refunded:")}
+        <strong>{format_amount(MeetingPayments.stripe_refunded_cents(@payment), @payment.currency)}</strong>
+      </p>
+      <%!-- Money a lost dispute took back is not a refund, so it gets its own line. --%>
+      <p :if={@payment.disputed_lost_cents > 0}>
+        {dgettext("dashboard_payments", "Lost in a dispute:")}
+        <strong>{format_amount(@payment.disputed_lost_cents, @payment.currency)}</strong>
+      </p>
       <p :if={@pending > 0} id="refund-pending">
         {dgettext("dashboard_payments", "%{amount} being processed",
           amount: format_amount(@pending, @payment.currency)
@@ -179,41 +183,6 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
         <strong>{format_amount(@remaining, @payment.currency)}</strong>
       </p>
     </div>
-    """
-  end
-
-  attr :refunded, :integer, required: true
-  attr :lost, :integer, required: true
-  attr :currency, :string, required: true
-
-  # The refunds made, and apart from them what a lost dispute took back.
-  defp already_refunded(%{lost: 0} = assigns) do
-    ~H"""
-    <p>
-      {dgettext("dashboard_payments", "Already refunded:")}
-      <strong>{format_amount(@refunded, @currency)}</strong>
-    </p>
-    """
-  end
-
-  defp already_refunded(%{refunded: 0} = assigns) do
-    ~H"""
-    <p>
-      {dgettext("dashboard_payments", "Already refunded: nothing; %{lost} lost in a dispute",
-        lost: format_amount(@lost, @currency)
-      )}
-    </p>
-    """
-  end
-
-  defp already_refunded(assigns) do
-    ~H"""
-    <p>
-      {dgettext("dashboard_payments", "Already refunded: %{refunded}, plus %{lost} lost in a dispute",
-        refunded: format_amount(@refunded, @currency),
-        lost: format_amount(@lost, @currency)
-      )}
-    </p>
     """
   end
 end

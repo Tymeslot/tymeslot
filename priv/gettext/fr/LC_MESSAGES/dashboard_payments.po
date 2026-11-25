@@ -569,10 +569,5 @@ msgstr "Stripe a refusé ce remboursement. Vérifiez le paiement dans votre tabl
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Already refunded: %{refunded}, plus %{lost} lost in a dispute"
-msgstr "Déjà remboursé : %{refunded}, plus %{lost} perdus lors d’un litige"
-
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Already refunded: nothing; %{lost} lost in a dispute"
-msgstr "Déjà remboursé : rien ; %{lost} perdus lors d’un litige"
+msgid "Lost in a dispute:"
+msgstr "Perdu lors d’un litige :"

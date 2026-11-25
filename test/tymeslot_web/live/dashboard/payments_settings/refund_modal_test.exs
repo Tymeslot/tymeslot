@@ -97,8 +97,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModalTest do
           )
         )
 
-      assert html =~ "Already refunded: €40.00, plus €60.00 lost in a dispute"
-      refute html =~ ~r/Already refunded:\s*<strong>/
+      assert html =~ ~r/<p>\s*Already refunded:\s*<strong>€40.00<\/strong>\s*<\/p>/
+      assert html =~ ~r/<p>\s*Lost in a dispute:\s*<strong>€60.00<\/strong>\s*<\/p>/
       assert html =~ ~r/Remaining refundable:\s*<strong>€0.00<\/strong>/
     end
 
@@ -112,14 +112,16 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModalTest do
           )
         )
 
-      assert html =~ "Already refunded: €100.00, plus €100.00 lost in a dispute"
+      assert html =~ ~r/Already refunded:\s*<strong>€100.00<\/strong>/
+      assert html =~ ~r/Lost in a dispute:\s*<strong>€100.00<\/strong>/
       assert html =~ ~r/Remaining refundable:\s*<strong>€0.00<\/strong>/
     end
 
     test "the refund dialog says when only the dispute took money back" do
       html = render_modal(payment(refunded_amount_cents: 6_000, disputed_lost_cents: 6_000))
 
-      assert html =~ "Already refunded: nothing; €60.00 lost in a dispute"
+      assert html =~ ~r/Already refunded:\s*<strong>€0.00<\/strong>/
+      assert html =~ ~r/Lost in a dispute:\s*<strong>€60.00<\/strong>/
     end
 
     test "the refund dialog wording is unchanged without a dispute" do

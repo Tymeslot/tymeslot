@@ -573,10 +573,5 @@ msgstr "Stripe toto vrácení platby odmítl. Zkontrolujte platbu na nástěnce 
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Already refunded: %{refunded}, plus %{lost} lost in a dispute"
-msgstr "Již vráceno: %{refunded}, navíc %{lost} strženo po prohraném sporu"
-
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Already refunded: nothing; %{lost} lost in a dispute"
-msgstr "Již vráceno: nic; %{lost} strženo po prohraném sporu"
+msgid "Lost in a dispute:"
+msgstr "Strženo po prohraném sporu:"
