@@ -509,8 +509,9 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       state = started_state(user)
       test_pid = self()
 
-      # Waits out the second so that a stamp taken after the exchange would
-      # differ from the one taken before it.
+      # Waits out the second so that a stamp taken after the exchange is
+      # later than `started`. A stamp taken before it may fall in the
+      # previous second, so the assertion is "not later", not equality.
       expect(StripeAdapterMock, :exchange_oauth_code, fn "code_fr" ->
         started = DateTime.utc_now(:second)
         send(test_pid, {:exchange_started, started})
@@ -523,7 +524,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       assert {:ok, account} = ConnectAccounts.complete_oauth_callback(user, "code_fr", state)
 
       assert_received {:exchange_started, started}
-      assert account.oauth_connected_at == started
+      assert DateTime.compare(account.oauth_connected_at, started) != :gt
     end
 
     defp wait_until_after(second) do
