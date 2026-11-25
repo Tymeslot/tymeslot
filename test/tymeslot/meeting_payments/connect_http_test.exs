@@ -202,8 +202,9 @@ defmodule Tymeslot.MeetingPayments.ConnectHttpTest do
           stripe_charge_id: "ch_test1"
         )
 
-      # The charge's total also holds a 500 refund made outside Tymeslot, so
-      # the recorded total is Stripe's 1500, not this refund's 1000.
+      # The charge's total also holds a 500 refund made outside Tymeslot,
+      # which its own report records: this refund raises the total by its
+      # 1000 only.
       StripeStub.expect(
         :create_refund,
         StripeFixtures.object("refund_with_charge", %{
@@ -214,7 +215,7 @@ defmodule Tymeslot.MeetingPayments.ConnectHttpTest do
 
       assert {:ok, refund} = MeetingPayments.refund_now(payment, 1000, :host)
 
-      assert %{refunded_amount_cents: 1500, status: :partially_refunded} =
+      assert %{refunded_amount_cents: 1000, status: :partially_refunded} =
                BookingPaymentQueries.get(payment.id)
 
       assert [%{method: :post, path: "/v1/refunds", form: form, headers: headers}] =

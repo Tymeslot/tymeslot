@@ -66,6 +66,30 @@ defmodule Tymeslot.MeetingPayments.RefundedTotal do
       )
 
   @doc """
+  The figures once one refund of `amount_cents` is recorded as made, Stripe
+  reporting `stripe_total` refunded on its charge: the refunds raised by
+  the amount, but not past Stripe's total, and never lowered.
+
+  Stripe's total alone would do but for one case: a total read before a
+  refund failed, whose failure was taken off since (`with_refund_failed/2`),
+  still counts that refund, and raising the refunds to it would count it
+  again for good. The amount bounds the rise, and the total stops a refund
+  already counted (by a `charge.refunded` total that holds it) from being
+  counted twice. A total holding refunds not recorded yet is reached by
+  their own reports.
+  """
+  @spec with_refund_made(BookingPaymentSchema.t(), non_neg_integer(), non_neg_integer()) ::
+          figures()
+  def with_refund_made(%{stripe_refunded_cents: refunds} = payment, stripe_total, amount_cents)
+      when is_integer(stripe_total) and is_integer(amount_cents),
+      do:
+        figures(
+          payment,
+          max(refunds, min(stripe_total, refunds + amount_cents)),
+          payment.disputed_lost_cents
+        )
+
+  @doc """
   The figures once a recorded refund of `amount_cents` is reported failed
   at Stripe, which gives the money back to the host. The only report of
   Stripe's that lowers the refunds; the dispute's part is kept.

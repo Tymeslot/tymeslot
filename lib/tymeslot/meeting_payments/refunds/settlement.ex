@@ -43,13 +43,11 @@ defmodule Tymeslot.MeetingPayments.Refunds.Settlement do
   @doc """
   Records `refund` as made at Stripe as `stripe_refund`, in one short
   transaction under its payment's row lock: the refund is settled
-  `succeeded`, the payment's refunds made raised to Stripe's total for
-  the charge (and its refunded total with them), and the attendee's email
-  enqueued. `stripe_refund` must
-  carry its charge expanded (`"charge"` as a map with `"amount_refunded"`):
-  Stripe's total counts the refund once however often it is reported,
-  where adding its amount would count it again on top of a total that
-  already holds it. Without it nothing is recorded and
+  `succeeded`, the payment's refunds made raised by its amount, up to
+  Stripe's total for the charge (`RefundedTotal.with_refund_made/3`), its
+  refunded total with them, and the attendee's email enqueued.
+  `stripe_refund` must carry its charge expanded (`"charge"` as a map with
+  `"amount_refunded"`), or nothing is recorded and
   `{:error, :charge_not_expanded}` is returned.
 
   A refund settled `failed` is settled again, since money Stripe moved
@@ -77,6 +75,7 @@ defmodule Tymeslot.MeetingPayments.Refunds.Settlement do
                record_refunded(
                  locked,
                  charge_total,
+                 refund.amount_cents,
                  Map.fetch!(@status_change_reasons, refund.source)
                ) do
           enqueue_refund_email(locked)
@@ -184,8 +183,8 @@ defmodule Tymeslot.MeetingPayments.Refunds.Settlement do
   Records `stripe_refund`, made of `payment` outside Tymeslot (in the
   Stripe dashboard), as a succeeded `:external` refund, or nothing when it
   is already recorded. In one transaction under the payment's row lock the
-  refunds made are raised to Stripe's total for the charge, as for
-  `settle_succeeded/2`, so a later failure of the refund
+  refunds made are raised by its amount, up to Stripe's total for the
+  charge, as for `settle_succeeded/2`, so a later failure of the refund
   (`fail_after_success/2`) takes off money that was counted. Nobody is
   emailed. `stripe_refund` must carry its charge expanded, or nothing is
   recorded and `{:error, :charge_not_expanded}` is returned.
@@ -205,7 +204,8 @@ defmodule Tymeslot.MeetingPayments.Refunds.Settlement do
       Repo.transaction(fn ->
         with {:ok, locked} <- BookingPaymentQueries.get_for_update(payment_id),
              {:ok, %RefundSchema{} = recorded} <- RefundQueries.insert_external(changeset),
-             {:ok, _updated} <- record_refunded(locked, charge_total, :external_refund) do
+             {:ok, _updated} <-
+               record_refunded(locked, charge_total, recorded.amount_cents, :external_refund) do
           recorded
         else
           {:ok, nil} -> nil
@@ -359,13 +359,17 @@ defmodule Tymeslot.MeetingPayments.Refunds.Settlement do
     end
   end
 
-  # Records a refund Stripe made of the `locked` payment, its charge
-  # showing `charge_total` refunded: the refunds made, never below those
-  # already recorded, with the refunded total and the status that follow
-  # (`RefundedTotal.with_stripe_refunded/2`, under which an open dispute
-  # stands).
-  defp record_refunded(locked, charge_total, reason),
-    do: write_figures(locked, RefundedTotal.with_stripe_refunded(locked, charge_total), reason)
+  # Records a refund of `amount_cents` Stripe made of the `locked` payment,
+  # its charge showing `charge_total` refunded, with the refunded total and
+  # the status that follow (`RefundedTotal.with_refund_made/3`, under which
+  # an open dispute stands).
+  defp record_refunded(locked, charge_total, amount_cents, reason),
+    do:
+      write_figures(
+        locked,
+        RefundedTotal.with_refund_made(locked, charge_total, amount_cents),
+        reason
+      )
 
   defp take_off(locked, amount_cents),
     do:

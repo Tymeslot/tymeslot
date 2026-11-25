@@ -64,6 +64,41 @@ defmodule Tymeslot.MeetingPayments.RefundedTotalTest do
     end
   end
 
+  describe "with_refund_made/3" do
+    test "raises the refunds by the refund's amount when Stripe's total holds it" do
+      payment = paid(stripe_refunded_cents: 2_000, disputed_lost_cents: 3_000)
+
+      assert RefundedTotal.with_refund_made(payment, 4_000, 2_000) == %{
+               stripe_refunded_cents: 4_000,
+               disputed_lost_cents: 3_000,
+               refunded_amount_cents: 7_000,
+               status: :partially_refunded
+             }
+    end
+
+    test "does not count again a failed refund a stale total still holds" do
+      # 3_000 was taken off when it failed; the total was read before that.
+      payment = paid(stripe_refunded_cents: 0)
+
+      assert %{stripe_refunded_cents: 2_000, refunded_amount_cents: 2_000} =
+               RefundedTotal.with_refund_made(payment, 5_000, 2_000)
+    end
+
+    test "does not count twice a refund a recorded total already holds" do
+      payment = paid(stripe_refunded_cents: 4_000)
+
+      assert %{stripe_refunded_cents: 4_000} =
+               RefundedTotal.with_refund_made(payment, 4_000, 2_000)
+    end
+
+    test "never lowers the refunds already recorded" do
+      payment = paid(stripe_refunded_cents: 5_000)
+
+      assert %{stripe_refunded_cents: 5_000} =
+               RefundedTotal.with_refund_made(payment, 1_000, 1_000)
+    end
+  end
+
   describe "with_refund_failed/2" do
     test "with_refund_failed lowers the refunds and keeps the dispute share" do
       payment = paid(stripe_refunded_cents: 5_000, disputed_lost_cents: 2_000)

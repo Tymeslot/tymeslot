@@ -251,6 +251,40 @@ defmodule Tymeslot.MeetingPayments.Webhooks.RefundUpdatedTest do
     refute_received {:send_alert, :refund_failure_reversed, _alert}
   end
 
+  # Refund B's answer shows the charge's total from before refund A
+  # failed, and arrives after refund.updated took A off.
+  test "a refund whose answer predates another's failure does not count that one again" do
+    payment =
+      refunded_payment(
+        refunded_amount_cents: 2_000,
+        stripe_refunded_cents: 2_000,
+        status: :partially_refunded
+      )
+
+    refund_a =
+      insert(:booking_payment_refund,
+        booking_payment: payment,
+        amount_cents: 2_000,
+        status: :succeeded,
+        stripe_refund_id: "re_UPDATED",
+        settled_at: DateTime.utc_now(:second)
+      )
+
+    refund_b = insert(:booking_payment_refund, booking_payment: payment, amount_cents: 1_000)
+
+    StripeStub.expect(:create_refund, fn request ->
+      assert :ok = deliver(stripe_refund(refund_a, "failed"), 1_000)
+      StripeStubResponses.refund(request, "re_B", 2_000)
+    end)
+
+    assert {:ok, %{status: :succeeded}} = Refunds.execute(refund_b, [])
+
+    assert %{status: :failed} = RefundQueries.get(refund_a.id)
+
+    assert %{stripe_refunded_cents: 1_000, refunded_amount_cents: 1_000} =
+             Repo.reload!(payment)
+  end
+
   describe "a refund Stripe will not read again" do
     test "a transient read retries the event" do
       payment = refunded_payment()
