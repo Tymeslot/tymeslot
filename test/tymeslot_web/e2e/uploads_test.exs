@@ -1,9 +1,9 @@
 defmodule TymeslotWeb.E2E.UploadsTest do
   @moduledoc """
-  File uploads picked in a real browser: the profile avatar (an auto-upload
-  form under the `AutoUpload` hook) and the self-host admin's email logo,
-  which the `EmailLogoUpload` hook rasterises to a PNG in the browser before
-  uploading it.
+  File uploads picked in a real browser: the profile avatar and a theme's
+  background image (auto-upload forms, saved once the file arrives) and the
+  self-host admin's email logo, which the `EmailLogoUpload` hook rasterises to
+  a PNG in the browser before uploading it.
 
   Each test gets an upload root of its own (`Tymeslot.Test.UploadRoot`), so
   stored files land in a temporary directory that is removed afterwards, and
@@ -15,12 +15,14 @@ defmodule TymeslotWeb.E2E.UploadsTest do
   @moduletag :profiles
   @moduletag :emails
 
+  import ExUnit.CaptureLog
   import Tymeslot.TestHelpers.Eventually
 
   alias Tymeslot.AppSettings
   alias Tymeslot.Profiles
   alias Tymeslot.Test.MediaFixtures
   alias Tymeslot.Test.UploadRoot
+  alias Tymeslot.ThemeCustomizations
 
   @avatar_input "#avatar-upload-form input[type='file']"
   @avatar_img "#avatar-upload-section img"
@@ -75,6 +77,61 @@ defmodule TymeslotWeb.E2E.UploadsTest do
 
       assert Profiles.get_profile(user.id).avatar == nil
       assert avatar_src(session) =~ "data:"
+    end
+  end
+
+  describe "theme background image" do
+    feature "a picked image is saved once, without crashing the page", %{session: session} do
+      {session, user} = log_in_via_browser(session)
+      profile = Profiles.get_profile(user.id)
+
+      session =
+        session
+        |> visit("/dashboard/pages/customize/1")
+        |> wait_for_live()
+        |> click(css("button[phx-click='theme:set_browsing_type'][phx-value-type='image']"))
+
+      # A second save of the same finished upload calls into its stopped
+      # upload channel and crashes the LiveView after the file is stored, so
+      # the stored file alone cannot tell one save from two; the crash report
+      # can.
+      log =
+        capture_log(fn ->
+          session
+          |> attach_file(css("#theme-background-image-form input[type='file']", visible: false),
+            path: MediaFixtures.path("gps.png")
+          )
+          |> assert_has(
+            css("#app-flash-group-info", text: "Background image uploaded successfully")
+          )
+
+          # A round trip after the save: the LiveView handles events in order,
+          # so any second trigger of the save has been handled once this
+          # click's result shows.
+          session
+          |> click(css("button[phx-click='theme:set_browsing_type'][phx-value-type='gradient']"))
+          |> assert_has(
+            css(
+              "button[phx-click='theme:set_option'][phx-value-option='background'][phx-value-field='gradient']",
+              minimum: 1
+            )
+          )
+        end)
+
+      refute log =~ "terminating"
+
+      stored =
+        eventually(
+          fn ->
+            ThemeCustomizations.get_by_profile_and_theme(profile.id, "1").settings[
+              "background_image_path"
+            ]
+          end,
+          timeout: 5_000
+        )
+
+      assert File.regular?(UploadRoot.path(stored))
+      assert File.ls!(Path.dirname(UploadRoot.path(stored))) == [Path.basename(stored)]
     end
   end
 

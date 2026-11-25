@@ -49,7 +49,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.LogoPanelTest d
     }
 
     view |> file_input(form, field, [entry]) |> render_upload(name)
-    assert_push_event(view, "upload-complete", %{})
+    # `render/1` pings the LiveView, so the save the progress callback queued has run.
+    render(view)
   end
 
   defp saved(profile), do: ThemeCustomizations.get_by_profile_and_theme(profile.id, @theme_id)

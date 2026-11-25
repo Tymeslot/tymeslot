@@ -30,7 +30,7 @@ defmodule TymeslotWeb.Hooks.RouteBundleHook do
   #
   # Bundles:
   # - "auth" -> Auth-specific hooks (PasswordToggle, RecaptchaV3, AuthVideo)
-  # - "dashboard" -> Dashboard hooks (AutoUpload, EmbedPreview, MeetingTypeSortable)
+  # - "dashboard" -> Dashboard hooks (EmbedPreview, MeetingTypeSortable)
   # - "public" -> Public booking hooks (loaded via scheduling_root layout directly)
   # - nil -> Core hooks only
   #

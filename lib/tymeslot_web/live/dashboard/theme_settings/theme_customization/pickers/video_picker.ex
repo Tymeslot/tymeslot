@@ -121,14 +121,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
       <div class="bg-tymeslot-50 p-8 rounded-token-4xl border-2 border-tymeslot-100 border-dashed">
         <form
           id="theme-background-video-form"
-          phx-submit="upload_asset"
           phx-change="upload_asset"
           phx-target={@myself}
-          data-auto-upload="true"
           class="flex flex-col items-center gap-6"
           novalidate
         >
-          <input type="hidden" name="asset_field" value="background_video_path" />
           <div class="w-full max-w-md">
             <%= if @uploads && @uploads[:background_video_path] do %>
               <div class="relative group/upload">
@@ -183,9 +180,6 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
                 </div>
               <% end %>
             <% end %>
-            <button type="submit" id="theme-video-submit-btn" class="hidden">
-              {dgettext("dashboard_appearance", "Upload Video")}
-            </button>
           </div>
 
           <p class="text-token-2xs font-black text-tymeslot-400 uppercase tracking-[0.2em]">

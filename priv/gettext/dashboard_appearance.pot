@@ -135,16 +135,6 @@ msgid "Too many upload attempts. Please wait a few minutes and try again."
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_upload.ex
-#, elixir-autogen, elixir-format
-msgid "Upload Image"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
-#, elixir-autogen, elixir-format
-msgid "Upload Video"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_upload.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Upload not available"

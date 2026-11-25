@@ -34,13 +34,9 @@ defmodule TymeslotWeb.Test.FixtureTheme.EmblemPanel do
         novalidate
         id="fixture-emblem-upload"
         phx-change="upload_asset"
-        phx-submit="upload_asset"
         phx-target={@myself}
-        data-auto-upload="true"
       >
-        <input type="hidden" name="asset_field" value="fixture_emblem_path" />
         <.live_file_input upload={@uploads[:fixture_emblem_path]} />
-        <button type="submit" class="hidden">Upload</button>
       </form>
     </div>
     """

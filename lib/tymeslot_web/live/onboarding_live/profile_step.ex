@@ -143,7 +143,7 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
       </.form>
 
       <%!-- Photo, optional --%>
-      <div id="onboarding-avatar-upload-group" class="onboarding-form-group" phx-hook="AutoUpload">
+      <div id="onboarding-avatar-upload-group" class="onboarding-form-group">
         <span class="label">{dgettext("onboarding_wizard", "Photo (optional)")}</span>
         <p class="onboarding-form-helper">
           {dgettext(
