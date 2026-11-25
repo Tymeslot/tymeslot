@@ -15,6 +15,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.RefundUpdatedTest do
   alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.MeetingPayments.RefundSchema
+  alias Tymeslot.MeetingPayments.Webhooks.ChargeRefunded
   alias Tymeslot.MeetingPayments.Webhooks.RefundUpdated
   alias Tymeslot.MeetingPayments.Webhooks.WebhookRegistry
   alias Tymeslot.Repo
@@ -310,6 +311,65 @@ defmodule Tymeslot.MeetingPayments.Webhooks.RefundUpdatedTest do
     end)
 
     assert {:ok, %{status: :succeeded}} = Refunds.execute(refund_b, [])
+
+    assert %{status: :failed} = RefundQueries.get(refund_a.id)
+
+    assert %{stripe_refunded_cents: 1_000, refunded_amount_cents: 1_000} =
+             Repo.reload!(payment)
+  end
+
+  # charge.refunded lists the charge's refunds while Stripe still counts
+  # refund A, and refund.updated takes A off before the total is written.
+  test "a charge total listed before another refund failed does not count that one again" do
+    payment =
+      refunded_payment(
+        refunded_amount_cents: 3_000,
+        stripe_refunded_cents: 3_000,
+        status: :partially_refunded
+      )
+
+    refund_a =
+      insert(:booking_payment_refund,
+        booking_payment: payment,
+        amount_cents: 2_000,
+        status: :succeeded,
+        stripe_refund_id: "re_UPDATED",
+        settled_at: DateTime.utc_now(:second)
+      )
+
+    refund_b =
+      insert(:booking_payment_refund,
+        booking_payment: payment,
+        amount_cents: 1_000,
+        status: :succeeded,
+        stripe_refund_id: "re_B",
+        settled_at: DateTime.utc_now(:second)
+      )
+
+    listed = fn refund, stripe_id ->
+      refund
+      |> stripe_refund("succeeded")
+      |> Map.put("id", stripe_id)
+      |> current(3_000)
+    end
+
+    StripeStub.expect(:list_refunds, fn _request ->
+      assert :ok = deliver(stripe_refund(refund_a, "failed"), 1_000)
+      StripeFixtures.list([listed.(refund_a, "re_UPDATED"), listed.(refund_b, "re_B")])
+    end)
+
+    charge =
+      StripeFixtures.object("charge", %{
+        "id" => "ch_UPDATED",
+        "amount" => 5_000,
+        "amount_refunded" => 3_000
+      })
+
+    assert :ok =
+             "charge.refunded"
+             |> StripeWebhookFixtures.connect_event(charge, @account)
+             |> Jason.decode!()
+             |> ChargeRefunded.handle()
 
     assert %{status: :failed} = RefundQueries.get(refund_a.id)
 

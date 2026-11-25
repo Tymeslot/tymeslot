@@ -16,10 +16,11 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefunded do
   The refunds are never lowered here, so a late or replayed event cannot
   undo a refund recorded since; only `refund.updated` takes a failed
   refund off.
-  Nor may a late event put one back: listed refunds give the charge's
-  current total, and an event's embedded refunds have those Stripe has
-  since reported ended taken off the event's total
-  (`Refunds.stale_committed_cents/2`).
+  Nor may a late report put one back: refunds Stripe has since reported
+  ended are taken off the reported total (`Refunds.stale_committed_cents/2`)
+  under the payment's row lock, so a refund failed between the report's
+  reading and the write is not counted again. Listed refunds are read before
+  the lock too, so the same holds for them.
   The reconcile runs first because the event id is recorded with the
   total: a redelivery after a failed reconcile repeats both, and one after
   success is a no-op.
@@ -76,7 +77,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefunded do
       payment ->
         with {:ok, refunds, charge_total} <- charge_refunds(event, object, payment),
              :ok <- Refunds.reconcile(payment, refunds) do
-          classify(update_payment(payment, event_id, charge_total))
+          classify(update_payment(payment, event_id, refunds, charge_total))
         else
           {:error, reason} -> {{:error, :retry_later, reason}, :error}
         end
@@ -85,17 +86,21 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefunded do
 
   defp do_handle(_other), do: {{:error, :permanent, :invalid_event}, :error}
 
-  # The charge's refunds and its refunded total. Each refund carries its
-  # charge, whose `amount_refunded` is the total a refund settled from it
-  # records (`Refunds.Settlement.settle_succeeded/2`): refunds embedded in
-  # the event are given the event's charge, its total less what Stripe has
-  # ended since, and listed ones are listed with theirs expanded, current.
+  # The charge's refunds and its refunded total as Stripe reported them.
+  # Each refund carries its charge, whose `amount_refunded` is the total a
+  # refund settled from it records (`Refunds.Settlement.settle_succeeded/2`):
+  # refunds embedded in the event are given the event's charge, its total
+  # less what Stripe has ended since, and listed ones are listed with theirs
+  # expanded.
   defp charge_refunds(_event, %{"refunds" => %{"data" => refunds}} = object, payment)
        when is_list(refunds) do
-    total =
-      max((object["amount_refunded"] || 0) - Refunds.stale_committed_cents(payment, refunds), 0)
+    total = event_total(object)
 
-    charge = object |> Map.delete("refunds") |> Map.put("amount_refunded", total)
+    charge =
+      object
+      |> Map.delete("refunds")
+      |> Map.put("amount_refunded", current_total(payment, refunds, total))
+
     {:ok, Enum.map(refunds, &Map.put(&1, "charge", charge)), total}
   end
 
@@ -127,14 +132,22 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefunded do
 
   defp event_total(object), do: object["amount_refunded"] || 0
 
+  # `total`, reported with `refunds`, less the refunds it counts that Stripe
+  # has reported ended since. Only refunds recorded as ended come off: a
+  # dashboard refund the charge total alone counts stays in it.
+  defp current_total(payment, refunds, total),
+    do: max(total - Refunds.stale_committed_cents(payment, refunds), 0)
+
   defp classify(:ok), do: {:ok, :ok}
   defp classify({:error, reason}), do: {{:error, :retry_later, reason}, :error}
 
   # Decided from the locked row (`LockedPayment`), so a concurrent refund
-  # or dispute handler cannot have its committed amount written over.
-  defp update_payment(payment, event_id, amount_refunded) do
+  # or dispute handler cannot have its committed amount written over, and
+  # a refund failed since `refunds` were read is already recorded as failed.
+  defp update_payment(payment, event_id, refunds, charge_total) do
     result =
       LockedPayment.run(payment, event_id, fn locked ->
+        amount_refunded = current_total(locked, refunds, charge_total)
         figures = RefundedTotal.with_stripe_refunded(locked, amount_refunded)
 
         case BookingPaymentQueries.update(locked, Map.put(figures, :last_event_id, event_id)) do
