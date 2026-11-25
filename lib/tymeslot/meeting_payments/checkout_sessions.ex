@@ -150,8 +150,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     theme_id = resolve_theme_id(host.id, meeting)
     unit_price_cents = checkout.unit_price_cents || meeting_type.price_cents
     amount_cents = unit_price_cents * checkout.quantity
-    bp_config = Application.get_env(:tymeslot, :payment_application_fee_bp, 0)
-    fee_cents = ApplicationFee.calculate(amount_cents, bp_config)
+    fee_cents = ApplicationFee.calculate(amount_cents, ApplicationFee.configured_bp())
 
     %{
       host: host,

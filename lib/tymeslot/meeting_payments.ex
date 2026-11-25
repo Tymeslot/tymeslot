@@ -35,6 +35,7 @@ defmodule Tymeslot.MeetingPayments do
   alias Tymeslot.Integrations.Stripe
   alias Tymeslot.Integrations.Stripe.Charges
   alias Tymeslot.MeetingPayments.AccountCurrency
+  alias Tymeslot.MeetingPayments.ApplicationFee
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.CheckoutOutcome
@@ -200,6 +201,13 @@ defmodule Tymeslot.MeetingPayments do
       _real -> true
     end
   end
+
+  @doc """
+  The platform fee charged on each payment at booking, in basis points
+  (100 bp = 1%). See `Tymeslot.MeetingPayments.ApplicationFee.configured_bp/0`.
+  """
+  @spec application_fee_bp() :: non_neg_integer()
+  defdelegate application_fee_bp(), to: ApplicationFee, as: :configured_bp
 
   @doc """
   Returns `true` if the user's Connect account has charges enabled, in a
