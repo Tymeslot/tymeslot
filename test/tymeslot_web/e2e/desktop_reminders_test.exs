@@ -191,8 +191,10 @@ defmodule TymeslotWeb.E2E.DesktopRemindersTest do
   } do
     {session, _user, integration} = organiser(session, %{desktop_reminders_enabled: true})
 
-    # Its ten-minute reminder came due half a minute ago.
-    soon = DateTime.add(DateTime.utc_now(:second), 570, :second)
+    # Its ten-minute reminder came due five seconds ago: the hook's first
+    # check looks back 90 seconds (`INITIAL_LOOKBACK_MS`), so the calendar
+    # has most of that to mount in.
+    soon = DateTime.add(DateTime.utc_now(:second), 595, :second)
     row = reminded(integration, "Design review", soon, 10)
     # Its reminder is hours off.
     reminded(integration, "Board meeting", DateTime.add(soon, 3, :hour), 10)
