@@ -79,19 +79,28 @@ defmodule TymeslotWeb.E2E.BookerLayoutAssertions do
 
   An embedded booker has one scroll region, the host page: an inner scroller
   keeps content out of sight inside an iframe that should have grown instead.
+
+  `:except` names, as a CSS selector, a region a theme scrolls on purpose
+  (Paper's three-column times, capped at the calendar's height).
   """
-  @spec assert_no_inner_scroll_region(Wallaby.Session.t(), String.t()) :: Wallaby.Session.t()
-  def assert_no_inner_scroll_region(session, context) do
+  @spec assert_no_inner_scroll_region(Wallaby.Session.t(), String.t(), keyword()) ::
+          Wallaby.Session.t()
+  def assert_no_inner_scroll_region(session, context, opts \\ []) do
     scrolling =
-      evaluate_script(session, """
-      return [...document.querySelectorAll("[data-booker-root] *")]
-        .filter((el) => {
-          const overflowY = getComputedStyle(el).overflowY;
-          return (overflowY === "auto" || overflowY === "scroll") &&
-            el.scrollHeight > el.clientHeight + 1;
-        })
-        .map((el) => `${el.className} (${el.clientHeight}px showing ${el.scrollHeight}px)`);
-      """)
+      evaluate_script(
+        session,
+        """
+        const except = #{Jason.encode!(Keyword.get(opts, :except))};
+        return [...document.querySelectorAll("[data-booker-root] *")]
+          .filter((el) => {
+            const overflowY = getComputedStyle(el).overflowY;
+            return (overflowY === "auto" || overflowY === "scroll") &&
+              el.scrollHeight > el.clientHeight + 1 &&
+              !(except && el.matches(except));
+          })
+          .map((el) => `${el.className} (${el.clientHeight}px showing ${el.scrollHeight}px)`);
+        """
+      )
 
     assert scrolling == [],
            "#{context}: the booker scrolls inside itself instead of growing the " <>
