@@ -91,12 +91,7 @@ defmodule TymeslotWeb.E2E.BookerSteps do
   """
   @spec click_first_free_date(Wallaby.Session.t()) :: Wallaby.Session.t()
   def click_first_free_date(session) do
-    session
-    |> find(css("[data-fact='date']:not([disabled])", count: :any))
-    |> List.first()
-    |> Element.click()
-
-    session
+    pick_first(session, "[data-fact='date']:not([disabled])")
   end
 
   @doc """
@@ -104,14 +99,7 @@ defmodule TymeslotWeb.E2E.BookerSteps do
   """
   @spec pick_first_free_slot(Wallaby.Session.t()) :: Wallaby.Session.t()
   def pick_first_free_slot(session) do
-    session
-    |> find(
-      css("[data-fact='slot']:not([disabled]), [data-fact='time']:not([disabled])", count: :any)
-    )
-    |> List.first()
-    |> Element.click()
-
-    session
+    pick_first(session, "[data-fact='slot']:not([disabled]), [data-fact='time']:not([disabled])")
   end
 
   @doc """
