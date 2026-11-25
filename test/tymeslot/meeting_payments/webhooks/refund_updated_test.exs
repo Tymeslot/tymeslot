@@ -251,6 +251,38 @@ defmodule Tymeslot.MeetingPayments.Webhooks.RefundUpdatedTest do
     refute_received {:send_alert, :refund_failure_reversed, _alert}
   end
 
+  test "a second Stripe refund made for one refund is reported, the refund left as it is" do
+    payment = refunded_payment(refunded_amount_cents: 5_000, stripe_refunded_cents: 5_000)
+    refund = succeeded_refund(payment)
+
+    second =
+      StripeFixtures.object("refund", %{
+        "id" => "re_SECOND",
+        "amount" => 5_000,
+        "charge" => "ch_UPDATED",
+        "status" => "succeeded",
+        "metadata" => %{"tymeslot_refund_id" => refund.id}
+      })
+
+    assert :ok = deliver(second, 5_000)
+
+    refund_id = refund.id
+
+    assert_received {:send_alert, :refund_duplicated,
+                     %{
+                       refund_id: ^refund_id,
+                       stripe_refund_id: "re_UPDATED",
+                       duplicate_stripe_refund_id: "re_SECOND",
+                       duplicate_amount_cents: 5_000
+                     }}
+
+    assert [%{id: ^refund_id, status: :succeeded, stripe_refund_id: "re_UPDATED"}] =
+             RefundQueries.list_for_payment(payment.id)
+
+    assert %{refunded_amount_cents: 5_000} = Repo.reload!(payment)
+    refute_enqueued(worker: SendBookingPaymentRefunded)
+  end
+
   # Refund B's answer shows the charge's total from before refund A
   # failed, and arrives after refund.updated took A off.
   test "a refund whose answer predates another's failure does not count that one again" do
