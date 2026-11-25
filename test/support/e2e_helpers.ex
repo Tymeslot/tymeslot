@@ -141,9 +141,10 @@ defmodule TymeslotWeb.E2EHelpers do
   which is why the document-level check worked for them.
 
   A clip or a scroller on an inner container is respected: an element inside one
-  is meant to be clipped or scrolled, and is skipped. The same declaration on
-  `body` or `html` is the page-level clamp this assertion exists to see through,
-  so the ancestor walk deliberately stops short of both. The dashboard's shell
+  (`overflow-x` of `hidden`, `clip`, `auto` or `scroll`) is meant to be clipped
+  or scrolled, and is skipped. The same declaration on `body` or `html` is the
+  page-level clamp this assertion exists to see through, so the ancestor walk
+  deliberately stops short of both. The dashboard's shell
   is looked through the same way: `#dashboard-root` and the main row are
   `overflow: hidden`, and the content column scrolls vertically, which computes
   its `overflow-x` to `auto` as well. Counting those as clips would skip every

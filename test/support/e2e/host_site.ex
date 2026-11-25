@@ -32,7 +32,7 @@ defmodule TymeslotWeb.E2E.HostSite do
     server =
       start_supervised!(
         {Bandit, plug: plug, ip: {127, 0, 0, 1}, port: 0, startup_log: false},
-        id: :host_site
+        id: {:host_site, make_ref()}
       )
 
     {:ok, {_ip, port}} = ThousandIsland.listener_info(server)

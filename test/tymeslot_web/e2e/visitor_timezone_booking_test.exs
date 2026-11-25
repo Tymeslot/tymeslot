@@ -133,13 +133,18 @@ defmodule TymeslotWeb.E2E.VisitorTimezoneBookingTest do
   # Shows `date`'s times: once the month grid has drawn its days, moves a
   # month on if the date is not in the month on screen (the page lands on the
   # first free day, which may be in the month before), then clicks the date
-  # and waits for it to be the chosen one.
+  # and waits for it to be the chosen one. The month on screen is read at
+  # once, its days having drawn: `has?/2` would wait out Wallaby's whole
+  # timeout before saying the date is not there.
   defp open_day(session, date) do
     day = "[data-fact='date'][data-value='#{date}']:not([data-alternate])"
     session = assert_has(session, css("[data-fact='date']:not([data-alternate])", minimum: 1))
 
+    on_screen? =
+      evaluate_script(session, "return document.querySelector(#{Jason.encode!(day)}) !== null;")
+
     session =
-      if has?(session, css(day)),
+      if on_screen?,
         do: session,
         else: click(session, css("[data-intent='later']:not([data-alternate])"))
 

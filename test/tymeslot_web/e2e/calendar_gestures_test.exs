@@ -97,7 +97,7 @@ defmodule TymeslotWeb.E2E.CalendarGesturesTest do
     )
   end
 
-  # A Tuesday a week or more ahead.
+  # The Tuesday of next week: two to eight days ahead.
   defp next_tuesday do
     base = Date.add(Date.utc_today(), 7)
     Date.add(base, 2 - Date.day_of_week(base))
