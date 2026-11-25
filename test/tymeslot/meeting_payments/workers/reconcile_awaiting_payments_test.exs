@@ -10,6 +10,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPaymentsTest do
 
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Repo
@@ -22,7 +23,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPaymentsTest do
         DateTime.utc_now() |> DateTime.add(-2, :hour) |> DateTime.truncate(:second)
       end)
 
-    meeting = insert(:meeting, status: :awaiting_payment)
+    meeting = insert(:meeting, Keyword.get(opts, :meeting, status: :awaiting_payment))
 
     bp =
       insert(:booking_payment,
@@ -132,6 +133,35 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPaymentsTest do
 
       assert log =~ "ReconcileAwaitingPayments handler failed"
       assert BookingPaymentQueries.get(bp.id).status == :pending
+    end
+
+    # The host cancelled the booking while its checkout was open, and the
+    # attendee paid all the same: the sweep records the payment and its
+    # refund once, and the row is off its list from then on.
+    test "settles a paid session of a cancelled booking once, then leaves it" do
+      {meeting, bp} =
+        insert_stale_pending(
+          session_id: "cs_CANCELLED_PAID",
+          meeting: [status: :cancelled, cancelled_at: DateTime.utc_now(:second)]
+        )
+
+      StripeStub.expect(
+        :retrieve_checkout_session,
+        paid_session("cs_CANCELLED_PAID", meeting, bp, "pi_CANCELLED_PAID")
+      )
+
+      assert {:ok, %{reconciled: 1}} = perform_job(ReconcileAwaitingPayments, %{})
+
+      assert %{status: :paid} = BookingPaymentQueries.get(bp.id)
+      assert [%{source: :late_payment, amount_cents: 5000}] = Repo.all(RefundSchema)
+      assert {:ok, %{status: :cancelled}} = MeetingQueries.get_meeting(meeting.id)
+
+      # No Stripe stub left: a second poll of the session fails the test.
+      assert {:ok, %{reconciled: 0, skipped: 0, errors: 0}} =
+               perform_job(ReconcileAwaitingPayments, %{})
+
+      assert [%{path: "/v1/checkout/sessions/cs_CANCELLED_PAID"}] =
+               StripeStub.requests(:retrieve_checkout_session)
     end
 
     test "leaves still-open sessions alone" do

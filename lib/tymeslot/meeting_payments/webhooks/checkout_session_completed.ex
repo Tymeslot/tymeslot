@@ -25,7 +25,10 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   A host whose account is pending deletion takes no booking: a checkout
   completed for one leaves the meeting expired and its payment refunded in
   full the same way. So is a payment whose meeting no longer exists,
-  because its host's account has been deleted since the checkout opened.
+  because its host's account has been deleted since the checkout opened,
+  and one whose booking was released before its payment was recorded (the
+  host cancelled it while its checkout was open, say): that booking stays
+  as it is, and is never reinstated the way an expired one can be.
 
   The booking is resolved through `PaymentLookup.find_for_session/1`, which
   ignores events from any connected account other than the one the booking
@@ -49,6 +52,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   alias Tymeslot.MeetingPayments.Webhooks.PaymentLookup
   alias Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutCompleted
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Payments.Behaviours.WebhookHandler
   alias Tymeslot.Repo
@@ -154,8 +158,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
       {:ok, {:refund_scheduled, paid, meeting}} ->
         after_late_refund_scheduled(paid, meeting, event_id)
 
-      {:ok, {:refused, paid, meeting}} ->
-        after_refusal(paid, meeting, event_id, object)
+      {:ok, {:refused, reason, paid, meeting}} ->
+        after_refusal(reason, paid, meeting, event_id, object)
 
       {:ok, outcome} when outcome in [:no_op, :idempotent_replay] ->
         :ok
@@ -196,7 +200,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
     :ok
   end
 
-  defp after_refusal(paid, nil, event_id, object) do
+  defp after_refusal(:meeting_missing, paid, nil, event_id, object) do
     Logger.warning(
       "checkout.session.completed: booking no longer exists, refund scheduled",
       payment_id: paid.id,
@@ -206,9 +210,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
     PaymentCompletion.backfill_charge_id(paid, object)
   end
 
-  defp after_refusal(paid, meeting, event_id, object) do
+  # `reason` is `:host_pending_deletion`, or `:released` for a booking
+  # released before its payment was recorded. The waiting attendee is told
+  # the booking will not go ahead.
+  defp after_refusal(reason, paid, meeting, event_id, object) do
     Logger.warning(
-      "checkout.session.completed: host account pending deletion, booking refused and refund scheduled",
+      "checkout.session.completed: booking refused and refund scheduled",
+      reason: reason,
       meeting_id: meeting.id,
       payment_id: paid.id,
       event_id: event_id
@@ -281,20 +289,21 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
       {:ok, {transition, paid, confirmed, pending}}
     else
       :no_op -> {:ok, :no_op}
-      {:refuse, :host_pending_deletion, meeting} -> refuse(payment, meeting, event_id, object)
+      {:refuse, reason, meeting} -> refuse(payment, meeting, event_id, object, reason)
       {:error, _reason} = error -> error
     end
   end
 
-  # The booking is not confirmed: the meeting is left (or put) `expired` and the
-  # payment, which truly was taken, is recorded paid with a refund of all of
-  # it, made by its job, which emails the attendee once Stripe has accepted
-  # it. No Stripe call is made here; see `refund_late_payment/3`.
-  defp refuse(payment, meeting, event_id, object) do
+  # The booking is not confirmed: the meeting is put `expired`, or left as it
+  # is when released already (cancelled, or expired), and the payment, which
+  # truly was taken, is recorded paid with a refund of all of it, made by its
+  # job, which emails the attendee once Stripe has accepted it. No Stripe
+  # call is made here; see `refund_late_payment/3`.
+  defp refuse(payment, meeting, event_id, object, reason) do
     with {:ok, paid} <- PaymentCompletion.mark_paid(payment, event_id, object),
-         {:ok, expired} <- expire(meeting),
+         {:ok, released} <- release(meeting),
          {:ok, _refund} <- Refunds.request_remaining_refund(paid, :late_payment) do
-      {:ok, {:refused, paid, expired}}
+      {:ok, {:refused, reason, paid, released}}
     end
   end
 
@@ -306,14 +315,17 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
        when status in [:pending, :failed] do
     with {:ok, paid} <- PaymentCompletion.mark_paid(payment, event_id, object),
          {:ok, _refund} <- Refunds.request_remaining_refund(paid, :late_payment) do
-      {:ok, {:refused, paid, nil}}
+      {:ok, {:refused, :meeting_missing, paid, nil}}
     end
   end
 
   defp refund_orphaned(_payment, _event_id, _object), do: {:ok, :no_op}
 
-  defp expire(%{status: :expired} = meeting), do: {:ok, meeting}
-  defp expire(meeting), do: MeetingQueries.update_meeting_status(meeting, %{status: :expired})
+  defp release(%{status: status} = meeting) do
+    if MeetingState.released_status?(status),
+      do: {:ok, meeting},
+      else: MeetingQueries.update_meeting_status(meeting, %{status: :expired})
+  end
 
   defp slot_checked(:recovered, :unchecked), do: {:error, :slot_unchecked}
   defp slot_checked(_transition, _slot), do: :ok
@@ -366,9 +378,19 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   #                payment was failed (the expired webhook, or a disconnect,
   #                ran first); re-confirmed only if the slot is still free,
   #                refunded otherwise (see `complete/3`)
-  #   :no_op     — meeting already in a non-recoverable terminal state; skip
+  #   :refuse    — any other released meeting (one cancelled while its checkout
+  #                was open) whose payment is not recorded yet (`paid_at` nil,
+  #                whether still pending, failed or already disputed); the
+  #                payment is refunded and the meeting left as it is, never
+  #                reinstated, so this is decided before any slot check
+  #   :no_op     — meeting already in a non-recoverable terminal state, or a
+  #                payment recorded already (a replay); skip
   defp check_transition(%{status: :awaiting_payment}, _payment), do: {:proceed, :advanced}
   defp check_transition(%{status: :expired}, %{status: :failed}), do: {:proceed, :recovered}
+
+  defp check_transition(%{status: status} = meeting, %{paid_at: nil}) do
+    if MeetingState.released_status?(status), do: {:refuse, :released, meeting}, else: :no_op
+  end
 
   defp check_transition(_meeting, _payment), do: :no_op
 
