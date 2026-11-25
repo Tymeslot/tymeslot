@@ -178,46 +178,12 @@ defmodule Tymeslot.MeetingPayments do
   end
 
   @doc """
-  Maps a Connect account (or `nil`) to its onboarding display state.
-
-  This is the single source of truth for "where is this account in the Stripe
-  Connect lifecycle?" — consumed both by the payments status banner
-  (`TymeslotWeb.Dashboard.PaymentsSettings.StatusCard`) and the integrations
-  hub summary. `nil` (no account) reads as `:not_connected`.
-
-  Two submitted states are distinct on purpose: `:incomplete` is onboarding
-  that was never submitted (Stripe stamps a brand-new account with
-  `requirements.past_due`, so `disabled_reason` must not be read until
-  `details_submitted` is true), while `:pending_review` is a submitted account
-  Stripe is still reviewing.
-
-  An account that is otherwise ready but carries a currency payments cannot
-  charge at all (`Currency.support/1` is `:unsupported`) reads as
-  `:unsupported_currency`, since it takes no payments until its host picks a
-  supported one.
+  Maps a Connect account (or `nil`) to its onboarding display state, the
+  single source of truth for where an account is in the Stripe Connect
+  lifecycle. See `ConnectAccounts.display_state/1`.
   """
-  @spec connect_display_state(map() | nil) ::
-          :not_connected
-          | :incomplete
-          | :pending_review
-          | :ready
-          | :unsupported_currency
-          | :restricted
-          | :deleted
-  def connect_display_state(nil), do: :not_connected
-  def connect_display_state(%{deleted_at: dt}) when is_struct(dt, DateTime), do: :deleted
-  def connect_display_state(%{details_submitted: true} = account), do: submitted_state(account)
-  def connect_display_state(_account), do: :incomplete
-
-  defp submitted_state(%{disabled_reason: reason}) when is_binary(reason), do: :restricted
-
-  defp submitted_state(%{charges_enabled: true, payouts_enabled: true} = account) do
-    if Currency.support(Map.get(account, :default_currency)) == :unsupported,
-      do: :unsupported_currency,
-      else: :ready
-  end
-
-  defp submitted_state(_account), do: :pending_review
+  @spec connect_display_state(map() | nil) :: ConnectAccounts.display_state()
+  defdelegate connect_display_state(account), to: ConnectAccounts, as: :display_state
 
   @doc """
   Returns `true` when the instance has a real Stripe platform API key
