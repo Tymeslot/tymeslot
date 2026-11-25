@@ -76,12 +76,12 @@ defmodule TymeslotWeb.E2E.ModalFocusTrapTest do
     |> visit("/dashboard/availability")
     |> wait_for_live()
     |> assert_has(css("#{@time_off_modal}[style*='display: none']", visible: :any))
-    |> click(css(@add_time_off, at: 0))
+    |> click(css(@add_time_off))
     |> assert_has(css("#{@time_off_modal}[style*='display: flex']"))
     |> assert_has(css("#{@time_off_modal} :focus"))
     |> send_keys([:escape])
     |> assert_has(css("#{@time_off_modal}[style*='display: none']", visible: :any))
-    |> assert_has(css("#{@add_time_off}:focus", visible: :any))
+    |> assert_has(css("#{@add_time_off}:focus"))
   end
 
   # Presses Shift+Tab until `selector` holds the focus, checking on the way

@@ -210,14 +210,19 @@ defmodule TymeslotWeb.E2E.BookerLayoutAssertions do
   end
 
   @doc """
-  The first element matching `selector` lives inside the scrollable page (its
-  document bottom within the scroll height), not clipped beyond it.
+  The first element matching `selector`, or with `last: true` the last, lives
+  inside the scrollable page (its document bottom within the scroll height),
+  not clipped beyond it. The last of a list is the one a short frame cuts off.
   """
-  @spec assert_reachable(Wallaby.Session.t(), String.t(), String.t()) :: Wallaby.Session.t()
-  def assert_reachable(session, selector, context) do
+  @spec assert_reachable(Wallaby.Session.t(), String.t(), String.t(), keyword()) ::
+          Wallaby.Session.t()
+  def assert_reachable(session, selector, context, opts \\ []) do
+    pick = if Keyword.get(opts, :last, false), do: "all[all.length - 1]", else: "all[0]"
+
     value =
       evaluate_script(session, """
-      const el = document.querySelector(#{Jason.encode!(selector)});
+      const all = document.querySelectorAll(#{Jason.encode!(selector)});
+      const el = #{pick};
       if (!el) return null;
       const r = el.getBoundingClientRect();
       return [Math.round(r.bottom + window.scrollY), r.height, document.documentElement.scrollHeight];

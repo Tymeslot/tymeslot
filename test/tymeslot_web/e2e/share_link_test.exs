@@ -17,6 +17,7 @@ defmodule TymeslotWeb.E2E.ShareLinkTest do
   @moduletag :e2e
   @moduletag :onboarding
 
+  import Tymeslot.TestHelpers.Eventually
   import TymeslotWeb.OnboardingTestHelpers, only: [stub_free_calendar: 0]
 
   alias Tymeslot.Onboarding
@@ -31,19 +32,13 @@ defmodule TymeslotWeb.E2E.ShareLinkTest do
     :ok
   end
 
-  feature "the message goes to the share sheet, then to a draft addressed to the first person",
-          %{session: session} do
+  feature "with no address typed, the message goes to the share sheet", %{session: session} do
     user = host_on_the_live_step()
-    url = "#{Endpoint.url()}/#{Profiles.get_profile(user.id).username}"
-    message = "Hi Ada, you can pick a time with me here: #{url}"
+    message = message_for(user, "Ada")
 
     session =
       session
-      |> log_in(user)
-      |> visit("/onboarding/ready")
-      |> wait_for_live()
-      |> assert_has(css(~s(#onboarding-finish[aria-disabled="true"])))
-      |> record_sharing()
+      |> open_live_step(user)
       |> fill_in(css("#onboarding-first-person-name"), with: "Ada")
       |> assert_has(css("#{@send}[data-share-text='#{message}']"))
       |> click(css(@send))
@@ -51,21 +46,57 @@ defmodule TymeslotWeb.E2E.ShareLinkTest do
       |> assert_has(css("#onboarding-finish:not([aria-disabled])"))
 
     assert recorded(session) == %{"shared" => [%{"text" => message}], "opened" => []}
+    eventually_shared(user)
+  end
 
-    # With an address typed, the draft goes to it even where a sheet exists.
-    session
-    |> fill_in(css("#onboarding-first-person-email"), with: "ada@example.com")
-    |> assert_has(css("#{@send}[data-share-to='ada@example.com']"))
-    |> click(css(@send))
-    |> assert_has(css(@kept, text: "Opened in your email app"))
+  feature "with an address typed, the draft goes to it even where a sheet exists",
+          %{session: session} do
+    user = host_on_the_live_step()
+    message = message_for(user, "Ada")
 
-    assert %{"opened" => [draft]} = recorded(session)
+    session =
+      session
+      |> open_live_step(user)
+      |> fill_in(css("#onboarding-first-person-name"), with: "Ada")
+      |> fill_in(css("#onboarding-first-person-email"), with: "ada@example.com")
+      |> assert_has(css("#{@send}[data-share-to='ada@example.com']"))
+      |> click(css(@send))
+      |> assert_has(css(@kept, text: "Opened in your email app"))
+      |> assert_has(css("#onboarding-finish:not([aria-disabled])"))
+
+    assert %{"shared" => [], "opened" => [draft]} = recorded(session)
 
     assert draft ==
              "mailto:ada@example.com?subject=Book%20a%20time%20with%20me&body=" <>
                URI.encode(message, &URI.char_unreserved?/1)
 
-    assert %DateTime{} = Profiles.get_profile(user.id).booking_link_first_shared_at
+    eventually_shared(user)
+  end
+
+  # Signs in a host who has not shared their link yet and opens the live step
+  # with the device's sharing recorded.
+  defp open_live_step(session, user) do
+    assert Profiles.get_profile(user.id).booking_link_first_shared_at == nil
+
+    session
+    |> log_in(user)
+    |> visit("/onboarding/ready")
+    |> wait_for_live()
+    |> assert_has(css(~s(#onboarding-finish[aria-disabled="true"])))
+    |> record_sharing()
+  end
+
+  defp message_for(user, name) do
+    url = "#{Endpoint.url()}/#{Profiles.get_profile(user.id).username}"
+    "Hi #{name}, you can pick a time with me here: #{url}"
+  end
+
+  defp eventually_shared(user) do
+    eventually(
+      fn -> match?(%DateTime{}, Profiles.get_profile(user.id).booking_link_first_shared_at) end,
+      timeout: 3_000,
+      message: "the share was never recorded as the booking link's first share"
+    )
   end
 
   # As the wizard leaves a host who has chosen a link, connected a calendar

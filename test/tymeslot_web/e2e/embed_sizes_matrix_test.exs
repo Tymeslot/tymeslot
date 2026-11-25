@@ -116,7 +116,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
           if theme.journey == :classic do
             assert_cta_reachable(acc, context)
           else
-            assert_reachable(acc, "[data-fact='length']", "first length at #{context}")
+            assert_reachable(acc, "[data-fact='length']", "last length at #{context}", last: true)
           end
         end)
     end
@@ -271,13 +271,15 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         |> assert_calendar_scrolls_with_session_list(context)
         |> then(fn acc ->
           # Paper and Folio have no Next: picking a time opens the details,
-          # so there is no actions row to reach.
+          # so there is no actions row to reach, and every date must be.
           if theme.journey == :classic do
             acc
             |> assert_has(css("[data-testid='schedule-actions']"))
             |> assert_cta_reachable(context)
           else
-            acc
+            assert_reachable(acc, "[data-testid='session-entry']", "last date at #{context}",
+              last: true
+            )
           end
         end)
         |> then(fn acc ->

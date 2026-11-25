@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentationTest do
         |> LazyHTML.query("code")
         |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
 
+      assert EventTypes.all() != []
       assert EventTypes.all() -- listed == []
 
       assert html =~ "Triggers once when you decline a series request"

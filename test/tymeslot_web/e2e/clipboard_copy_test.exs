@@ -30,6 +30,7 @@ defmodule TymeslotWeb.E2E.ClipboardCopyTest do
     {session, user} = log_in_via_browser(session)
     insert(:calendar_integration, user: user, is_active: true)
     %{username: username} = Profiles.get_profile(user.id)
+    refute_shared(user)
 
     session =
       session
@@ -49,6 +50,7 @@ defmodule TymeslotWeb.E2E.ClipboardCopyTest do
     {session, user} = log_in_via_browser(session)
     insert(:calendar_integration, user: user, is_active: true)
     %{username: username} = Profiles.get_profile(user.id)
+    refute_shared(user)
 
     copy = "button[phx-click='copy_code'][phx-value-type='inline']"
 
@@ -103,6 +105,11 @@ defmodule TymeslotWeb.E2E.ClipboardCopyTest do
   end
 
   defp lines(text), do: text |> String.split("\n") |> Enum.map(&String.trim/1)
+
+  # Nothing before the copy (signing in, the page's mount) stamps the first
+  # share, so the stamp afterwards is the copy's.
+  defp refute_shared(user),
+    do: assert(Profiles.get_profile(user.id).booking_link_first_shared_at == nil)
 
   defp eventually_shared(user) do
     eventually(

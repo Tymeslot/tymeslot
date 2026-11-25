@@ -77,6 +77,7 @@ defmodule TymeslotWeb.E2E.EmbedLoaderTest do
 
     # The wrapper leaves its 250px placeholder for the content's height...
     assert_wrapper_height(session, frame, wrapper, & &1)
+    assert wrapper_height(session, wrapper) != 250
 
     # ...grows with the content...
     set_content_min_height(session, frame, "1700px")
@@ -127,8 +128,11 @@ defmodule TymeslotWeb.E2E.EmbedLoaderTest do
     |> assert_has(css("[data-phx-main].phx-connected"))
     |> focus_default_frame()
 
+    # The overview starts shorter than the cap, so the frame first follows
+    # the content and only the 1700px content below meets the cap.
     cap = evaluate_script(session, "return window.innerHeight - 100;")
-    assert_wrapper_height(session, modal_frame, modal_wrapper, &min(&1, cap))
+    assert content_height(session, modal_frame) < cap
+    assert_wrapper_height(session, modal_frame, modal_wrapper, & &1)
 
     set_content_min_height(session, modal_frame, "1700px")
     assert_wrapper_height(session, modal_frame, modal_wrapper, fn _content -> cap end)
@@ -154,9 +158,10 @@ defmodule TymeslotWeb.E2E.EmbedLoaderTest do
     |> click(:left)
     |> assert_closed("book")
     # Shift+Tab from the dialog's first control wraps to its last, the
-    # booking frame, rather than escaping to the host page behind it.
+    # booking frame, rather than escaping to the host page behind it. The
+    # driver holds a modifier until it is pressed again, so Shift is let go.
     |> open_popup()
-    |> send_keys([:shift, :tab])
+    |> send_keys([:shift, :tab, :shift])
     |> assert_focus("modal-iframe")
     |> click(css("#tymeslot-modal [data-tymeslot-close]"))
     |> assert_closed("book")
@@ -220,18 +225,37 @@ defmodule TymeslotWeb.E2E.EmbedLoaderTest do
           %{session: session} do
     profile = create_embeddable_profile(["embedder.test"])
 
+    # The notice tells the embedder why only when it knows the parent origin
+    # the token vouched for; a broken token reaches the same notice without
+    # one, so the message is what shows the allowlist said no.
     site =
       HostSite.start!(%{
         "/" =>
-          HostSite.page(~s(<div id="tymeslot-booking" data-username="#{profile.username}"></div>))
+          HostSite.page("""
+          <script>
+            window.__messages = [];
+            window.addEventListener("message", (event) => window.__messages.push(event.data?.type));
+          </script>
+          <div id="tymeslot-booking" data-username="#{profile.username}"></div>
+          """)
       })
 
-    session
-    |> resize(@window)
-    |> visit(site <> "/")
-    |> focus_frame(css("#tymeslot-booking iframe[title='Booking Widget']"))
-    |> assert_has(css("h1", text: "This booking page can’t be embedded here"))
-    |> refute_has(css("[data-testid='duration-option']"))
+    session =
+      session
+      |> resize(@window)
+      |> visit(site <> "/")
+      |> focus_frame(css("#tymeslot-booking iframe[title='Booking Widget']"))
+      |> assert_has(css("h1", text: "This booking page can’t be embedded here"))
+      |> refute_has(css("[data-testid='duration-option']"))
+      |> focus_default_frame()
+
+    eventually(
+      fn ->
+        "tymeslot-embed-blocked" in evaluate_script(session, "return window.__messages;")
+      end,
+      timeout: 3_000,
+      message: "the notice never told the host page the embed was blocked"
+    )
   end
 
   defp resize(session, {width, height}), do: resize_window(session, width, height)
@@ -284,18 +308,23 @@ defmodule TymeslotWeb.E2E.EmbedLoaderTest do
   defp assert_wrapper_height(session, frame, wrapper, expected) do
     eventually(
       fn ->
-        content =
-          session
-          |> focus_frame(css(frame))
-          |> evaluate_script(@measure_content)
-
-        focus_default_frame(session)
-
+        content = content_height(session, frame)
         assert wrapper_height(session, wrapper) == expected.(content)
       end,
       timeout: 5_000,
       interval: 100
     )
+  end
+
+  # The framed content's height, as `iframe_embed.js` measures it.
+  defp content_height(session, frame) do
+    content =
+      session
+      |> focus_frame(css(frame))
+      |> evaluate_script(@measure_content)
+
+    focus_default_frame(session)
+    content
   end
 
   defp wrapper_height(session, wrapper) do
