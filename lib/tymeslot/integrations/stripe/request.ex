@@ -59,7 +59,8 @@ defmodule Tymeslot.Integrations.Stripe.Request do
   Options: `:api_key`, `:connect_account`, `:idempotency_key`, `:deadline_ms`,
   `:receive_timeout`, `:connect_timeout`. Raises `ArgumentError` for a path
   segment that is not a non-empty binary, for an unknown option, so a
-  misspelt option fails loudly instead of being ignored, and for a
+  misspelt option fails loudly instead of being ignored, for a timeout
+  that is not a positive integer of milliseconds, and for a
   `connect_timeout` that leaves no time inside `deadline_ms`.
   """
   @spec new(atom(), method(), [String.t()], map() | keyword(), keyword()) :: t()
@@ -68,12 +69,19 @@ defmodule Tymeslot.Integrations.Stripe.Request do
              (is_map(params) or is_list(params)) do
     Enum.each(path, &validate_segment!/1)
     opts = Keyword.validate!(opts, @options)
+    Enum.each(@timeouts, fn {name, _default} -> validate_timeout!(name, opts[name]) end)
     validate_timeouts!(opts[:connect_timeout], opts[:deadline_ms])
 
     struct!(
       __MODULE__,
       [operation: operation, method: method, path: path, params: params] ++ opts
     )
+  end
+
+  defp validate_timeout!(_name, ms) when is_integer(ms) and ms > 0, do: :ok
+
+  defp validate_timeout!(name, ms) do
+    raise ArgumentError, "expected #{name} to be a positive integer, got: #{inspect(ms)}"
   end
 
   defp validate_timeouts!(connect_timeout, deadline_ms) when connect_timeout < deadline_ms,

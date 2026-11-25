@@ -109,6 +109,19 @@ defmodule Tymeslot.Integrations.Stripe.RequestTest do
                    end
     end
 
+    for name <- [:deadline_ms, :receive_timeout, :connect_timeout],
+        value <- [nil, 0, -1, 1.5, "1000"] do
+      test "raises for #{name}: #{inspect(value)}, not a positive integer" do
+        assert_raise ArgumentError,
+                     ~r/expected #{unquote(name)} to be a positive integer, got: #{Regex.escape(inspect(unquote(value)))}/,
+                     fn ->
+                       Request.new(:retrieve_charge, :get, ["charges"], %{}, [
+                         {unquote(name), unquote(value)}
+                       ])
+                     end
+      end
+    end
+
     test "accepts a connect timeout inside the deadline" do
       assert %Request{deadline_ms: 3_001, connect_timeout: 3_000} =
                Request.new(:retrieve_charge, :get, ["charges"], %{}, deadline_ms: 3_001)
