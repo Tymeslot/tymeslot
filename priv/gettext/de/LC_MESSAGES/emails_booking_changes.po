@@ -722,3 +722,23 @@ msgstr "Termin abgesagt: %{name} hat storniert - %{date}"
 #, elixir-autogen, elixir-format
 msgid "No one else has confirmed a spot at the earlier time, so that meeting has been cancelled."
 msgstr "Zum früheren Zeitpunkt hat sonst niemand einen Platz bestätigt, daher wurde jener Termin abgesagt."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} took a spot on this slot, so the meeting you were told had been cancelled goes ahead after all."
+msgstr "%{name} hat einen Platz in diesem Zeitfenster gebucht. Der Termin, dessen Absage Ihnen mitgeteilt wurde, findet daher doch statt."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Back on"
+msgstr "Findet doch statt"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting back on: %{name} - %{date}"
+msgstr "Termin findet doch statt: %{name} - %{date}"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Your group meeting is on again"
+msgstr "Ihr Gruppentermin findet wieder statt"

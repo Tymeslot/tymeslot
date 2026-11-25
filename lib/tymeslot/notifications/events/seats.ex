@@ -1,7 +1,7 @@
 defmodule Tymeslot.Notifications.Events.Seats do
   @moduledoc """
   The notification events of a seat on a group meeting: booked, cancelled
-  and moved, the release of seat confirmations once a video room exists, and
+  and moved, a held slot brought back by a seat, the release of seat confirmations once a video room exists, and
   the seat's own integration dispatch. `Tymeslot.Notifications.Events`
   handles the meeting-level events and runs the deferred fan-outs these
   return.
@@ -82,6 +82,17 @@ defmodule Tymeslot.Notifications.Events.Seats do
       do: {result, [{:meeting_created, meeting, {:seat, participant}}]},
       else: {result, []}
   end
+
+  @doc """
+  Handles a group slot coming back to life: held again when its last
+  confirmed seat left (`Tymeslot.Bookings.SeatRelease`), the organiser told
+  the meeting had been cancelled, and now `participant`'s seat counts on it.
+  Schedules the organiser's email that it goes ahead after all, inside the
+  caller's transaction.
+  """
+  @spec slot_revived(term(), term()) :: {:ok, term()} | {:error, term()}
+  def slot_revived(meeting, participant),
+    do: Orchestrator.schedule_seat_slot_revived(meeting, participant)
 
   # A room job that finishes after the host cancelled the meeting has no
   # confirmations left to release: the participants were told it is off.

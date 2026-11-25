@@ -66,6 +66,31 @@ defmodule Tymeslot.Notifications.Email.SeatEmails do
   end
 
   @doc """
+  The organiser's email that a group slot they were told had been cancelled
+  is going ahead after all, brought back by this seat
+  (`Tymeslot.Bookings.SlotActivation`). It goes to the organiser alone: the
+  seat's participant and guests hear of their booking through its own
+  confirmation, or its move.
+
+  A seat that has left again by the time this runs is skipped, as is a slot
+  cancelled meanwhile: the organiser's email about that leaving is the news.
+  """
+  @spec handle_seat_slot_revived_email(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_seat_slot_revived_email(%{
+        "meeting_id" => meeting_id,
+        "participant_id" => participant_id
+      }) do
+    SeatJobs.with_seat(
+      meeting_id,
+      participant_id,
+      "seat slot revived email",
+      {:live_slot, :live},
+      &send_slot_revived/2
+    )
+  end
+
+  @doc """
   A seat its participant cancelled: their cancellation, the organiser's "a
   participant cancelled their spot", and cancellations for the participant's
   guests.
@@ -171,6 +196,21 @@ defmodule Tymeslot.Notifications.Email.SeatEmails do
       "seat confirmation",
       [meeting_id: meeting.id, participant_id: participant.id],
       [organizer_result, attendee_result]
+    )
+  end
+
+  defp send_slot_revived(meeting, participant) do
+    details =
+      AppointmentBuilder.for_organizer_of_seat(meeting, Recipient.from_participant(participant))
+
+    :revived
+    |> Config.email_service_module().send_seat_update_to_organizer(
+      meeting.organizer_email,
+      details
+    )
+    |> SeatJobs.send_result("slot revived",
+      meeting_id: meeting.id,
+      participant_id: participant.id
     )
   end
 

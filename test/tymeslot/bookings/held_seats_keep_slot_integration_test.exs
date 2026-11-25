@@ -173,6 +173,58 @@ defmodule Tymeslot.Bookings.HeldSeatsKeepSlotIntegrationTest do
 
       refute email.text_body =~ "free again"
     end
+
+    test "the organiser is told the meeting is off, then that it is on again, never a plain booking",
+         ctx do
+      TestMocks.setup_email_mocks()
+      test_pid = self()
+
+      stub(Tymeslot.EmailServiceMock, :send_seat_update_to_organizer, fn variant, _to, det ->
+        send(test_pid, {:organizer, variant, det})
+        {:ok, "sent"}
+      end)
+
+      assert {:ok, :meeting_cancelled} = CancelSeat.execute(ctx.confirmed.management_token)
+
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_seat_cancellation_emails",
+                 "meeting_id" => ctx.slot.id,
+                 "participant_id" => ctx.confirmed.id,
+                 "slot_freed" => true,
+                 "slot_held" => true
+               })
+
+      assert_received {:organizer, :cancelled, %{slot_held: true}}
+
+      assert {:ok, :verified, _slot} = EmailVerification.verify_seat(ctx.held)
+
+      seat_args = %{"meeting_id" => ctx.slot.id, "participant_id" => ctx.held.id}
+
+      revived_args = Map.put(seat_args, "action", "send_seat_slot_revived")
+      assert_enqueued(worker: EmailWorker, args: revived_args)
+      assert :ok = perform_job(EmailWorker, revived_args)
+
+      assert_received {:organizer, :revived, details}
+      assert details.attendee_email == "held@example.com"
+
+      email = SeatUpdateForOrganizer.render(:revived, "host@example.com", details)
+      assert email.subject =~ "Meeting back on:"
+
+      assert email.text_body =~
+               "took a spot on this slot, so the meeting you were told had been cancelled goes ahead after all."
+
+      # The seat's own confirmation still reaches its booker, but tells the
+      # organiser nothing more.
+      confirmation_args = Map.put(seat_args, "action", "send_seat_confirmation_emails")
+
+      expect(Tymeslot.EmailServiceMock, :send_appointment_confirmation_to_attendee, fn
+        "held@example.com", _details -> {:ok, "sent"}
+      end)
+
+      assert :ok = perform_job(EmailWorker, confirmation_args)
+      refute_received {:organizer, _variant, _details}
+    end
   end
 
   # Each `CancelSeat` commits its seat's cancellation before it asks
@@ -292,6 +344,50 @@ defmodule Tymeslot.Bookings.HeldSeatsKeepSlotIntegrationTest do
 
       verify_brings_slot_back(ctx)
     end
+  end
+
+  # A seat moved onto the held slot counts on it at once, so it brings the
+  # slot back: the organiser hears it is on again, beside the move's own
+  # email, which still tells them of the move.
+  test "a guest moving onto the held slot brings it back, and the organiser hears so", ctx do
+    assert {:ok, :meeting_cancelled} = CancelSeat.execute(ctx.confirmed.management_token)
+
+    other_start = DateTime.add(ctx.slot.start_time, 1, :day)
+
+    other =
+      insert(:group_meeting,
+        status: :confirmed,
+        organizer_user_id: ctx.slot.organizer_user_id,
+        organizer_email: ctx.slot.organizer_email,
+        meeting_type_id: ctx.slot.meeting_type_id,
+        start_time: other_start,
+        end_time: DateTime.add(other_start, 1, :hour),
+        duration: 60,
+        capacity: 3
+      )
+
+    mover = insert(:participant, meeting: other, email: "mover@example.com")
+
+    assert {:ok, %{meeting: %{id: slot_id}, participant: new_seat}} = move(mover, "14:00")
+    assert slot_id == ctx.slot.id
+    assert reload(ctx.slot).status == :confirmed
+
+    assert_enqueued(
+      worker: EmailWorker,
+      args: %{
+        "action" => "send_seat_slot_revived",
+        "meeting_id" => ctx.slot.id,
+        "participant_id" => new_seat.id
+      }
+    )
+
+    assert_enqueued(
+      worker: EmailWorker,
+      args: %{"action" => "send_seat_reschedule_emails", "participant_id" => new_seat.id}
+    )
+
+    # The move's email is not the revival's to suppress.
+    assert %{organizer_notified_at: nil} = reload(new_seat)
   end
 
   # A create still queued from the slot's activation runs after the slot is

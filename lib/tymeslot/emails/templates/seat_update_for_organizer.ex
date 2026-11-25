@@ -1,7 +1,8 @@
 defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
   @moduledoc """
   The organiser's email about one seat of a group meeting: a spot was booked,
-  a participant cancelled their spot, or a participant moved their spot to
+  a spot was taken on a slot the organiser was told had been cancelled, a
+  participant cancelled their spot, or a participant moved their spot to
   another time.
 
   The solo templates cannot say any of this. They are about *the* booking: a
@@ -35,11 +36,12 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  @type variant :: :booked | :cancelled | :moved
+  @type variant :: :booked | :revived | :cancelled | :moved
 
   @spec render(variant(), String.t(), Tymeslot.Emails.EmailService.appointment_details()) ::
           Swoosh.Email.t()
-  def render(variant, organizer_email, details) when variant in [:booked, :cancelled, :moved] do
+  def render(variant, organizer_email, details)
+      when variant in [:booked, :revived, :cancelled, :moved] do
     details = Formatting.without_location_note(details)
     locale = RecipientLocale.organizer_locale(details)
 
@@ -84,6 +86,7 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
   end
 
   defp intent(:booked), do: :confirmed
+  defp intent(:revived), do: :confirmed
   defp intent(:cancelled), do: :cancelled
   defp intent(:moved), do: :alert
 
@@ -99,6 +102,29 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
         ),
       subject:
         dgettext("emails_booking_changes", "Spot booked: %{name} - %{date}",
+          name: name,
+          date: short_date(details)
+        )
+    }
+  end
+
+  # A seat on a slot held again after its last confirmed seat left: the
+  # organiser was told the meeting had been cancelled (the `slot_held`
+  # cancellation below), so this says first that it is on again.
+  defp copy(:revived, details) do
+    name = details.attendee_name
+
+    %{
+      eyebrow: dgettext("emails_booking_changes", "Back on"),
+      title: dgettext("emails_booking_changes", "Your group meeting is on again"),
+      lead:
+        dgettext(
+          "emails_booking_changes",
+          "%{name} took a spot on this slot, so the meeting you were told had been cancelled goes ahead after all.",
+          name: name
+        ),
+      subject:
+        dgettext("emails_booking_changes", "Meeting back on: %{name} - %{date}",
           name: name,
           date: short_date(details)
         )
