@@ -98,25 +98,26 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
   """
   @spec validate_providers!() :: :ok
   def validate_providers! do
-    Enum.reduce(providers(), Map.keys(@registry), fn provider, taken ->
-      unless provider?(provider) do
-        raise ArgumentError,
-              ":admin_alert_type_providers entry #{inspect(provider)} does not implement " <>
-                inspect(AlertTypeProvider)
-      end
-
-      types = Map.keys(provider.registered_types())
-
-      case Enum.filter(types, &(&1 in taken)) do
-        [] ->
-          types ++ taken
-
-        clashes ->
+    _registered =
+      Enum.reduce(providers(), Map.keys(@registry), fn provider, taken ->
+        unless provider?(provider) do
           raise ArgumentError,
-                ":admin_alert_type_providers entry #{inspect(provider)} registers " <>
-                  "#{inspect(Enum.sort(clashes))}, already registered by Core or an earlier provider"
-      end
-    end)
+                ":admin_alert_type_providers entry #{inspect(provider)} does not implement " <>
+                  inspect(AlertTypeProvider)
+        end
+
+        types = Map.keys(provider.registered_types())
+
+        case Enum.filter(types, &(&1 in taken)) do
+          [] ->
+            types ++ taken
+
+          clashes ->
+            raise ArgumentError,
+                  ":admin_alert_type_providers entry #{inspect(provider)} registers " <>
+                    "#{inspect(Enum.sort(clashes))}, already registered by Core or an earlier provider"
+        end
+      end)
 
     :ok
   end
