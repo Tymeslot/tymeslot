@@ -6,10 +6,11 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
 
     * `won` → revert to `paid` (or `partially_refunded` if any prior
       refund was on the row before the dispute opened). A payment whose
-      booking expired (it completed after its slot was taken, say) still
-      owes the attendee: its automatic refund was given up while the
-      dispute held the money, so a refund of what is left is recorded
-      here, in the same transaction (`Refunds.request_remaining_refund/2`).
+      booking expired (it completed after its slot was taken, say), or
+      was cancelled before the payment was recorded, still owes the
+      attendee: its automatic refund was given up while the dispute held
+      the money, so a refund of what is left is recorded here, in the
+      same transaction (`Refunds.request_remaining_refund/2`).
     * `lost` → record the disputed amount as `disputed_lost_cents`, add
       it to `refunded_amount_cents` (`RefundedTotal`) and derive
       `refunded` / `partially_refunded` accordingly. Stripe debits
@@ -23,8 +24,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
       live dispute, which a replayed or mis-routed event must not clear:
       the booking stays `disputed`.
 
-  Whichever way a final dispute goes, a payment whose booking expired is
-  refunded whatever is left of it with the host: all of it after a won
+  Whichever way a final dispute goes, a payment whose booking was released
+  before it was paid for is refunded whatever is left of it with the host: all of it after a won
   dispute, the part a lost one did not take back after a partial loss
   (`partially_refunded`). The attendee paid for a booking that never
   happened, so nothing of it is the host's to keep.
@@ -164,18 +165,34 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
   # Money back with the host for a booking that never happened is owed to
   # the attendee, as it was before the dispute opened: after a won dispute,
   # and after a partly lost one, for the part the dispute did not take. A
-  # series never happened when every one of its sessions expired. A refund
-  # still pending holds its share, so a second close of the dispute records
-  # nothing more.
+  # series never happened when every one of its sessions was released before
+  # it was paid for (`released_before_paid?/2`). A refund still pending holds
+  # its share, so a second close of the dispute records nothing more.
   defp maybe_request_refund(payment) do
     with true <- payment.status in BookingPaymentSchema.refundable_statuses(),
          [_first | _rest] = meetings <- HeldMeetings.meetings_for(payment),
-         true <- Enum.all?(meetings, &match?(%{status: :expired}, &1)) do
+         true <- Enum.all?(meetings, &released_before_paid?(&1, payment.paid_at)) do
       Refunds.request_remaining_refund(payment, :late_payment)
     else
       _not_owed -> {:ok, :none}
     end
   end
+
+  # An expired booking was never held for anyone who paid for it: its
+  # payment completed after the expiry, and was refused. A cancelled one
+  # was refused the same way only when its payment was recorded after the
+  # cancellation (`CheckoutSessionCompleted`); one paid for first went
+  # ahead, and its host chose its refund when cancelling it, which a dispute
+  # does not overturn.
+  defp released_before_paid?(%{status: :expired}, _paid_at), do: true
+
+  defp released_before_paid?(
+         %{status: :cancelled, cancelled_at: %DateTime{} = cancelled_at},
+         %DateTime{} = paid_at
+       ),
+       do: DateTime.after?(paid_at, cancelled_at)
+
+  defp released_before_paid?(_meeting, _paid_at), do: false
 
   defp outcome_attrs(payment, :won, _disputed_amount),
     do: %{status: derive_status_from_refund(payment, payment.refunded_amount_cents)}
