@@ -30,6 +30,10 @@ defmodule TymeslotWeb.E2E.EmbedPrimaryColourTest do
   @override "#e11d48"
   @parent_origin "http://embedder.test"
 
+  # The language switcher's dropdown panel, by the id the dropdown gives it
+  # (`language-switcher-dropdown-panel`), not by a theme's styling classes.
+  @language_panel "language-switcher-dropdown-panel"
+
   feature "the embed's primary colour reaches the rendered page in every theme",
           %{session: session} do
     profile = create_embeddable_profile()
@@ -69,8 +73,8 @@ defmodule TymeslotWeb.E2E.EmbedPrimaryColourTest do
       session
       |> visit("/#{profile.username}")
       |> frame(path)
-      |> click(css(".lang-switcher button[phx-click='toggle_language_dropdown']"))
-      |> click(css("button[phx-click='change_locale'][phx-value-locale='de']"))
+      |> click(css("#language-switcher-dropdown button[aria-controls='#{@language_panel}']"))
+      |> click(css("##{@language_panel} button[phx-value-locale='de']"))
       |> assert_has(css("html[lang='de'][data-embedded][data-embed-layout='column']"))
       |> assert_has(css("[data-phx-main].phx-connected"))
 

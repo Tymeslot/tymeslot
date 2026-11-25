@@ -128,9 +128,9 @@ jobs:
             echo "::warning title=Cloudron package drift::packages/tymeslot-app on git.cloudron.io has drifted from Dockerfile.docker; see this step's log."
             exit 1
           }
-      # `:e2e` is deliberately absent. The 11 Wallaby features need a Chrome
-      # binary and a matching chromedriver, and no workflow in this repo
-      # installs either; config/test.exs also pins the browser to a developer's
-      # snap path with no environment override. Provisioning that is its own
-      # change — a job that cannot pass would only teach people to ignore this
-      # one.
+      # `:e2e` is absent: the browser suite (`mix test.e2e`) needs Chrome and a
+      # matching chromedriver, and no workflow in this repo installs either.
+      # config/test.exs takes the browser from CHROME_BINARY, and
+      # test/support/e2e/fonts.conf pins the fonts, so a runner can host it;
+      # adding that job is its own change, kept out of this one so a red
+      # browser run does not hide the suites above.

@@ -317,7 +317,7 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
         meeting_type: "Consultation",
         meeting_type_id: consultation.id,
         duration: 30,
-        status: "awaiting_approval",
+        status: :awaiting_approval,
         attendee_name: "Anna Kowalski",
         attendee_email: "anna@example.com",
         title: "Consultation with Anna Kowalski",
@@ -338,7 +338,7 @@ defmodule TymeslotWeb.E2E.CalendarJourneysTest do
     |> assert_has(css("#calendar-preview-cancel"))
     |> assert_has(css("#calendar-preview-accept", count: 0))
 
-    eventually(fn -> assert Repo.get!(MeetingSchema, held.id).status == "confirmed" end,
+    eventually(fn -> assert Repo.get!(MeetingSchema, held.id).status == :confirmed end,
       timeout: 5_000
     )
   end

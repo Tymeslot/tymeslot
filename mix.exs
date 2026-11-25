@@ -218,7 +218,7 @@ defmodule Tymeslot.MixProject do
         "assets.build",
         "ecto.create --quiet",
         "ecto.migrate --quiet",
-        "test --color --preload-modules --only e2e"
+        &run_e2e_tests/1
       ],
       # The Vitest suite under assets/, which `mix test` does not reach. A
       # `mix precommit` step and a CI step of its own.
@@ -258,6 +258,18 @@ defmodule Tymeslot.MixProject do
   # `test_helper.exs` reads this to decide whether to start the HTTP endpoint and
   # Wallaby, which the browser needs to connect to.
   defp set_e2e_env(_args), do: System.put_env("E2E", "true")
+
+  # Without a path, the browser suite's own directory rather than the whole
+  # of `test/`: `--only e2e` over everything loads every other test module
+  # only to exclude it, about a minute of a run.
+  defp run_e2e_tests(args) do
+    paths =
+      if Enum.any?(args, &String.starts_with?(&1, "test/")),
+        do: [],
+        else: ["test/tymeslot_web/e2e"]
+
+    Mix.Task.run("test", ["--color", "--preload-modules", "--only", "e2e"] ++ args ++ paths)
+  end
 
   # `mix setup` builds the assets with the esbuild and Tailwind binaries and
   # never runs npm, so a fresh clone has no node_modules until this installs
