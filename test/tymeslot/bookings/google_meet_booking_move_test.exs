@@ -26,6 +26,7 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingMoveTest do
   alias Ecto.Changeset
   alias Tymeslot.Bookings.{Cancel, Reschedule, RescheduleLocation}
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.{CalendarEventSync, MeetingSchema}
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Repo
@@ -249,6 +250,54 @@ defmodule Tymeslot.Bookings.GoogleMeetBookingMoveTest do
     assert rescheduled.html_body =~ @meet_url
     assert rescheduled.text_body =~ @meet_url
     refute rescheduled.text_body =~ @space_url
+  end
+
+  # The booking's event, written and synced without a Meet, is asked for one
+  # in place once the booking moves onto Meet; the booking then leaves Meet
+  # before its video job takes the Meet and before a sync brings it back. The
+  # cached event carries the request, so the move off takes the Meet off the
+  # guest's event.
+  test "a booking moved off Meet before taking the Meet asked for on its event takes it off",
+       %{meeting: meeting} do
+    use_runtime_calendar()
+    GoogleMeetFake.start()
+
+    set_video = fn video_integration_id, location ->
+      MeetingSchema
+      |> Repo.get!(meeting.id)
+      |> Changeset.change(video_integration_id: video_integration_id, location: location)
+      |> Repo.update!()
+    end
+
+    set_video.(nil, "Our office")
+    run_calendar_jobs()
+    %{provider_event_id: event_id} = written = Repo.get!(MeetingSchema, meeting.id)
+
+    insert(:provider_calendar_event,
+      calendar_integration: Repo.get!(CalendarIntegrationSchema, written.calendar_integration_id),
+      uid: event_id,
+      provider_event_id: event_id,
+      provider_calendar_id: @calendar_id,
+      provider_metadata: %{"id" => event_id}
+    )
+
+    set_video.(meeting.video_integration_id, nil)
+    assert :ok = Meetings.request_event_conference(meeting.id, event_id)
+
+    set_video.(nil, "Our office")
+    assert :ok = CalendarEventSync.update(meeting.id, 1)
+
+    assert [_create, {:put, _request_uri, request}, {:put, removal_uri, removal}] =
+             for(
+               {method, _uri, _body} = req <- GoogleMeetFake.requests(),
+               method != :get,
+               do: req
+             )
+
+    assert %{"createRequest" => _request} = request["conferenceData"]
+    assert removal_uri.path =~ "/events/#{event_id}"
+    assert URI.decode_query(removal_uri.query)["conferenceDataVersion"] == "1"
+    refute Map.has_key?(removal, "conferenceData")
   end
 
   # The cache write-through runs in the same transaction, and a database
