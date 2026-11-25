@@ -3,6 +3,8 @@ defmodule Tymeslot.PaymentsTest do
   @moduletag :utils
   @moduletag :payments
 
+  import Ecto.Query, only: [from: 2]
+
   alias Tymeslot.Factory
   alias Tymeslot.Payments
   alias Tymeslot.Payments.PaymentTransactionSchema
@@ -175,6 +177,79 @@ defmodule Tymeslot.PaymentsTest do
 
       assert %{status: :failed} = Repo.get_by(PaymentTransactionSchema, user_id: user.id)
     end
+  end
+
+  # Two initiations by one user overlapping: B starts while A waits on Stripe
+  # for its session. B runs inside A's stubbed call, at exactly that moment.
+  describe "initiate_subscription/7 started again while a checkout is being prepared" do
+    setup do
+      set_subscription_manager(SubscriptionManagerMock)
+      %{user: Factory.insert(:user)}
+    end
+
+    test "waits for the first checkout instead of starting a second", %{user: user} do
+      expect_session("cs_A", fn ->
+        assert {:error, :retry_later} = initiate(user)
+      end)
+
+      assert {:ok, %{checkout_url: "https://checkout.stripe.com/cs_A"}} = initiate(user)
+
+      assert [%{stripe_id: "cs_A"}] = pending_transactions(user)
+      assert StripeStub.requests() == []
+    end
+
+    test "expires the first checkout's session when a later one superseded it", %{user: user} do
+      expect_session("cs_A", fn ->
+        # A's Stripe calls have outlasted the cutoff, so B supersedes A's row.
+        backdate_pending(user, 180)
+        expect_session("cs_B", fn -> :ok end)
+
+        assert {:ok, %{checkout_url: "https://checkout.stripe.com/cs_B"}} = initiate(user)
+      end)
+
+      StripeStub.expect(
+        :expire_checkout_session,
+        StripeFixtures.object("checkout_session_expired", %{"id" => "cs_A"})
+      )
+
+      assert {:error, :checkout_superseded} = initiate(user)
+
+      assert [%{stripe_id: "cs_B"}] = pending_transactions(user)
+
+      assert [%{method: :post, path: "/v1/checkout/sessions/cs_A/expire"}] =
+               StripeStub.requests()
+    end
+  end
+
+  defp expect_session(session_id, during_call) do
+    Mox.expect(SubscriptionManagerMock, :create_subscription_checkout, fn _price,
+                                                                          _prod,
+                                                                          _amt,
+                                                                          _uid,
+                                                                          _email,
+                                                                          _urls,
+                                                                          _meta ->
+      during_call.()
+
+      {:ok,
+       StripeFixtures.object("checkout_session_subscription", %{
+         "id" => session_id,
+         "url" => "https://checkout.stripe.com/#{session_id}"
+       })}
+    end)
+  end
+
+  defp pending_transactions(user) do
+    Repo.all(
+      from(t in PaymentTransactionSchema, where: t.user_id == ^user.id and t.status == :pending)
+    )
+  end
+
+  defp backdate_pending(user, seconds) do
+    Repo.update_all(
+      from(t in PaymentTransactionSchema, where: t.user_id == ^user.id and t.status == :pending),
+      set: [inserted_at: DateTime.add(DateTime.utc_now(:second), -seconds)]
+    )
   end
 
   defp initiate(user) do

@@ -108,7 +108,12 @@ defmodule Tymeslot.Payments do
     * metadata - Additional metadata for the subscription (app-specific data)
 
   ## Returns
-    * `{:ok, %{checkout_url: url}}` - URL for the Stripe checkout session
+    * `{:ok, %{checkout_url: url}}` - URL for the Stripe checkout session; a
+      checkout already started for the same plan and amount returns its URL
+    * `{:error, :retry_later}` - Another checkout for the user is still being
+      prepared and has no URL yet
+    * `{:error, :checkout_superseded}` - A newer checkout replaced this one
+      while its session was being created; the session is expired
     * `{:error, reason}` - If the subscription creation fails
   """
   @spec initiate_subscription(

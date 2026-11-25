@@ -91,13 +91,14 @@ defmodule Tymeslot.Payments.ComponentsTest do
       assert :ok = PendingTransactions.supersede_pending_transaction_if_needed(user.id)
     end
 
-    test "supersede_pending_transaction_if_needed/1 supersedes pending transactions" do
+    test "supersede_pending_transaction_if_needed/1 supersedes a pending transaction with a session" do
       user = Factory.insert(:user)
 
       pending_tx =
         Factory.insert(:payment_transaction,
           user: user,
-          status: :pending
+          status: :pending,
+          stripe_id: "pi_abc123"
         )
 
       assert :ok = PendingTransactions.supersede_pending_transaction_if_needed(user.id)
@@ -105,6 +106,42 @@ defmodule Tymeslot.Payments.ComponentsTest do
       updated = Repo.get!(PaymentTransactionSchema, pending_tx.id)
       assert updated.status == :failed
       assert updated.metadata["superseded"] == true
+    end
+
+    test "supersede_pending_transaction_if_needed/1 leaves a checkout still being prepared" do
+      user = Factory.insert(:user)
+
+      pending_tx =
+        Factory.insert(:payment_transaction, user: user, status: :pending, stripe_id: nil)
+
+      assert :ok = PendingTransactions.supersede_pending_transaction_if_needed(user.id)
+
+      assert Repo.get!(PaymentTransactionSchema, pending_tx.id).status == :pending
+    end
+
+    test "supersede_pending_transaction_if_needed/1 supersedes a sessionless one past the cutoff" do
+      user = Factory.insert(:user)
+
+      pending_tx =
+        Factory.insert(:payment_transaction,
+          user: user,
+          status: :pending,
+          stripe_id: nil,
+          inserted_at: DateTime.add(DateTime.utc_now(:second), -121)
+        )
+
+      assert :ok = PendingTransactions.supersede_pending_transaction_if_needed(user.id)
+
+      assert Repo.get!(PaymentTransactionSchema, pending_tx.id).status == :failed
+    end
+
+    test "supersede_pending_transaction/1 leaves a transaction no longer pending" do
+      user = Factory.insert(:user)
+      completed = Factory.insert(:payment_transaction, user: user, status: :completed)
+
+      assert :ok = PendingTransactions.supersede_pending_transaction(completed)
+
+      assert Repo.get!(PaymentTransactionSchema, completed.id).status == :completed
     end
   end
 

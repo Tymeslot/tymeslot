@@ -135,6 +135,13 @@ defmodule Tymeslot.Payments.SubscriptionFlow do
           {:ok, _updated_transaction} ->
             {:ok, %{checkout_url: checkout_url}}
 
+          # A newer checkout superseded this one while Stripe was creating its
+          # session, too early to expire it, so it is expired here: the user
+          # is sent to the newer checkout, never to two payable ones.
+          {:error, :not_pending} ->
+            PendingTransactions.expire_checkout_session(checkout_session["id"])
+            {:error, :checkout_superseded}
+
           {:error, reason} ->
             Logger.error(
               "Failed to persist subscription checkout session, returning URL anyway",
@@ -200,7 +207,7 @@ defmodule Tymeslot.Payments.SubscriptionFlow do
           })
       }
 
-      PaymentQueries.update_transaction(transaction, attrs)
+      PaymentQueries.update_pending_transaction(transaction, attrs)
     end
   end
 
