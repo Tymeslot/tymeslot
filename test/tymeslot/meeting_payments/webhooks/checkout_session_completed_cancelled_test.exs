@@ -203,6 +203,56 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedCancelledTes
       assert refunds(bp) == []
       refute_enqueued(worker: ExecuteRefund)
     end
+
+    test "refunds a payment refused in the second the booking was cancelled" do
+      now = DateTime.utc_now(:second)
+      meeting = insert(:meeting, status: :cancelled, cancelled_at: now)
+
+      bp =
+        insert_payment(
+          meeting: meeting,
+          status: :disputed,
+          paid_at: now,
+          stripe_charge_id: "ch_CANCELLED_PAID"
+        )
+
+      insert(:booking_payment_refund,
+        booking_payment: bp,
+        amount_cents: 5000,
+        source: :late_payment,
+        status: :failed,
+        failure_code: "under_dispute"
+      )
+
+      assert :ok =
+               ChargeDisputeClosed.handle(
+                 dispute_event("evt_DISPUTE_WON", "charge.dispute.closed", %{"status" => "won"})
+               )
+
+      assert bp |> refunds() |> Enum.map(&{&1.source, &1.status}) |> Enum.sort() ==
+               [{:late_payment, :failed}, {:late_payment, :pending}]
+    end
+
+    test "refunds nothing for a booking paid for in the second before it was cancelled" do
+      now = DateTime.utc_now(:second)
+      meeting = insert(:meeting, status: :cancelled, cancelled_at: now)
+
+      bp =
+        insert_payment(
+          meeting: meeting,
+          status: :disputed,
+          paid_at: now,
+          stripe_charge_id: "ch_CANCELLED_PAID"
+        )
+
+      assert :ok =
+               ChargeDisputeClosed.handle(
+                 dispute_event("evt_DISPUTE_WON", "charge.dispute.closed", %{"status" => "won"})
+               )
+
+      assert Repo.reload!(bp).status == :paid
+      assert refunds(bp) == []
+    end
   end
 
   # Cancelled a minute before its checkout completes.

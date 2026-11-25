@@ -55,6 +55,16 @@ defmodule Tymeslot.MeetingPayments.RefundQueries do
     )
   end
 
+  @doc "Whether a refund from `source` was ever recorded for a payment, whatever its status."
+  @spec recorded_from?(UUID.t(), RefundSchema.source()) :: boolean()
+  def recorded_from?(booking_payment_id, source) do
+    Repo.exists?(
+      from(r in RefundSchema,
+        where: r.booking_payment_id == ^booking_payment_id and r.source == ^source
+      )
+    )
+  end
+
   @doc "A payment's refunds, oldest first."
   @spec list_for_payment(UUID.t()) :: [RefundSchema.t()]
   def list_for_payment(booking_payment_id) do

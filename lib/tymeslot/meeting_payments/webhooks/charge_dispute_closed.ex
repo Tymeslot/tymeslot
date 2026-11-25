@@ -54,6 +54,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.HeldMeetings
   alias Tymeslot.MeetingPayments.RefundedTotal
+  alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.MeetingPayments.Telemetry
   alias Tymeslot.MeetingPayments.Webhooks.DisputeOutcome
@@ -171,7 +172,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
   defp maybe_request_refund(payment) do
     with true <- payment.status in BookingPaymentSchema.refundable_statuses(),
          [_first | _rest] = meetings <- HeldMeetings.meetings_for(payment),
-         true <- Enum.all?(meetings, &released_before_paid?(&1, payment.paid_at)) do
+         refused? = RefundQueries.recorded_from?(payment.id, :late_payment),
+         true <- Enum.all?(meetings, &released_before_paid?(&1, refused?)) do
       Refunds.request_remaining_refund(payment, :late_payment)
     else
       _not_owed -> {:ok, :none}
@@ -181,20 +183,15 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
   # Every expired booking counts, whatever expired it. One whose payment
   # completed after the expiry was refused; but a confirmed, paid booking
   # whose reschedule request lapsed is expired too, and is refunded here
-  # as well, although its expiry refunds nothing. A cancelled one was
-  # refused the same way only when its payment was recorded after the
-  # cancellation (`CheckoutSessionCompleted`); one paid for first went
-  # ahead, and its host chose its refund when cancelling it, which a dispute
-  # does not overturn.
-  defp released_before_paid?(%{status: :expired}, _paid_at), do: true
-
-  defp released_before_paid?(
-         %{status: :cancelled, cancelled_at: %DateTime{} = cancelled_at},
-         %DateTime{} = paid_at
-       ),
-       do: DateTime.after?(paid_at, cancelled_at)
-
-  defp released_before_paid?(_meeting, _paid_at), do: false
+  # as well, although its expiry refunds nothing. A cancelled one counts
+  # only when its payment completed after the cancellation, which
+  # `refused?` says: the completion then refused the booking and recorded
+  # a `:late_payment` refund (`CheckoutSessionCompleted`), whichever second
+  # each landed in. One paid for first went ahead, and its host chose its
+  # refund when cancelling it, which a dispute does not overturn.
+  defp released_before_paid?(%{status: :expired}, _refused?), do: true
+  defp released_before_paid?(%{status: :cancelled}, refused?), do: refused?
+  defp released_before_paid?(_meeting, _refused?), do: false
 
   defp outcome_attrs(payment, :won, _disputed_amount),
     do: %{status: derive_status_from_refund(payment, payment.refunded_amount_cents)}
