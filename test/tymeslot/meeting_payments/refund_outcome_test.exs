@@ -39,6 +39,14 @@ defmodule Tymeslot.MeetingPayments.RefundOutcomeTest do
       assert RefundOutcome.classify({:error, rate_limited}) == {:retry, rate_limited}
     end
 
+    test "a refused API key, which Stripe acts on nothing for, keeps the key" do
+      unauthorised = %StripeError{type: "invalid_request_error", status: 401}
+      authentication = %StripeError{type: "authentication_error", status: 403}
+
+      assert RefundOutcome.classify({:error, unauthorised}) == {:retry, unauthorised}
+      assert RefundOutcome.classify({:error, authentication}) == {:retry, authentication}
+    end
+
     test "a 5xx, which Stripe replays under its key, is retried under a new one" do
       error = %StripeError{type: "api_error", status: 500}
 

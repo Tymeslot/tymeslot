@@ -310,6 +310,22 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
       refute_received {:send_alert, _type, _payload}
     end
 
+    test "a refund whose create a refused API key blocks stays pending under its key, unreported",
+         %{payment: payment} do
+      StripeStub.expect(
+        :create_refund,
+        {401, %{"error" => %{"type" => "invalid_request_error", "message" => "Invalid API Key"}}}
+      )
+
+      assert {:pending, refund} = Refunds.refund_now(payment, 2_000, :host, [])
+
+      assert %{status: :pending, executing_until: nil, key_attempt: key_attempt} =
+               RefundQueries.get(refund.id)
+
+      assert key_attempt == refund.key_attempt
+      refute_received {:send_alert, _type, _payload}
+    end
+
     test "a permanent refusal fails the refund and alerts", %{payment: payment} do
       StripeStub.expect(
         :create_refund,

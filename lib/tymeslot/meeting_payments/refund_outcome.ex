@@ -10,8 +10,8 @@ defmodule Tymeslot.MeetingPayments.RefundOutcome do
       the same key: no answer arrived (a timeout, a dropped connection, in
       which case Stripe may have made the refund), or Stripe turned the
       request away before acting on it (a 409 for a request still in flight
-      under the key, a 429). A missing API key is one too: nothing was sent,
-      and configuration can fix it.
+      under the key, a 429). So is a refused or missing API key: Stripe
+      acted on nothing, and configuration can fix it.
     * `{:retry_new_key, error}`: a later attempt may succeed, but Stripe
       stored an answer under the key that a resend would only replay: a 5xx,
       after which Stripe may still have made the refund, or an idempotency
@@ -74,7 +74,11 @@ defmodule Tymeslot.MeetingPayments.RefundOutcome do
 
   defp unanswered?(%StripeError{type: "api_connection_error"}), do: true
   defp unanswered?(%StripeError{status: status}) when status in [409, 429], do: true
-  defp unanswered?(_error), do: false
+  defp unanswered?(error), do: refused_key?(error)
+
+  defp refused_key?(%StripeError{status: 401}), do: true
+  defp refused_key?(%StripeError{type: "authentication_error"}), do: true
+  defp refused_key?(_error), do: false
 
   @doc """
   What a failed read of the charge's refunds comes to. The read is made
@@ -89,7 +93,7 @@ defmodule Tymeslot.MeetingPayments.RefundOutcome do
   def classify_list_error(%StripeError{} = error) do
     cond do
       StripeError.retryable?(error) -> {:retry, error}
-      error.status == 401 or error.type == "authentication_error" -> {:retry, error}
+      refused_key?(error) -> {:retry, error}
       true -> {:unlistable, error}
     end
   end
