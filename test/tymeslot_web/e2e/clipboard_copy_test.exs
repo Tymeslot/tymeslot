@@ -60,11 +60,9 @@ defmodule TymeslotWeb.E2E.ClipboardCopyTest do
       |> click(css(copy))
       |> assert_has(css("#app-flash-group-info", text: "Code copied to clipboard!"))
 
-    # Two listeners answer the server's `copy-to-clipboard` (the hook, and
-    # one on `window` in `bundles/core.js`), so the text is written twice;
-    # what matters is that every write is the snippet.
-    assert [snippet | _rest] = copied = copied(session)
-    assert Enum.uniq(copied) == [snippet]
+    # Written once, by the `ClipboardCopy` hook answering the server's
+    # `copy-to-clipboard`.
+    assert [snippet] = copied(session)
 
     assert snippet =~ ~s(<div id="tymeslot-booking" data-username="#{username}")
     assert snippet =~ ~s(<script src="#{Endpoint.url()}/embed.js" async></script>)

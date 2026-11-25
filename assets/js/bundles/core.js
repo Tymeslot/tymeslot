@@ -197,17 +197,6 @@ window.addEventListener("phx:ts:setting-saved", (e) => {
   }, 1200);
 });
 
-window.addEventListener("phx:copy-to-clipboard", (e) => {
-  const text = e.detail.text;
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).then(() => {
-      console.log('Copied to clipboard');
-    }).catch(err => {
-      console.error('Failed to copy:', err);
-    });
-  }
-});
-
 window.addEventListener("tymeslot:clip-copy", (e) => {
   const message = e.detail.message || "Copied to clipboard!";
   const kind = e.detail.kind || "info";
