@@ -34,6 +34,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     Currency
   }
 
+  alias Tymeslot.MeetingPayments.Workers.ExpireCheckoutSession
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
@@ -388,10 +389,44 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   open to expire.
   """
   @spec abandon_checkout(String.t()) :: :ok | {:error, term()}
-  def abandon_checkout(meeting_id) do
+  def abandon_checkout(meeting_id), do: with_open_checkout(meeting_id, &expire_stripe_session/2)
+
+  @doc """
+  Schedules the end of the open Stripe Checkout of `meeting`, a booking
+  being cancelled while it awaits payment, so its attendee cannot pay for it
+  afterwards (`Workers.ExpireCheckoutSession`, which calls
+  `close_checkout/1`).
+
+  Runs inside the cancelling transaction: the job commits with the
+  cancellation, and Stripe is called only once it has. Returns `:ok`, with
+  nothing scheduled for a meeting not awaiting payment, or the enqueue's
+  `{:error, reason}`, on which the caller rolls the cancellation back.
+  """
+  @spec schedule_close(Tymeslot.Meetings.MeetingSchema.t()) :: :ok | {:error, term()}
+  def schedule_close(%{status: :awaiting_payment, id: meeting_id}) do
+    case ExpireCheckoutSession.enqueue(meeting_id) do
+      {:ok, _job} -> :ok
+      {:error, _reason} = error -> error
+    end
+  end
+
+  def schedule_close(_meeting), do: :ok
+
+  @doc """
+  Ends the open Stripe Checkout of a cancelled booking, as
+  `abandon_checkout/1` does, but counts a checkout Stripe will not expire
+  because it is no longer open as closed: one the attendee completed first
+  is refunded by the completion webhook, and one expired already needs
+  nothing. Returns `{:error, reason}` only while the checkout may still be
+  open, for a retry.
+  """
+  @spec close_checkout(String.t()) :: :ok | {:error, term()}
+  def close_checkout(meeting_id), do: with_open_checkout(meeting_id, &expire_unless_closed/2)
+
+  defp with_open_checkout(meeting_id, expire) do
     case BookingPaymentQueries.for_meeting(meeting_id) do
       %{status: :pending, stripe_checkout_session_id: "cs_" <> _rest = session_id} = payment ->
-        expire_stripe_session(session_id, payment.stripe_account_id)
+        expire.(session_id, payment.stripe_account_id)
 
       _nothing_open ->
         :ok
@@ -404,11 +439,24 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
         :ok
 
       {:error, reason} = error ->
-        Logger.info("Could not expire an abandoned checkout session",
+        Logger.info("Could not expire a checkout session",
+          checkout_session_id: session_id,
           reason: LogFormat.reason(reason)
         )
 
         error
+    end
+  end
+
+  # Stripe refuses to expire a session that is no longer open. Rather than
+  # read that from the wording of its error, the session is read back, which
+  # tells a closed one from a failure.
+  defp expire_unless_closed(session_id, stripe_account_id) do
+    with {:error, _reason} = error <- expire_stripe_session(session_id, stripe_account_id) do
+      case StripeCheckoutSessions.retrieve(session_id, connect_account: stripe_account_id) do
+        {:ok, %{"status" => status}} when status in ["complete", "expired"] -> :ok
+        _open_or_unknown -> error
+      end
     end
   end
 

@@ -527,6 +527,14 @@ defmodule Tymeslot.MeetingPayments do
   defdelegate abandon_checkout(meeting_id), to: CheckoutSessions
 
   @doc """
+  Schedules the end of the open Stripe Checkout of a booking being
+  cancelled while it awaits payment, inside the cancelling transaction. See
+  `CheckoutSessions.schedule_close/1`.
+  """
+  @spec schedule_checkout_close(MeetingSchema.t()) :: :ok | {:error, term()}
+  defdelegate schedule_checkout_close(meeting), to: CheckoutSessions, as: :schedule_close
+
+  @doc """
   What an attendee returning from Stripe Checkout should be told about their
   booking: still `:processing`, `:failed`, `:awaiting_approval`, `:declined`,
   `:expired`, `:confirmed` or `:cancelled`. See `CheckoutOutcome` for the rules.
