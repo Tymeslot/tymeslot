@@ -219,6 +219,16 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
       "the attendee has been refunded, so refund nothing by hand" <> host_told(metadata)
   end
 
+  def format_message(:refund_duplicated, metadata) do
+    get = &Map.get(metadata, &1, "unknown")
+
+    "Stripe made a second refund, #{get.(:duplicate_stripe_refund_id)} of " <>
+      "#{get.(:duplicate_amount_cents)} cents, for refund #{get.(:refund_id)} of booking " <>
+      "payment #{get.(:booking_payment_id)}, which records #{get.(:stripe_refund_id)}: the " <>
+      "attendee has been refunded twice. Check the charge in the Stripe dashboard and settle " <>
+      "the difference with the host and the attendee"
+  end
+
   def format_message(:refund_stuck, metadata) do
     get = &Map.get(metadata, &1, "unknown")
 

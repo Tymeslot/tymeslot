@@ -77,6 +77,22 @@ defmodule Tymeslot.MeetingPayments.RefundReconciliationTest do
       assert RefundReconciliation.plan([succeeded], [made_for(succeeded, "succeeded")]) == []
     end
 
+    test "a second committed Stripe refund naming it is a duplicate" do
+      succeeded = row(status: :succeeded, stripe_refund_id: "re_1")
+      second = stripe_refund("succeeded", %{"tymeslot_refund_id" => succeeded.id}, "re_2")
+
+      assert RefundReconciliation.plan([succeeded], [second]) ==
+               [{:duplicate, succeeded, second}]
+    end
+
+    test "a second committed Stripe refund another row records is that row's" do
+      succeeded = row(status: :succeeded, stripe_refund_id: "re_1")
+      other = row(status: :succeeded, stripe_refund_id: "re_2")
+      second = stripe_refund("succeeded", %{"tymeslot_refund_id" => succeeded.id}, "re_2")
+
+      assert RefundReconciliation.plan([succeeded, other], [second]) == []
+    end
+
     test "is not taken for a second Stripe refund naming it" do
       succeeded = row(status: :succeeded, stripe_refund_id: "re_1")
       second = stripe_refund("failed", %{"tymeslot_refund_id" => succeeded.id}, "re_2")

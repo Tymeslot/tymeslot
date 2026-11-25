@@ -1,7 +1,8 @@
 defmodule Tymeslot.MeetingPayments.Refunds.FailureNotice do
   @moduledoc """
-  Tells whoever must act that a recorded refund ended `failed`: the money
-  is still owed to the attendee and Tymeslot will not try again.
+  Tells whoever must act that a recorded refund went wrong: it ended
+  `failed`, the money still owed to the attendee and Tymeslot not trying
+  again; it is stuck pending; or Stripe made it twice.
   """
 
   require Logger
@@ -107,6 +108,36 @@ defmodule Tymeslot.MeetingPayments.Refunds.FailureNotice do
         booking_payment_id: refund.booking_payment_id,
         source: refund.source,
         attempt: refund.attempt
+      }
+    )
+
+    :ok
+  end
+
+  @doc """
+  Reports to the admins, as a `:refund_duplicated` alert, `stripe_refund`:
+  a committed Stripe refund whose metadata names `refund`, which records a
+  different Stripe refund, so the attendee was refunded twice. Every
+  reconcile of the payment's refunds finds it again; the alert is keyed on
+  the Stripe refund, so it is raised once.
+  """
+  @spec duplicated(RefundSchema.t(), map()) :: :ok
+  def duplicated(%RefundSchema{} = refund, stripe_refund) do
+    Logger.error("Stripe made a second refund for a recorded refund",
+      refund_id: refund.id,
+      booking_payment_id: refund.booking_payment_id,
+      stripe_refund_id: refund.stripe_refund_id,
+      duplicate_stripe_refund_id: stripe_refund["id"]
+    )
+
+    AdminAlerts.report(:refund_duplicated,
+      summary: "Stripe made a second refund for one refund of a booking payment",
+      context: %{
+        refund_id: refund.id,
+        booking_payment_id: refund.booking_payment_id,
+        stripe_refund_id: refund.stripe_refund_id,
+        duplicate_stripe_refund_id: stripe_refund["id"],
+        duplicate_amount_cents: stripe_refund["amount"]
       }
     )
 

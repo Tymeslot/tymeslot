@@ -20,6 +20,11 @@ defmodule Tymeslot.MeetingPayments.RefundReconciliation do
       report saying otherwise is an older one arriving late. A row failed
       on anything else (its attempts ran out, or another attempt's refund
       failed) records no Stripe refund, and is reversed;
+    * a committed refund naming a row that records a different Stripe
+      refund is a second refund made for that row, the attendee refunded
+      twice (`:duplicate`), for a person to put right. Its amount is in the
+      charge's refunded total, which `charge.refunded` records, so it is
+      counted without a row of its own;
     * a refund belonging to no row is recorded (`:record_external`) only
       when it names neither a row nor a payment, as one a host made in the
       Stripe dashboard does, and only once committed. One naming its
@@ -39,6 +44,7 @@ defmodule Tymeslot.MeetingPayments.RefundReconciliation do
           {:settle_succeeded, RefundSchema.t(), stripe_refund :: map()}
           | {:settle_failed, RefundSchema.t(), stripe_refund :: map()}
           | {:fail_after_success, RefundSchema.t(), stripe_refund :: map()}
+          | {:duplicate, RefundSchema.t(), stripe_refund :: map()}
           | {:record_external, stripe_refund :: map()}
 
   @doc "Whether Stripe reports `stripe_refund` ended: `failed` or `canceled`."
@@ -65,7 +71,14 @@ defmodule Tymeslot.MeetingPayments.RefundReconciliation do
 
   @spec plan([RefundSchema.t()], [map()]) :: [action()]
   def plan(rows, stripe_refunds) when is_list(rows) and is_list(stripe_refunds),
-    do: Enum.flat_map(stripe_refunds, &(&1 |> row_for(rows) |> action(&1)))
+    do: Enum.flat_map(stripe_refunds, &plan_refund(&1, rows))
+
+  defp plan_refund(stripe_refund, rows) do
+    case row_for(stripe_refund, rows) do
+      nil -> unowned(named_row(stripe_refund, rows), stripe_refund)
+      row -> action(row, stripe_refund)
+    end
+  end
 
   defp row_for(stripe_refund, rows) do
     stripe_id = stripe_refund["id"]
@@ -84,6 +97,13 @@ defmodule Tymeslot.MeetingPayments.RefundReconciliation do
     do: Enum.find(rows, &(&1.stripe_refund_id == stripe_id))
 
   defp recording(_rows, _stripe_id), do: nil
+
+  defp named_row(stripe_refund, rows) do
+    case metadata(stripe_refund)["tymeslot_refund_id"] do
+      row_id when is_binary(row_id) -> Enum.find(rows, &(&1.id == row_id))
+      _none -> nil
+    end
+  end
 
   defp action(%RefundSchema{status: :pending} = row, %{"status" => status} = refund)
        when status in @committed,
@@ -109,16 +129,23 @@ defmodule Tymeslot.MeetingPayments.RefundReconciliation do
 
   defp action(%RefundSchema{}, _refund), do: []
 
-  defp action(nil, %{"id" => id, "status" => status, "amount" => amount} = refund)
-       when is_binary(id) and status in @committed and is_integer(amount) and amount > 0 do
+  # A refund no row owns: `named` is the row its metadata names, which
+  # records another Stripe refund, or nil.
+  defp unowned(named, %{"id" => id, "status" => status, "amount" => amount} = refund)
+       when is_binary(id) and status in @committed and is_integer(amount) and amount > 0,
+       do: committed_unowned(named, refund)
+
+  defp unowned(_named, _refund), do: []
+
+  defp committed_unowned(%RefundSchema{} = named, refund), do: [{:duplicate, named, refund}]
+
+  defp committed_unowned(nil, refund) do
     metadata = metadata(refund)
 
     if is_nil(metadata["tymeslot_refund_id"]) and is_nil(metadata["booking_payment_id"]),
       do: [{:record_external, refund}],
       else: []
   end
-
-  defp action(nil, _refund), do: []
 
   defp stale_committed?(
          %{"status" => status, "amount" => amount} = refund,

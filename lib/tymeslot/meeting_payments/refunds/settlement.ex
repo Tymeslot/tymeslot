@@ -289,8 +289,10 @@ defmodule Tymeslot.MeetingPayments.Refunds.Settlement do
   @doc """
   Brings `payment`'s recorded refunds in line with `stripe_refunds`, the
   refunds Stripe reports for its charge (`RefundReconciliation.plan/2`),
-  one action at a time. A Stripe refund another row records is logged and
-  passed over, since no retry changes that; any other failure stops there
+  one action at a time. A second Stripe refund made for one row is
+  reported (`FailureNotice.duplicated/2`). A Stripe refund another row
+  records is logged and passed over, since no retry changes that; any
+  other failure stops there
   and is returned, for the webhook to be delivered again, and the actions
   already taken find their refunds settled the next time.
   """
@@ -344,6 +346,11 @@ defmodule Tymeslot.MeetingPayments.Refunds.Settlement do
 
   defp carry_out(payment, {:record_external, stripe_refund}),
     do: record_external(payment, stripe_refund)
+
+  defp carry_out(_payment, {:duplicate, refund, stripe_refund}) do
+    FailureNotice.duplicated(refund, stripe_refund)
+    {:ok, refund}
+  end
 
   defp already_settled(%RefundSchema{id: id}) do
     case RefundQueries.get(id) do

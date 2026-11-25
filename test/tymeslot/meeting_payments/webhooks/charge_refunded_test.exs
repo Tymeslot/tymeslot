@@ -375,6 +375,44 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
       assert %{refunded_amount_cents: 2_000, status: :partially_refunded} = Repo.reload!(payment)
     end
 
+    test "a second Stripe refund made for one refund is reported and counted in the total",
+         %{payment: payment, refund: refund} do
+      capture_admin_alerts()
+
+      {:ok, refund} =
+        refund
+        |> Changeset.change(status: :succeeded, stripe_refund_id: "re_FIRST")
+        |> Repo.update()
+
+      second =
+        StripeFixtures.object("refund_with_charge", %{
+          "id" => "re_SECOND",
+          "amount" => 2_000,
+          "metadata" => %{"tymeslot_refund_id" => refund.id},
+          "charge" => %{"id" => "ch_RECONCILE", "amount_refunded" => 4_000}
+        })
+
+      StripeStub.stub(:list_refunds, StripeFixtures.list([second]))
+
+      assert :ok = ChargeRefunded.handle(connect_charge_event(4_000))
+
+      refund_id = refund.id
+
+      assert_received {:send_alert, :refund_duplicated,
+                       %{
+                         refund_id: ^refund_id,
+                         stripe_refund_id: "re_FIRST",
+                         duplicate_stripe_refund_id: "re_SECOND",
+                         duplicate_amount_cents: 2_000
+                       }}
+
+      assert [%{id: ^refund_id, stripe_refund_id: "re_FIRST"}] =
+               RefundQueries.list_for_payment(payment.id)
+
+      assert %{refunded_amount_cents: 4_000} = Repo.reload!(payment)
+      refute_enqueued(worker: SendBookingPaymentRefunded)
+    end
+
     test "a dashboard refund is recorded as external", %{payment: payment, refund: refund} do
       Repo.delete!(refund)
 

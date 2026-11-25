@@ -47,6 +47,35 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesRefundFailedTest do
     end
   end
 
+  describe "the alert for a refund Stripe made twice" do
+    test ":refund_duplicated names both Stripe refunds, the amount and the payment" do
+      metadata = %{
+        refund_id: "rf_1",
+        booking_payment_id: "bp_1",
+        stripe_refund_id: "re_1",
+        duplicate_stripe_refund_id: "re_2",
+        duplicate_amount_cents: 2_000
+      }
+
+      msg = AlertTypes.format_message(:refund_duplicated, metadata)
+
+      assert msg =~ "second refund, re_2 of 2000 cents, for refund rf_1"
+      assert msg =~ "booking payment bp_1, which records re_1"
+      assert msg =~ "refunded twice"
+    end
+
+    test ":refund_duplicated dedups per duplicate Stripe refund" do
+      key =
+        &AlertTypes.dedup_key(:refund_duplicated, %{
+          refund_id: "rf_1",
+          duplicate_stripe_refund_id: &1
+        })
+
+      assert key.("re_2") == key.("re_2")
+      refute key.("re_2") == key.("re_3")
+    end
+  end
+
   describe "the alert for a failed refund made after all" do
     test ":refund_failure_reversed voids the failure alert and names the refund made" do
       metadata = %{

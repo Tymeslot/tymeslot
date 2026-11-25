@@ -46,6 +46,9 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.DedupKey do
     refund_stuck: {:refund_id, "unknown"},
     # A refund is settled once succeeded, so it is reversed at most once.
     refund_failure_reversed: {:refund_id, "unknown"},
+    # Every reconcile of the payment's refunds finds a duplicate again, and
+    # one refund may be made more than twice: one alert per Stripe refund.
+    refund_duplicated: {:duplicate_stripe_refund_id, "unknown"},
     # One alert per account: two accounts failing must not collapse into one.
     connect_revocation_failed: {:stripe_account_id, "unknown"},
     # A refused key or a revoked account fails every event from that
