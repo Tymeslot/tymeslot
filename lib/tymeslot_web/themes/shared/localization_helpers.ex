@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
       dgettext("datetime", "%{weekday}, %{day} %{month} %{year} at %{time} %{timezone}",
         weekday: weekday,
-        day: dt.day,
+        day: day_of_month(dt.day),
         month: month,
         year: dt.year,
         time: time_str,
@@ -133,7 +133,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
       dgettext("datetime", "Ends %{time} on %{weekday} %{day} %{month}",
         time: format_time_by_locale(finish),
         weekday: mid_sentence_weekday(Date.day_of_week(DateTime.to_date(finish))),
-        day: finish.day,
+        day: day_of_month(finish.day),
         month: month_in_date(finish.month)
       )
     else
@@ -176,7 +176,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
     case to_attendee_datetime(start_time, timezone) do
       {:ok, dt} ->
         dgettext("datetime", "%{day} %{month} %{year} at %{time} %{timezone}",
-          day: dt.day,
+          day: day_of_month(dt.day),
           month: month_in_date(dt.month),
           year: dt.year,
           time: format_time_by_locale(dt),
@@ -207,7 +207,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
       {:ok, dt} ->
         dgettext("datetime", "%{weekday} %{day} %{month}, %{time}",
           weekday: weekday_name(Date.day_of_week(DateTime.to_date(dt))),
-          day: dt.day,
+          day: day_of_month(dt.day),
           month: month_in_date(dt.month),
           time: format_time_by_locale(dt)
         )
@@ -369,6 +369,12 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   defp month_in_date(month) do
     LocaleFormat.format_month_name(month, current_locale())
   end
+
+  # The day inside a date, as an ordinal where the language writes the first
+  # of the month as one ("1er", "1°", "1º"), so booking pages read the same as
+  # the emails.
+  @spec day_of_month(1..31) :: String.t()
+  defp day_of_month(day), do: LocaleFormat.format_day_of_month(day, current_locale())
 
   @spec standalone_month(integer()) :: String.t()
   defp standalone_month(month) do

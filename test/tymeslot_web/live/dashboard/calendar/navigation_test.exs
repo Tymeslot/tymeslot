@@ -72,9 +72,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.NavigationTest do
       assert length(strings.months) == 12
     end
 
+    test "the first of the month is the ordinal the language writes it as" do
+      assert ClientStrings.build("fr").first_of_month == "1er"
+      assert ClientStrings.build("it").first_of_month == "1°"
+      assert ClientStrings.build("en").first_of_month == "1"
+    end
+
     test "carries every key the renderer reads" do
       keys =
-        ~w(weekdays months all_day more allday_more also_here shown_as_free ended waiting_to_sync early_hours show_early_hours fold_early_hours open_day empty_day empty_three_day empty_week loading list_label)a
+        ~w(weekdays months first_of_month all_day more allday_more also_here shown_as_free ended waiting_to_sync early_hours show_early_hours fold_early_hours open_day empty_day empty_three_day empty_week loading list_label)a
 
       assert keys -- Map.keys(ClientStrings.build("en")) == []
     end

@@ -137,6 +137,46 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
     end
   end
 
+  describe "the first of the month" do
+    # The booking pages build dates from their own patterns rather than
+    # `LocaleFormat.format_date/2`, so each one must still write the first
+    # as the ordinal the confirmation email uses.
+    test "is an ordinal in French, Italian and Portuguese on every booking-page date" do
+      expected = %{
+        "fr" =>
+          {"Jeudi 1er octobre 2026 à 10:00 CEST", "1er octobre 2026 à 10:00 CEST",
+           "Jeudi 1er octobre, 10:00", "Fin : jeudi 1er octobre, 01:00"},
+        "it" =>
+          {"Giovedì 1° ottobre 2026 alle 10:00 CEST", "1° ottobre 2026 alle 10:00 CEST",
+           "Giovedì 1° ottobre, 10:00", "Fine: giovedì 1° ottobre, alle 01:00"},
+        "pt" =>
+          {"quinta-feira, 1º de outubro de 2026 às 10:00 CEST",
+           "1º de outubro de 2026 às 10:00 CEST", "quinta-feira, 1º de outubro, 10:00",
+           "Termina às 01:00 de quinta-feira, 1º de outubro"}
+      }
+
+      for {locale, dates} <- expected do
+        Gettext.put_locale(TymeslotWeb.Gettext, locale)
+        assert {locale, first_of_october()} == {locale, dates}
+      end
+    end
+
+    test "stays a plain number in English" do
+      assert first_of_october() ==
+               {"Thursday, 1 October 2026 at 10:00 AM CEST", "1 October 2026 at 10:00 AM CEST",
+                "Thursday 1 October, 10:00 AM", "Ends 01:00 AM on Thursday 1 October"}
+    end
+  end
+
+  defp first_of_october do
+    {LocalizationHelpers.format_booking_datetime("2026-10-01", "10:00", "Europe/Paris"),
+     LocalizationHelpers.format_meeting_datetime(~U[2026-10-01 08:00:00Z], "Europe/Paris"),
+     LocalizationHelpers.format_meeting_datetime_compact(
+       ~U[2026-10-01 08:00:00Z],
+       "Europe/Paris"
+     ), LocalizationHelpers.format_next_day_end("2026-09-30", "23:00", 120, "Europe/Paris")}
+  end
+
   describe "weekday_name/1" do
     test "names the ISO weekday in the booking language" do
       Gettext.put_locale(TymeslotWeb.Gettext, "en")

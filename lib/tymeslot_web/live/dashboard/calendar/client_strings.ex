@@ -38,6 +38,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.ClientStrings do
     %{
       weekdays: monday_to_saturday ++ [sunday],
       months: LocaleFormat.get_month_names(locale, :short),
+      first_of_month: LocaleFormat.format_day_of_month(1, locale),
       all_day: dgettext("dashboard_calendar", "All day"),
       more: dgettext("dashboard_calendar", "more"),
       allday_more:

@@ -75,9 +75,12 @@ export function colour(token) {
   return TOKEN.test(token || "") ? `var(--color-${token})` : "var(--color-calendar-fallback)";
 }
 
+// The first of the month takes the ordinal some languages write it as
+// ("1er", "1°", "1º"), which the server sends as `first_of_month`.
 export function dateLabel(iso, strings) {
   const [, month, day] = iso.split("-").map(Number);
-  return `${strings.weekdays[isoWeekday(dayNumber(iso)) - 1]} ${day} ${strings.months[month - 1]}`;
+  const dayText = day === 1 && strings.first_of_month ? strings.first_of_month : day;
+  return `${strings.weekdays[isoWeekday(dayNumber(iso)) - 1]} ${dayText} ${strings.months[month - 1]}`;
 }
 
 // A row's ISO week (week_numbers.js), for the head corner and the month and
