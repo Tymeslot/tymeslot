@@ -5,9 +5,22 @@ defmodule Tymeslot.MeetingPayments.RefundOutcome do
     * `{:succeeded, stripe_refund}`: Stripe accepted the refund. A refund
       still `pending` or `requires_action` at Stripe is money committed
       there, so it counts as made.
-    * `{:retry, reason}`: a later attempt may succeed. An idempotency error
-      is one too, since the next attempt re-reads Stripe's refunds and sends
-      under a new key; so is a missing API key, which configuration can fix.
+    * `{:retry, reason}`: a later attempt may succeed, and Stripe stored no
+      answer under the request's idempotency key, so the next attempt sends
+      the same key: no answer arrived (a timeout, a dropped connection, in
+      which case Stripe may have made the refund), or Stripe turned the
+      request away before acting on it (a 409 for a request still in flight
+      under the key, a 429). A missing API key is one too: nothing was sent,
+      and configuration can fix it.
+    * `{:retry_new_key, error}`: a later attempt may succeed, but Stripe
+      stored an answer under the key that a resend would only replay: a 5xx,
+      after which Stripe may still have made the refund, or an idempotency
+      error. The next attempt re-reads Stripe's refunds and sends under a new
+      key. With `later_attempt: true`, so is a refusal saying the charge is
+      refunded already: an earlier attempt's request may have refunded it
+      without Stripe listing that refund yet, so the refusal does not fail
+      the refund, and a later attempt finds that refund or, the job's last,
+      fails it.
     * `{:failed, code}`: Stripe refused the refund; no attempt will turn
       that round.
     * `{:failed, code, stripe_refund_id}`: Stripe made the refund and ended
@@ -24,26 +37,44 @@ defmodule Tymeslot.MeetingPayments.RefundOutcome do
   @type t ::
           {:succeeded, map()}
           | {:retry, StripeError.t() | :missing_api_key}
+          | {:retry_new_key, StripeError.t()}
           | {:failed, String.t()}
           | {:failed, String.t(), String.t()}
           | {:unlistable, StripeError.t()}
 
-  @spec classify({:ok, map()} | {:error, StripeError.t() | :missing_api_key}) :: t()
-  def classify({:ok, %{"status" => status} = refund}) when status in @committed,
+  @doc """
+  What Stripe's answer to a request for a refund comes to. Options:
+
+    * `:later_attempt` (default `false`): the request follows an earlier
+      attempt's, so a refusal saying the charge is refunded already may be
+      that earlier request's doing.
+  """
+  @spec classify({:ok, map()} | {:error, StripeError.t() | :missing_api_key}, [
+          {:later_attempt, boolean()}
+        ]) :: t()
+  def classify(answer, opts \\ [])
+
+  def classify({:ok, %{"status" => status} = refund}, _opts) when status in @committed,
     do: {:succeeded, refund}
 
-  def classify({:ok, %{"status" => status, "id" => id}}) when status in @ended,
+  def classify({:ok, %{"status" => status, "id" => id}}, _opts) when status in @ended,
     do: {:failed, "refund_" <> status, id}
 
-  def classify({:error, %StripeError{} = error}) do
+  def classify({:error, %StripeError{} = error}, opts) do
     cond do
-      StripeError.retryable?(error) -> {:retry, error}
-      error.type == "idempotency_error" -> {:retry, error}
+      unanswered?(error) -> {:retry, error}
+      StripeError.retryable?(error) -> {:retry_new_key, error}
+      error.type == "idempotency_error" -> {:retry_new_key, error}
+      error.code == "charge_already_refunded" and opts[:later_attempt] -> {:retry_new_key, error}
       true -> {:failed, error.code || error.type}
     end
   end
 
-  def classify({:error, :missing_api_key}), do: {:retry, :missing_api_key}
+  def classify({:error, :missing_api_key}, _opts), do: {:retry, :missing_api_key}
+
+  defp unanswered?(%StripeError{type: "api_connection_error"}), do: true
+  defp unanswered?(%StripeError{status: status}) when status in [409, 429], do: true
+  defp unanswered?(_error), do: false
 
   @doc """
   What a failed read of the charge's refunds comes to. The read is made

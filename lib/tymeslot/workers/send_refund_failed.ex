@@ -7,9 +7,12 @@ defmodule Tymeslot.Workers.SendRefundFailed do
 
   Enqueued by `Tymeslot.MeetingPayments.Refunds.FailureNotice` once the
   refund is settled `failed`. Loads the refund and its payment inside
-  `perform/1`, and sends nothing once either is gone. One job per refund,
-  and the send is claimed through `Tymeslot.Workers.DeliveryClaims`, so a
-  rescued job does not send it twice.
+  `perform/1`, and sends nothing once either is gone, or once the refund is
+  no longer `failed`: Stripe reported it made after all
+  (`Tymeslot.MeetingPayments.Refunds.FailureNotice.reversed/2`), and the
+  money is the attendee's already. One job per refund, and the send is
+  claimed through `Tymeslot.Workers.DeliveryClaims`, so a rescued job does
+  not send it twice.
   """
 
   use Oban.Worker,
@@ -32,10 +35,13 @@ defmodule Tymeslot.Workers.SendRefundFailed do
   @behaviour ExpectedJobOutcome
 
   @refund_gone "refund not found"
+  @not_failed "refund no longer failed"
 
   @impl ExpectedJobOutcome
   def expected_outcome?(reason),
-    do: reason == @refund_gone or TransactionalEmailDelivery.recipient_rejected?(reason)
+    do:
+      reason in [@refund_gone, @not_failed] or
+        TransactionalEmailDelivery.recipient_rejected?(reason)
 
   @doc "The job telling the host that `refund` failed."
   @spec new_for(RefundSchema.t()) :: Oban.Job.changeset()
@@ -50,6 +56,16 @@ defmodule Tymeslot.Workers.SendRefundFailed do
     else
       nil -> {:discard, @refund_gone}
     end
+  end
+
+  defp send_to_host(_job, %RefundSchema{status: status} = refund, _payment)
+       when status != :failed do
+    Logger.info("Refund failure email skipped, the refund is no longer failed",
+      refund_id: refund.id,
+      status: status
+    )
+
+    {:cancel, @not_failed}
   end
 
   defp send_to_host(_job, refund, %BookingPaymentSchema{host_email: host_email})

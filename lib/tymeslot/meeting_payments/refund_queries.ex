@@ -86,7 +86,9 @@ defmodule Tymeslot.MeetingPayments.RefundQueries do
   #{@lease_seconds} seconds, in one statement committed on its own, so the
   attempt's number is spent even if the process dies during it. The lease
   is read and written by the database's clock, so app servers whose clocks
-  disagree still agree on it.
+  disagree still agree on it. A refund with no key in use
+  (`RefundSchema`'s `key_attempt`) takes this attempt's, so a request whose
+  process dies before Stripe's answer leaves its key to the next attempt.
 
   Returns the refund as claimed, `:busy` while another attempt holds an
   unexpired lease, or `:not_pending` for a refund settled (or gone).
@@ -102,6 +104,7 @@ defmodule Tymeslot.MeetingPayments.RefundQueries do
           inc: [attempt: 1],
           set: [
             executing_until: fragment("? + make_interval(secs => ?)", db_now(), ^@lease_seconds),
+            key_attempt: fragment("coalesce(?, ? + 1)", r.key_attempt, r.attempt),
             updated_at: db_now()
           ]
         ]
@@ -128,10 +131,15 @@ defmodule Tymeslot.MeetingPayments.RefundQueries do
   @doc """
   Gives up the lease the `claimed` attempt took. A later attempt that has
   claimed the refund since keeps its own.
+
+  With `new_key: true`, Stripe has stored an answer under the key in use,
+  which a resend would only replay, so the key is given up too and the next
+  attempt takes its own.
   """
-  @spec release(RefundSchema.t()) :: :ok
-  def release(%RefundSchema{} = claimed) do
-    Repo.update_all(claimed_by(claimed), set: [executing_until: nil])
+  @spec release(RefundSchema.t(), [{:new_key, boolean()}]) :: :ok
+  def release(%RefundSchema{} = claimed, opts \\ []) do
+    key = if opts[:new_key], do: [key_attempt: nil], else: []
+    Repo.update_all(claimed_by(claimed), set: [executing_until: nil] ++ key)
     :ok
   end
 

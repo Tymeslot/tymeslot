@@ -87,6 +87,23 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxConcurrencyTest do
     assert key == "tymeslot:refund:#{refund.id}:2"
   end
 
+  test "an attempt taking over from one that died mid-request resends its key",
+       %{payment: payment} do
+    refund = insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2_000)
+
+    # The first attempt claimed the refund and died before Stripe answered.
+    {:ok, _first} = RefundQueries.claim_attempt(refund)
+    expire_lease(refund)
+
+    StripeStub.expect(:list_refunds, StripeFixtures.list([]))
+    StripeStub.expect(:create_refund, StripeStubResponses.refund("re_FIRST_REQUEST"))
+
+    assert {:ok, %{status: :succeeded, attempt: 2}} = Refunds.execute(refund, [])
+
+    assert [%{headers: %{"idempotency-key" => key}}] = StripeStub.requests(:create_refund)
+    assert key == "tymeslot:refund:#{refund.id}:1"
+  end
+
   describe "a claim outlived by its lease" do
     setup %{payment: payment} do
       refund = insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2_000)
@@ -177,7 +194,11 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxConcurrencyTest do
     refund_id = refund.id
 
     assert_received {:send_alert, :refund_failure_reversed,
-                     %{refund_id: ^refund_id, failure_code: "refund_failed"}}
+                     %{
+                       refund_id: ^refund_id,
+                       failure_code: "refund_failed",
+                       host_may_have_been_told: true
+                     }}
   end
 
   test "a refund Stripe reported failed is not recorded as made from an older answer",

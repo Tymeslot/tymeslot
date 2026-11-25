@@ -62,6 +62,15 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesRefundFailedTest do
       assert msg =~ "(retries_exhausted)"
       assert msg =~ "as re_1"
       assert msg =~ "earlier failure alert is void"
+      refute msg =~ "host"
+    end
+
+    test ":refund_failure_reversed asks for a host who may have been told to be told" do
+      metadata = %{refund_id: "rf_1", host_may_have_been_told: true}
+
+      msg = AlertTypes.format_message(:refund_failure_reversed, metadata)
+
+      assert msg =~ "The host may have been emailed that it failed: tell them it was made"
     end
   end
 end

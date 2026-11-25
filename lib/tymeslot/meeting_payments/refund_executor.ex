@@ -13,10 +13,10 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
     3. Claims the attempt (`RefundQueries.claim_attempt/1`): its number is
        committed and a lease taken before Stripe is called, so two
        executors never call Stripe for one refund at once, and an attempt
-       whose process dies has still spent its idempotency key. Releasing
-       the lease and failing the refund apply only while this claim is the
-       latest, so an attempt that outlived its lease decides nothing but a
-       refund Stripe made.
+       whose process dies leaves its idempotency key in use for the next.
+       Releasing the lease and failing the refund apply only while this
+       claim is the latest, so an attempt that outlived its lease decides
+       nothing but a refund Stripe made.
     4. From the second attempt on, lists the charge's refunds first and
        adopts the one carrying this refund's id in its metadata: an earlier
        attempt may have been made at Stripe without its answer arriving. A
@@ -24,9 +24,18 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
        with no attempt after it to find out how a new request ended, it
        never sends one, and fails the refund with `"retries_exhausted"`
        only once the list shows Stripe never made it.
-    5. Asks Stripe for the refund under the attempt's own key
-       (`IdempotencyKey.for_intent(:refund, id, attempt)`), so a later
-       attempt never replays an error Stripe stored against an earlier key.
+    5. Asks Stripe for the refund under the key in use
+       (`IdempotencyKey.for_intent(:refund, id, key_attempt)`; see
+       `RefundSchema`). An attempt following one Stripe stored no answer
+       for (a timeout, a request still in flight) sends that attempt's key
+       again, so Stripe returns the refund the earlier request made rather
+       than making a second; the listing in step 4 alone cannot promise
+       that, as Stripe may not list a refund it is still making. Once
+       Stripe has stored an answer under a key that leaves the refund open
+       (`RefundOutcome`'s `:retry_new_key`), the next attempt takes its
+       own key, so it never replays that answer, and runs no sooner than a
+       minute later, giving Stripe time to list a refund the answered
+       request may have made.
        A refund carrying a `legacy_idempotency_key` replays that key, with
        the request first sent under it (which named no refund row), on
        every attempt until 24 hours after `legacy_since`, while Stripe may
@@ -66,6 +75,11 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
   @legacy_key_kept_seconds 24 * 60 * 60
   @clock_margin_seconds 5 * 60
 
+  # How long Stripe is given to list a refund that a request it answered
+  # with an error may still have made, before the next attempt reads the
+  # list and sends under a new key.
+  @settle_seconds 60
+
   @type result ::
           {:ok, RefundSchema.t()}
           | {:pending, RefundSchema.t()}
@@ -81,7 +95,8 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
     * `:deadline_ms` (default 10 000): how long the Stripe call may take.
     * `:from_job` (default `false`): called by `ExecuteRefund`, whose own
       backoff schedules the next attempt. Otherwise a refund left pending
-      has its job rescheduled to run at once.
+      has its job rescheduled to run at once, or in #{@settle_seconds}
+      seconds when the next attempt is to send under a new key.
     * `:last_attempt` (default `false`): no attempt follows, so the attempt
       only looks for the refund at Stripe (step 4), and a refund whose
       charge cannot be found fails.
@@ -205,8 +220,11 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
     end
   end
 
-  defp created(refund, payment, opts),
-    do: refund |> create(payment, opts) |> RefundOutcome.classify()
+  defp created(refund, payment, opts) do
+    refund
+    |> create(payment, opts)
+    |> RefundOutcome.classify(later_attempt: refund.attempt > 1)
+  end
 
   # The charge is expanded so an adopted refund carries Stripe's refunded
   # total as a created one does.
@@ -265,13 +283,15 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
 
   defp request(refund, payment), do: attempt_request(refund, payment)
 
-  defp attempt_request(%RefundSchema{id: id, attempt: attempt} = refund, payment) do
+  # The key in use is set by the claim this attempt holds.
+  defp attempt_request(%RefundSchema{id: id, key_attempt: key_attempt} = refund, payment)
+       when is_integer(key_attempt) do
     params =
       payment
       |> stripe_params(refund.amount_cents, refund.reason)
       |> put_in([:metadata, :tymeslot_refund_id], id)
 
-    {params, IdempotencyKey.for_intent(:refund, id, attempt)}
+    {params, IdempotencyKey.for_intent(:refund, id, key_attempt)}
   end
 
   # A series payment names its series instead of a meeting.
@@ -306,6 +326,17 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
 
     RefundQueries.release(refund)
     retry_later(refund, opts)
+  end
+
+  defp conclude({:retry_new_key, reason}, refund, _payment, opts) do
+    Logger.warning("Refund attempt failed, to be retried under a new key",
+      refund_id: refund.id,
+      attempt: refund.attempt,
+      reason: LogFormat.reason(reason)
+    )
+
+    RefundQueries.release(refund, new_key: true)
+    retry_later(refund, opts, @settle_seconds)
   end
 
   defp conclude({:failed, code}, refund, _payment, _opts), do: fail(refund, code)
@@ -371,8 +402,8 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
     end
   end
 
-  defp retry_later(refund, opts) do
-    unless opts[:from_job], do: ExecuteRefund.reschedule(refund.id, in: 0)
+  defp retry_later(refund, opts, seconds \\ 0) do
+    unless opts[:from_job], do: ExecuteRefund.reschedule(refund.id, in: seconds)
     {:pending, refund}
   end
 

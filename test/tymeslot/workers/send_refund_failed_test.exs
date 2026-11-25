@@ -118,6 +118,16 @@ defmodule Tymeslot.Workers.SendRefundFailedTest do
     assert second.id == first.id
   end
 
+  # Stripe reported the refund made after it was failed, before the email went.
+  test "sends nothing for a refund no longer failed", %{refund: refund} do
+    refund
+    |> Changeset.change(status: :succeeded, failure_code: nil, stripe_refund_id: "re_LATE")
+    |> Repo.update!()
+
+    assert {:cancel, "refund no longer failed"} = run(refund)
+    refute_received {:email, _email}
+  end
+
   test "sends nothing once the refund is gone" do
     assert {:discard, "refund not found"} =
              perform_job(SendRefundFailed, %{refund_id: UUID.generate()})

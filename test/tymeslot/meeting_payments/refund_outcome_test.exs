@@ -25,16 +25,30 @@ defmodule Tymeslot.MeetingPayments.RefundOutcomeTest do
   end
 
   describe "a Stripe error" do
-    test "one a later attempt can get past is retried" do
+    test "one with no answer is retried under the same key" do
       error = %StripeError{type: "api_connection_error", reason: :timeout}
 
       assert RefundOutcome.classify({:error, error}) == {:retry, error}
     end
 
-    test "an idempotency error is retried, under the next attempt's key" do
+    test "a conflict or a rate limit, which Stripe stores no answer for, keeps the key" do
+      conflict = %StripeError{type: "idempotency_error", status: 409}
+      rate_limited = %StripeError{type: "invalid_request_error", status: 429}
+
+      assert RefundOutcome.classify({:error, conflict}) == {:retry, conflict}
+      assert RefundOutcome.classify({:error, rate_limited}) == {:retry, rate_limited}
+    end
+
+    test "a 5xx, which Stripe replays under its key, is retried under a new one" do
+      error = %StripeError{type: "api_error", status: 500}
+
+      assert RefundOutcome.classify({:error, error}) == {:retry_new_key, error}
+    end
+
+    test "an idempotency error is retried under a new key" do
       error = %StripeError{type: "idempotency_error", status: 400}
 
-      assert RefundOutcome.classify({:error, error}) == {:retry, error}
+      assert RefundOutcome.classify({:error, error}) == {:retry_new_key, error}
     end
 
     test "a charge refunded already fails the refund" do
@@ -45,6 +59,24 @@ defmodule Tymeslot.MeetingPayments.RefundOutcomeTest do
       }
 
       assert RefundOutcome.classify({:error, error}) == {:failed, "charge_already_refunded"}
+    end
+
+    test "after an earlier attempt, a charge refunded already is retried under a new key" do
+      error = %StripeError{
+        type: "invalid_request_error",
+        code: "charge_already_refunded",
+        status: 400
+      }
+
+      assert RefundOutcome.classify({:error, error}, later_attempt: true) ==
+               {:retry_new_key, error}
+    end
+
+    test "after an earlier attempt, any other refusal still fails the refund" do
+      error = %StripeError{type: "card_error", code: "card_declined", status: 402}
+
+      assert RefundOutcome.classify({:error, error}, later_attempt: true) ==
+               {:failed, "card_declined"}
     end
 
     test "any other refusal fails the refund with its code" do

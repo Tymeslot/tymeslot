@@ -61,6 +61,13 @@ defmodule Tymeslot.MeetingPayments.Refunds.FailureNotice do
   Reports `refund` to the admins as a `:refund_failure_reversed` alert: it
   was settled failed with `failure_code` and reported, and has since been
   recorded as made at Stripe, so that earlier alert no longer stands.
+
+  The host is not emailed again. `SendRefundFailed` sends nothing for a
+  refund no longer failed, and a request whose answer never arrived is
+  resent under its own key, so a failure Stripe later reverses reaches the
+  host only when Stripe answered a request with an error and made its
+  refund all the same. For a refund the host decided, the alert says the
+  host may have been told, for the admin to put right.
   """
   @spec reversed(RefundSchema.t(), String.t() | nil) :: :ok
   def reversed(%RefundSchema{} = refund, failure_code) do
@@ -70,7 +77,8 @@ defmodule Tymeslot.MeetingPayments.Refunds.FailureNotice do
         refund_id: refund.id,
         booking_payment_id: refund.booking_payment_id,
         stripe_refund_id: refund.stripe_refund_id,
-        failure_code: failure_code
+        failure_code: failure_code,
+        host_may_have_been_told: refund.source in @host_decided
       }
     )
 

@@ -9,8 +9,13 @@ defmodule Tymeslot.MeetingPayments.RefundSchema do
       `refunded_amount_cents`
     * failed     — Stripe refused it, or every attempt failed
 
-  `attempt` counts the attempts made (each names its own idempotency key),
-  and `executing_until` is the lease of the one attempt in flight.
+  `attempt` counts the attempts made, and `executing_until` is the lease of
+  the one attempt in flight. `key_attempt` is the attempt whose idempotency
+  key the refund's requests are sent under: claimed with the attempt that
+  first sends it, kept while Stripe has answered no request under it (a
+  timeout, a conflict with a request still in flight), and given up once
+  Stripe has stored an answer to replay (`nil`, so the next attempt takes
+  its own).
 
   `source` says what decided the refund. `:external` is a refund made outside
   Tymeslot (in the Stripe dashboard) and recorded from Stripe; callers never
@@ -43,6 +48,7 @@ defmodule Tymeslot.MeetingPayments.RefundSchema do
           source: source() | nil,
           status: status(),
           attempt: non_neg_integer(),
+          key_attempt: pos_integer() | nil,
           stripe_refund_id: String.t() | nil,
           failure_code: String.t() | nil,
           reason: String.t() | nil,
@@ -62,6 +68,7 @@ defmodule Tymeslot.MeetingPayments.RefundSchema do
     field :source, Ecto.Enum, values: @sources
     field :status, Ecto.Enum, values: @statuses, default: :pending
     field :attempt, :integer, default: 0
+    field :key_attempt, :integer
     field :stripe_refund_id, :string
     field :failure_code, :string
     field :reason, :string

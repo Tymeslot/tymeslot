@@ -216,7 +216,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
     "Refund #{get.(:refund_id)} of booking payment #{get.(:booking_payment_id)}, reported " <>
       "as failed (#{get.(:failure_code)}), was made at Stripe after all as " <>
       "#{get.(:stripe_refund_id)} and is now recorded. The earlier failure alert is void: " <>
-      "the attendee has been refunded, so refund nothing by hand"
+      "the attendee has been refunded, so refund nothing by hand" <> host_told(metadata)
   end
 
   def format_message(:refund_stuck, metadata) do
@@ -389,6 +389,12 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
       true -> nil
     end
   end
+
+  # A refund the host decided emails the host when it fails.
+  defp host_told(%{host_may_have_been_told: true}),
+    do: ". The host may have been emailed that it failed: tell them it was made"
+
+  defp host_told(_metadata), do: ""
 
   defp recipients_label(metadata) do
     case Map.get(metadata, :recipients_masked) do
