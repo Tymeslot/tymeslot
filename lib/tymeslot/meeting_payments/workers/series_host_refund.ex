@@ -1,6 +1,7 @@
 defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
   @moduledoc """
-  Runs jobs queued before 1.49; delete after that release.
+  Runs jobs queued before the release that brought in the refund outbox
+  (`booking_payment_refunds`); delete in the release after it.
 
   Such a job refunds `amount_cents` of a series payment for its host, after
   the host cancelled the series' remaining sessions. Nothing inserts such

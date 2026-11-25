@@ -1,6 +1,7 @@
 defmodule Tymeslot.Workers.SendSeriesRefundFailed do
   @moduledoc """
-  Runs jobs queued before 1.49; delete after that release.
+  Runs jobs queued before the release that brought in the refund outbox
+  (`booking_payment_refunds`); delete in the release after it.
 
   Such a job tells the host that the refund of a series payment, made when
   they cancelled the series' remaining sessions, could not be made. Nothing
