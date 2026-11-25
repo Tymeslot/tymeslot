@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.IcsImport
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   @upload :ics_file
 
@@ -122,8 +123,9 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
       dngettext(
         "dashboard_calendar_import",
         "This file contains more than 1 event, too many to read. Export a shorter date range from your calendar app, or subscribe to the calendar by URL instead.",
-        "This file contains more than %{count} events, too many to read. Export a shorter date range from your calendar app, or subscribe to the calendar by URL instead.",
-        IcsImport.max_file_events()
+        "This file contains more than %{number} events, too many to read. Export a shorter date range from your calendar app, or subscribe to the calendar by URL instead.",
+        IcsImport.max_file_events(),
+        number: number(IcsImport.max_file_events())
       )
 
   @doc "Why an import could not start, other than one already running."
@@ -188,8 +190,9 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
       dngettext(
         "dashboard_calendar_import",
         "Imported 1 event.",
-        "Imported %{count} events.",
-        count
+        "Imported %{number} events.",
+        count,
+        number: number(count)
       )
 
   # Why events were not imported: the calendar refused or failed them, or
@@ -210,8 +213,9 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
       dngettext(
         "dashboard_calendar_import",
         "1 event repeats in a way Outlook can't store, so it was not imported.",
-        "%{count} events repeat in a way Outlook can't store, so they were not imported.",
-        count
+        "%{number} events repeat in a way Outlook can't store, so they were not imported.",
+        count,
+        number: number(count)
       )
 
     case month_end do
@@ -227,8 +231,9 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
       dngettext(
         "dashboard_calendar_import",
         "1 event could not be imported.",
-        "%{count} events could not be imported.",
-        failed
+        "%{number} events could not be imported.",
+        failed,
+        number: number(failed)
       )
 
     if titles == "", do: message, else: "#{message} (#{titles})"
@@ -239,8 +244,9 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
       dngettext(
         "dashboard_calendar_import",
         "1 of them repeats on a day some months don't have, which Outlook would move to the month's last day.",
-        "%{count} of them repeat on a day some months don't have, which Outlook would move to the month's last day.",
-        count
+        "%{number} of them repeat on a day some months don't have, which Outlook would move to the month's last day.",
+        count,
+        number: number(count)
       )
 
   defp halted_message(:unauthorized),
@@ -269,7 +275,17 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
       dngettext(
         "dashboard_calendar_import",
         "Outlook could not take the skipped dates of 1 recurring event, so it may show extra occurrences.",
-        "Outlook could not take the skipped dates of %{count} recurring events, so they may show extra occurrences.",
-        count
+        "Outlook could not take the skipped dates of %{number} recurring events, so they may show extra occurrences.",
+        count,
+        number: number(count)
       )
+
+  @doc """
+  A count in the import's messages, with the locale's thousands separator.
+  Gettext binds the raw `count` to choose the plural form, so the formatted
+  figure travels under its own placeholder, `%{number}`.
+  """
+  @spec number(non_neg_integer()) :: String.t()
+  def number(count),
+    do: LocaleFormat.format_integer(count, Gettext.get_locale(TymeslotWeb.Gettext))
 end

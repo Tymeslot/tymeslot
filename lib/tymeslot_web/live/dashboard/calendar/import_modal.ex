@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
 
   alias Tymeslot.CalendarGrid.IcsImport
   alias TymeslotWeb.Dashboard.Calendar.PanelCalendarField
+  alias TymeslotWeb.Dashboard.IcsImportFlow
   alias TymeslotWeb.Helpers.LocaleFormat
 
   @choosing [:choose, :reading, :too_many, :ready]
@@ -61,9 +62,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
               {dngettext(
                 "dashboard_calendar_import",
                 "Importing %{done} of 1 event...",
-                "Importing %{done} of %{count} events...",
+                "Importing %{done} of %{number} events...",
                 @ics_import.total,
-                done: @ics_import.done
+                done: IcsImportFlow.number(@ics_import.done),
+                number: IcsImportFlow.number(@ics_import.total)
               )}
             </span>
           </div>
@@ -133,23 +135,26 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
               {dngettext(
                 "dashboard_calendar_import",
                 "Found 1 event.",
-                "Found %{count} events.",
-                @ics_import.summary.events
+                "Found %{number} events.",
+                @ics_import.summary.events,
+                number: IcsImportFlow.number(@ics_import.summary.events)
               )}
               <span :if={@ics_import.summary.series > 0}>
                 {dngettext(
                   "dashboard_calendar_import",
                   "1 of them repeats.",
-                  "%{count} of them repeat.",
-                  @ics_import.summary.series
+                  "%{number} of them repeat.",
+                  @ics_import.summary.series,
+                  number: IcsImportFlow.number(@ics_import.summary.series)
                 )}
               </span>
               <span :if={@ics_import.summary.left_out > 0}>
                 {dngettext(
                   "dashboard_calendar_import",
                   "1 event before %{before_date} is left out.",
-                  "%{count} events before %{before_date} are left out.",
+                  "%{number} events before %{before_date} are left out.",
                   @ics_import.summary.left_out,
+                  number: IcsImportFlow.number(@ics_import.summary.left_out),
                   before_date: long_date(@ics_import.summary.from, :a)
                 )}
               </span>
@@ -223,7 +228,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
   defp too_many(assigns) do
     assigns =
       assign(assigns,
-        max: IcsImport.max_events(),
+        max: IcsImportFlow.number(IcsImport.max_events()),
         none_fit: none_fit(assigns.overview.suggestions)
       )
 
@@ -233,8 +238,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
         {dngettext(
           "dashboard_calendar_import",
           "This file holds 1 event, from %{from_date} to %{to_date}. One import can copy up to %{max}.",
-          "This file holds %{count} events, from %{from_date} to %{to_date}. One import can copy up to %{max}.",
+          "This file holds %{number} events, from %{from_date} to %{to_date}. One import can copy up to %{max}.",
           @overview.events,
+          number: IcsImportFlow.number(@overview.events),
           from_date: long_date(@overview.first, :da),
           to_date: long_date(@overview.last, :a),
           max: @max
@@ -347,13 +353,17 @@ defmodule TymeslotWeb.Dashboard.Calendar.ImportModal do
       dngettext(
         "dashboard_calendar_import",
         "1 event, more than %{max}",
-        "%{count} events, more than %{max}",
+        "%{number} events, more than %{max}",
         count,
+        number: IcsImportFlow.number(count),
         max: max
       )
 
   defp suggestion_note(%{events: count}, _max),
-    do: dngettext("dashboard_calendar_import", "1 event", "%{count} events", count)
+    do:
+      dngettext("dashboard_calendar_import", "1 event", "%{number} events", count,
+        number: IcsImportFlow.number(count)
+      )
 
   # A date in a sentence, led by the article Italian puts before it.
   defp long_date(date, preposition) do
