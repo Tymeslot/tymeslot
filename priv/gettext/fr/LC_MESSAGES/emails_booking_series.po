@@ -191,8 +191,8 @@ msgstr "Refuser toutes les séances"
 
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format
-msgid "Every session is held until you answer. If you haven't replied by %{deadline}, the request lapses and %{name} is told the times are free again."
-msgstr "Toutes les séances restent réservées jusqu’à votre réponse. Sans réponse avant le %{deadline}, la demande expire et %{name} est informé que les créneaux sont de nouveau libres."
+msgid "Every session is held until you answer. If you haven't replied by %{by_deadline}, the request lapses and %{name} is told the times are free again."
+msgstr "Toutes les séances restent réservées jusqu’à votre réponse. Sans réponse avant le %{by_deadline}, la demande expire et %{name} est informé que les créneaux sont de nouveau libres."
 
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format
@@ -206,8 +206,8 @@ msgstr "Bonjour %{name}, %{host} n’est pas disponible pour les séances ci-des
 
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format
-msgid "Hi %{name}, %{host} has your request for the sessions below. They are held for you but not booked until %{host} approves them, and you'll hear either way by %{deadline}."
-msgstr "Bonjour %{name}, %{host} a bien reçu votre demande pour les séances ci-dessous. Elles sont retenues pour vous, mais ne seront réservées qu’une fois acceptées par %{host}. Vous recevrez une réponse dans tous les cas d’ici le %{deadline}."
+msgid "Hi %{name}, %{host} has your request for the sessions below. They are held for you but not booked until %{host} approves them, and you'll hear either way by %{by_deadline}."
+msgstr "Bonjour %{name}, %{host} a bien reçu votre demande pour les séances ci-dessous. Elles sont retenues pour vous, mais ne seront réservées qu’une fois acceptées par %{host}. Vous recevrez une réponse dans tous les cas d’ici le %{by_deadline}."
 
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format

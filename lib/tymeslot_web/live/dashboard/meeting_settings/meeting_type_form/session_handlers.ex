@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Components.CoreComponents.DateTimePicker.Value
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{Autosave, OfferedTimeHandlers}
+  alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   @doc "Assigns the type's planned dates, the host's time zone and the input row's state."
@@ -317,9 +318,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
     do:
       dgettext(
         "dashboard_meeting_fixed_dates",
-        "%{time} does not exist on %{date} because the clocks go forward, so the time was saved as %{saved}.",
+        "%{time} does not exist on %{on_date} because the clocks go forward, so the time was saved as %{saved}.",
         time: LocalizationHelpers.format_time_by_locale(time),
-        date: LocalizationHelpers.format_date(date),
+        on_date: on_date(date),
         saved: LocalizationHelpers.format_time_by_locale(just_after)
       )
 
@@ -327,13 +328,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
     do:
       dgettext(
         "dashboard_meeting_fixed_dates",
-        "%{time} happens twice on %{date} because the clocks go back, so the earlier one (%{zone}) was saved.",
+        "%{time} happens twice on %{on_date} because the clocks go back, so the earlier one (%{zone}) was saved.",
         time: LocalizationHelpers.format_time_by_locale(time),
-        date: LocalizationHelpers.format_date(date),
+        on_date: on_date(date),
         zone: first.zone_abbr
       )
 
   defp notice(_plain_or_invalid, _date, _time), do: nil
+
+  defp on_date(date) do
+    date
+    |> LocalizationHelpers.format_date()
+    |> LocaleFormat.with_article(:none, Gettext.get_locale(TymeslotWeb.Gettext))
+  end
 
   defp parse_close(value, _timezone) when value in [nil, ""], do: {:ok, nil}
 

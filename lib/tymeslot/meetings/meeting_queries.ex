@@ -291,11 +291,16 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   @doc """
   Held-for-verification meetings whose verification deadline has passed at
   `now`, oldest deadline first, at most `limit`. Backs the expiry sweep.
+
+  Group slots (`capacity > 1`, `MeetingSchema.group?/1`) are left out: a held
+  slot's own deadline only hides it from the organiser, and it expires
+  through its seats (`EmailVerification.expire_seat/1`).
   """
   @spec list_expired_verifications(DateTime.t(), pos_integer()) :: [Meeting.t()]
   def list_expired_verifications(%DateTime{} = now, limit) when is_integer(limit) do
     Meeting
     |> MeetingState.where_awaiting_verification()
+    |> where([m], m.capacity <= 1)
     |> where([m], not is_nil(m.verification_deadline_at) and m.verification_deadline_at <= ^now)
     |> order_by([m], asc: m.verification_deadline_at)
     |> limit(^limit)

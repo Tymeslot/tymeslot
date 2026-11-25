@@ -411,8 +411,8 @@ msgstr "Ihr Stripe-Konto ist nicht verbunden, daher müssen diese Rückerstattun
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Cancelled %{date}"
-msgstr "Abgesagt am %{date}"
+msgid "Cancelled %{on_date}"
+msgstr "Abgesagt am %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
@@ -421,8 +421,8 @@ msgstr "Abgelaufen"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Expired, paid %{date}"
-msgstr "Abgelaufen, bezahlt am %{date}"
+msgid "Expired, paid %{on_date}"
+msgstr "Abgelaufen, bezahlt am %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
@@ -431,8 +431,8 @@ msgstr "Abgelaufene Buchungen wurden bezahlt, aber nie bestätigt, zum Beispiel 
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Declined %{date}"
-msgstr "Abgelehnt am %{date}"
+msgid "Declined %{on_date}"
+msgstr "Abgelehnt am %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format

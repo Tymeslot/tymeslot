@@ -411,7 +411,7 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Cancelled %{date}"
+msgid "Cancelled %{on_date}"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
@@ -421,7 +421,7 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Expired, paid %{date}"
+msgid "Expired, paid %{on_date}"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
@@ -431,7 +431,7 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Declined %{date}"
+msgid "Declined %{on_date}"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex

@@ -38,6 +38,7 @@ defmodule Tymeslot.Emails.Templates.BookingRequestReceived do
   }
 
   alias Tymeslot.Utils.DateTimeUtils
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   alias Tymeslot.Emails.Shared.BookingRequestLocation
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -227,14 +228,17 @@ defmodule Tymeslot.Emails.Templates.BookingRequestReceived do
   end
 
   defp waiting_sentence(%Meeting{} = meeting, locale) do
-    deadline =
+    by_deadline =
       meeting.approval_deadline_at
       |> DateTimeUtils.convert_to_timezone(meeting.attendee_timezone || "UTC")
       |> Formatting.format_datetime(locale)
+      |> LocaleFormat.with_article(:none, locale)
 
-    dgettext("emails_booking_requests", "%{organizer} will reply by %{deadline} at the latest.",
+    dgettext(
+      "emails_booking_requests",
+      "%{organizer} will reply by %{by_deadline} at the latest.",
       organizer: meeting.organizer_name,
-      deadline: deadline
+      by_deadline: by_deadline
     )
   end
 

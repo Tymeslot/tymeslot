@@ -106,7 +106,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupRulesTest do
       refute reload(meeting_type).requires_approval
     end
 
-    test "group bookings are blocked by email verification", %{conn: conn, user: user} do
+    test "email verification does not block group bookings", %{conn: conn, user: user} do
       meeting_type =
         insert(:meeting_type,
           user: user,
@@ -116,14 +116,10 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupRulesTest do
 
       view = edit(conn, meeting_type)
 
-      assert has_element?(view, "input[phx-click='toggle_group_bookings'][disabled]")
-      assert render(view) =~ "Turn off email confirmation to enable group bookings."
+      refute has_element?(view, "input[phx-click='toggle_group_bookings'][disabled]")
+      view |> element("input[phx-click='toggle_group_bookings']") |> render_click()
 
-      view
-      |> with_target(form_wrapper(meeting_type))
-      |> render_click("toggle_group_bookings", %{})
-
-      assert reload(meeting_type).max_participants == 1
+      assert %{requires_email_verification: true, max_participants: 10} = reload(meeting_type)
     end
 
     test "turning approval off makes group bookings available again",

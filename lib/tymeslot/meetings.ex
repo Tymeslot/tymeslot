@@ -10,6 +10,7 @@ defmodule Tymeslot.Meetings do
   alias Tymeslot.Bookings.{Cancel, CancelSeat, HostMove, Reschedule, RescheduleRequest}
 
   alias Tymeslot.Meetings.{
+    CalendarEventConference,
     CalendarEvents,
     CalendarExport,
     CalendarMove,
@@ -73,6 +74,14 @@ defmodule Tymeslot.Meetings do
   result (`Tymeslot.Meetings.CalendarEventConference.clear_under_lock/2`).
   """
   defdelegate await_event_conference_writes(meeting_id), to: MeetingQueries
+
+  @doc """
+  Asks the meeting's Google event `event_id` for a Meet conference in place
+  (`Tymeslot.Meetings.CalendarEventConference.request_under_lock/2`).
+  """
+  defdelegate request_event_conference(meeting_id, event_id),
+    to: CalendarEventConference,
+    as: :request_under_lock
 
   @doc """
   Which of the calendar event `uids` belong to the organiser's group meetings
@@ -242,6 +251,9 @@ defmodule Tymeslot.Meetings do
 
   @doc "Deletes a meeting's calendar event through an Oban worker; scheduling failures are not fatal."
   defdelegate cancel_calendar_event(meeting), to: CalendarEvents
+
+  @doc "Deletes the event a meeting is letting go of; see `Tymeslot.Meetings.CalendarEvents.release_calendar_event/1`."
+  defdelegate release_calendar_event(meeting), to: CalendarEvents
 
   # =====================================
   # Video Room Integration Functions

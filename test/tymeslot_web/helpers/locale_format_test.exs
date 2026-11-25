@@ -49,6 +49,18 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       date = ~D[2026-03-15]
       assert LocaleFormat.format_date(date, "ja") == "15 March 2026"
     end
+
+    test "writes the first of a month as an ordinal in French, Italian and Portuguese" do
+      assert LocaleFormat.format_date(~D[2026-10-01], "fr") == "1er octobre 2026"
+      assert LocaleFormat.format_date(~D[2026-10-01], "it") == "1° ottobre 2026"
+      assert LocaleFormat.format_date(~D[2026-10-01], "pt") == "1º de outubro de 2026"
+    end
+
+    test "keeps the first of a month a plain number elsewhere, with German's single stop" do
+      assert LocaleFormat.format_date(~D[2026-10-01], "en") == "1 October 2026"
+      assert LocaleFormat.format_date(~D[2026-10-01], "de") == "1. Oktober 2026"
+      assert LocaleFormat.format_date(~D[2026-10-01], "cs") == "1. října 2026"
+    end
   end
 
   describe "format_time/2" do
@@ -488,68 +500,59 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       assert LocaleFormat.format_date_range(~D[2026-04-10], ~D[2026-04-12], "cs") ==
                "10.–12. dubna 2026"
     end
-  end
 
-  describe "format_integer/2" do
-    test "groups thousands using each locale's separator" do
-      assert LocaleFormat.format_integer(1500, "en") == "1,500"
-      assert LocaleFormat.format_integer(1500, "de") == "1.500"
-      assert LocaleFormat.format_integer(1500, "it") == "1.500"
-      assert LocaleFormat.format_integer(1500, "cs") == "1#{@nbsp}500"
-      assert LocaleFormat.format_integer(1500, "uk") == "1#{@nbsp}500"
-      assert LocaleFormat.format_integer(1500, "fr") == "1#{@nbsp}500"
-      assert LocaleFormat.format_integer(1500, "pl") == "1#{@nbsp}500"
-      assert LocaleFormat.format_integer(1500, "es") == "1#{@nbsp}500"
+    test "writes the first of a month as an ordinal at either end of the range" do
+      assert LocaleFormat.format_date_range(~D[2026-10-01], ~D[2026-10-03], "fr") ==
+               "1er–3 octobre 2026"
+
+      assert LocaleFormat.format_date_range(~D[2026-09-30], ~D[2026-10-01], "it") ==
+               "30 settembre – 1° ottobre 2026"
+
+      assert LocaleFormat.format_date_range(~D[2026-10-01], ~D[2026-10-03], "pt") ==
+               "1º–3 de outubro de 2026"
+
+      assert LocaleFormat.format_date_range(~D[2026-09-30], ~D[2026-10-01], "pt") ==
+               "30 de setembro – 1º de outubro de 2026"
     end
 
-    test "leaves values below a thousand ungrouped" do
-      assert LocaleFormat.format_integer(450, "cs") == "450"
-      assert LocaleFormat.format_integer(999, "en") == "999"
-      assert LocaleFormat.format_integer(0, "en") == "0"
-    end
+    test "keeps the first of a month a plain number elsewhere, with German's single stop" do
+      assert LocaleFormat.format_date_range(~D[2026-10-01], ~D[2026-10-03], "en") ==
+               "1–3 October 2026"
 
-    test "groups every three places in longer numbers" do
-      assert LocaleFormat.format_integer(450_000, "cs") == "450#{@nbsp}000"
-      assert LocaleFormat.format_integer(1_234_567, "en") == "1,234,567"
-    end
-
-    test "keeps the sign outside the grouping" do
-      # A sign left in the digit run would be chunked like a digit, misplacing
-      # the separator whenever the digit count is a multiple of three.
-      assert LocaleFormat.format_integer(-1234, "en") == "-1,234"
-      assert LocaleFormat.format_integer(-123_456, "en") == "-123,456"
-      assert LocaleFormat.format_integer(-1_234_567, "cs") == "-1#{@nbsp}234#{@nbsp}567"
+      assert LocaleFormat.format_date_range(~D[2026-09-30], ~D[2026-10-01], "de") ==
+               "30. September – 1. Oktober 2026"
     end
   end
 
-  describe "group_separator/1" do
-    test "reports the same separator format_integer/2 applies" do
-      for locale <- ~w(en de it cs uk fr pl es) do
-        separator = LocaleFormat.group_separator(locale)
-        assert LocaleFormat.format_integer(1000, locale) == "1" <> separator <> "000"
-      end
+  describe "with_article/3" do
+    test "elides the Italian article before the 8th and the 11th" do
+      assert LocaleFormat.with_article("8 ottobre 2026", :da, "it") == "dall'8 ottobre 2026"
+      assert LocaleFormat.with_article("11 marzo 2026", :none, "it") == "l'11 marzo 2026"
+      assert LocaleFormat.with_article("8 ottobre", :a, "it") == "all'8 ottobre"
+      assert LocaleFormat.with_article("11 marzo", :di, "it") == "dell'11 marzo"
+      assert LocaleFormat.with_article("8 ottobre", :in, "it") == "nell'8 ottobre"
+      assert LocaleFormat.with_article("11 marzo", :su, "it") == "sull'11 marzo"
+    end
+
+    test "keeps the full Italian article before every other day, the first included" do
+      assert LocaleFormat.with_article("9 ottobre 2026", :da, "it") == "dal 9 ottobre 2026"
+      assert LocaleFormat.with_article("1° ottobre 2026", :none, "it") == "il 1° ottobre 2026"
+      assert LocaleFormat.with_article("18 ottobre", :a, "it") == "al 18 ottobre"
+      assert LocaleFormat.with_article("28 ottobre", :di, "it") == "del 28 ottobre"
+    end
+
+    test "leaves the date unchanged in the other languages" do
+      assert LocaleFormat.with_article("8 octobre 2026", :da, "fr") == "8 octobre 2026"
+      assert LocaleFormat.with_article("11 March 2026", :none, "en") == "11 March 2026"
     end
   end
 
-  describe "format_number/3 decimal places" do
-    test "formats to two decimal places" do
-      assert LocaleFormat.format_number(1234.5, "en", 2) == "1,234.50"
-    end
-
-    test "honours an explicit decimal count" do
-      assert LocaleFormat.format_number(520.0, "en", 1) == "520.0"
-      assert LocaleFormat.format_number(2080.0, "cs", 1) == "2#{@nbsp}080,0"
-      assert LocaleFormat.format_number(2080.0, "pl", 1) == "2#{@nbsp}080,0"
-      assert LocaleFormat.format_number(2080.0, "es", 1) == "2#{@nbsp}080,0"
-    end
-
-    test "omits the decimal separator entirely for zero decimals" do
-      assert LocaleFormat.format_number(1234.5, "cs", 0) == "1#{@nbsp}235"
-      assert LocaleFormat.format_number(999.4, "en", 0) == "999"
-    end
-
-    test "accepts integers as well as floats" do
-      assert LocaleFormat.format_number(1500, "cs", 0) == "1#{@nbsp}500"
+  describe "weekday and short dates" do
+    test "write the first of a month as an ordinal in French, Italian and Portuguese" do
+      assert LocaleFormat.format_weekday_date(~D[2026-10-01], "fr") == "jeudi 1er octobre 2026"
+      assert LocaleFormat.format_short_date(~D[2026-10-01], "it") == "1° ott"
+      assert LocaleFormat.format_short_date(~D[2026-10-01], "pt") == "1º de out"
+      assert LocaleFormat.format_short_date(~D[2026-10-01], "de") == "1. Okt"
     end
   end
 

@@ -64,6 +64,20 @@ defmodule Tymeslot.Emails.Templates.AccountDeletionNoticeTest do
     end)
   end
 
+  # Italian elides the date's article before the 8th, and the subtitle, which
+  # is the date alone, opens with it.
+  test "an Italian recipient's date carries its article, capitalised in the subtitle" do
+    recipient = %{@recipient | locale: "it"}
+    at = ~U[2026-10-08 09:00:00Z]
+
+    Gettext.with_locale(TymeslotWeb.Gettext, "it", fn ->
+      email = AccountDeletionNotice.render(recipient, at, "https://example.com/auth/login")
+
+      assert email.text_body =~ "il tuo account Tymeslot verrà eliminato l'8 ottobre 2026."
+      assert email.html_body =~ "L&#39;8 ottobre 2026."
+    end)
+  end
+
   test "an immediate deletion says it is done, in the past tense, and offers no restore" do
     Gettext.with_locale(TymeslotWeb.Gettext, "en", fn ->
       text = AccountDeletionNotice.render(@recipient, @at, nil).text_body

@@ -656,7 +656,7 @@ msgstr[1] ""
 
 #: lib/tymeslot_web/themes/shared/components/group_session.ex
 #, elixir-autogen, elixir-format
-msgid "Moving your spot on %{datetime}. Pick a new time below."
+msgid "Moving your spot on %{on_datetime}. Pick a new time below."
 msgstr ""
 
 #: lib/tymeslot_web/themes/shared/seat_move_link.ex

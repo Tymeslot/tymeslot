@@ -411,8 +411,8 @@ msgstr "Il tuo account Stripe non è collegato, quindi questi rimborsi vanno eme
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Cancelled %{date}"
-msgstr "Annullata il %{date}"
+msgid "Cancelled %{on_date}"
+msgstr "Annullata %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
@@ -421,8 +421,8 @@ msgstr "Scaduta"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Expired, paid %{date}"
-msgstr "Scaduta, pagata il %{date}"
+msgid "Expired, paid %{on_date}"
+msgstr "Scaduta, pagata %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
@@ -431,8 +431,8 @@ msgstr "Le prenotazioni scadute sono state pagate ma mai confermate, ad esempio 
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Declined %{date}"
-msgstr "Rifiutata il %{date}"
+msgid "Declined %{on_date}"
+msgstr "Rifiutata %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format

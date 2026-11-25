@@ -144,6 +144,7 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationsTab do
             paths={Enum.map(entity.fields, & &1.path)}
             only_open={@only_open}
             notify={@notify}
+            leave_target={@myself}
           />
         </.card>
       </section>

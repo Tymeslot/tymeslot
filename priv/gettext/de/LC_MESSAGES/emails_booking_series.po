@@ -191,8 +191,8 @@ msgstr "Alle Termine ablehnen"
 
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format
-msgid "Every session is held until you answer. If you haven't replied by %{deadline}, the request lapses and %{name} is told the times are free again."
-msgstr "Alle Termine bleiben reserviert, bis Sie antworten. Ohne Antwort bis %{deadline} verfällt die Anfrage und %{name} erfährt, dass die Zeiten wieder frei sind."
+msgid "Every session is held until you answer. If you haven't replied by %{by_deadline}, the request lapses and %{name} is told the times are free again."
+msgstr "Alle Termine bleiben reserviert, bis Sie antworten. Ohne Antwort bis %{by_deadline} verfällt die Anfrage und %{name} erfährt, dass die Zeiten wieder frei sind."
 
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format
@@ -206,8 +206,8 @@ msgstr "Hallo %{name}, %{host} kann die folgenden Termine nicht wahrnehmen, dahe
 
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format
-msgid "Hi %{name}, %{host} has your request for the sessions below. They are held for you but not booked until %{host} approves them, and you'll hear either way by %{deadline}."
-msgstr "Hallo %{name}, %{host} hat Ihre Anfrage für die folgenden Termine erhalten. Die Termine sind für Sie reserviert, aber erst gebucht, wenn %{host} sie bestätigt. Bis %{deadline} erhalten Sie in jedem Fall Bescheid."
+msgid "Hi %{name}, %{host} has your request for the sessions below. They are held for you but not booked until %{host} approves them, and you'll hear either way by %{by_deadline}."
+msgstr "Hallo %{name}, %{host} hat Ihre Anfrage für die folgenden Termine erhalten. Die Termine sind für Sie reserviert, aber erst gebucht, wenn %{host} sie bestätigt. Bis %{by_deadline} erhalten Sie in jedem Fall Bescheid."
 
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format

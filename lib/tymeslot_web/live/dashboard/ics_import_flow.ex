@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
 
   @doc """
   Reads the uploaded file. Only the file is read here: parsing a large one
-  takes seconds, so the caller plans it in an async task with `plan/2`.
+  takes seconds, so the caller plans it in an async task with `plan/3`.
   `:none` when no file has finished uploading.
   """
   @spec consume(socket()) :: {:ok, String.t(), binary()} | :none
@@ -61,18 +61,28 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
     end
   end
 
-  @doc "Plans a file's import, reading floating times in `timezone`."
-  @spec plan(binary(), String.t()) :: {:ok, IcsImport.plan()} | {:error, IcsImport.plan_error()}
-  def plan(content, timezone), do: CalendarGrid.plan_ics_import(content, timezone)
+  @doc """
+  Plans a file's import, reading floating times in `timezone`; `opts` are
+  `IcsImport.plan/3`'s (`:from`).
+  """
+  @spec plan(binary(), String.t(), keyword()) ::
+          {:ok, IcsImport.plan()} | {:error, IcsImport.plan_error()}
+  def plan(content, timezone, opts \\ []),
+    do: CalendarGrid.plan_ics_import(content, timezone, opts)
 
   @doc "What a plan holds, as the import modal reports it."
   @spec summary(IcsImport.plan()) :: %{
           events: non_neg_integer(),
           series: non_neg_integer(),
-          cancelled: non_neg_integer()
+          cancelled: non_neg_integer(),
+          from: Date.t() | nil,
+          left_out: non_neg_integer()
         }
-  def summary(%{events: events, series: series, cancelled: cancelled}),
-    do: %{events: length(events), series: series, cancelled: cancelled}
+  def summary(%{events: events} = plan),
+    do:
+      plan
+      |> Map.take([:series, :cancelled, :from, :left_out])
+      |> Map.put(:events, length(events))
 
   @doc "Why the upload refused a file (an `upload_errors/2` reason)."
   @spec upload_error(atom() | nil) :: String.t()
@@ -80,7 +90,7 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
     do:
       dgettext(
         "dashboard_calendar_import",
-        "The file is too large. Files up to %{size} MB can be imported.",
+        "The file is too large. Files up to %{size} MB can be imported. Export a shorter date range from your calendar app and try again.",
         size: div(IcsImport.max_bytes(), 1_000_000)
       )
 
@@ -90,8 +100,11 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
   def upload_error(_other),
     do: dgettext("dashboard_calendar_import", "The file could not be uploaded. Please try again.")
 
-  @doc "Why a file could not be planned."
-  @spec plan_error(IcsImport.plan_error()) :: String.t()
+  @doc """
+  Why a file could not be planned. A file `{:too_many_events, overview}` can
+  still be narrowed, which the import modal offers instead of a message.
+  """
+  @spec plan_error(:too_large | :invalid_file | :no_events | :too_many_events) :: String.t()
   def plan_error(:too_large), do: upload_error(:too_large)
 
   def plan_error(:invalid_file),
@@ -106,10 +119,11 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlow do
 
   def plan_error(:too_many_events),
     do:
-      dgettext(
+      dngettext(
         "dashboard_calendar_import",
-        "This file contains more than %{count} events. Please split it into smaller files.",
-        count: IcsImport.max_events()
+        "This file contains more than 1 event, too many to read. Export a shorter date range from your calendar app, or subscribe to the calendar by URL instead.",
+        "This file contains more than %{count} events, too many to read. Export a shorter date range from your calendar app, or subscribe to the calendar by URL instead.",
+        IcsImport.max_file_events()
       )
 
   @doc "Why an import could not start, other than one already running."

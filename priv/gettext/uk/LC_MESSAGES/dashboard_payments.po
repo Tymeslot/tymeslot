@@ -271,7 +271,7 @@ msgstr "Повернено"
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Refunding..."
-msgstr "Повернення..."
+msgstr "Повернення…"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -414,8 +414,8 @@ msgstr "Ваш обліковий запис Stripe не підключено, �
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Cancelled %{date}"
-msgstr "Скасовано %{date}"
+msgid "Cancelled %{on_date}"
+msgstr "Скасовано %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
@@ -424,8 +424,8 @@ msgstr "Прострочено"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Expired, paid %{date}"
-msgstr "Прострочено, оплачено %{date}"
+msgid "Expired, paid %{on_date}"
+msgstr "Прострочено, оплачено %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
@@ -434,8 +434,8 @@ msgstr "Прострочені бронювання було оплачено, �
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Declined %{date}"
-msgstr "Відхилено %{date}"
+msgid "Declined %{on_date}"
+msgstr "Відхилено %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format

@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Live.Scheduling.VerificationPreviewTest do
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
@@ -233,6 +234,96 @@ defmodule TymeslotWeb.Live.Scheduling.VerificationPreviewTest do
       assert resend(view) =~ "Too many attempts"
       assert has_element?(view, "[data-testid='resend-verification']")
       assert reload(meeting).verification_emails_sent == nil
+    end
+  end
+
+  describe "Resend email for a group seat (Quill)" do
+    setup %{conn: conn} do
+      %{user: user, profile: profile} =
+        seed_organiser("1", "verify-group",
+          types: [
+            [
+              name: "Workshop",
+              duration_minutes: 30,
+              max_participants: 3,
+              requires_email_verification: true
+            ]
+          ]
+        )
+
+      {:ok, view, _html} = live(conn, "/#{profile.username}")
+      html = BookingDriver.book(view, attendee: @attendee)
+
+      slot = Repo.get_by!(MeetingSchema, organizer_user_id: user.id)
+      seat = Repo.get_by!(ParticipantSchema, meeting_id: slot.id)
+
+      %{view: view, html: html, slot: slot, seat: seat}
+    end
+
+    @tag :capture_log
+    test "a gated group booking ends on check your inbox and resends the seat's email",
+         %{view: view, html: html, slot: slot, seat: seat} do
+      assert slot.status == :awaiting_verification
+      assert ParticipantSchema.unverified?(seat)
+
+      message = view |> element("[data-testid='check-inbox']") |> render()
+      assert message =~ "ana@example.com"
+      assert message =~ "Until then your place is held for you."
+      refute html =~ slot.uid
+
+      assert resend(view) =~ "Sent again"
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_seat_email_verification",
+          "meeting_id" => slot.id,
+          "participant_id" => seat.id,
+          "send" => 2
+        }
+      )
+
+      refute_enqueued(worker: EmailWorker, args: %{"action" => "send_booking_email_verification"})
+      assert Repo.reload!(seat).verification_emails_sent == 2
+      assert reload(slot).verification_emails_sent == nil
+    end
+
+    @tag :capture_log
+    test "after the seat's deadline it says the place was released",
+         %{view: view, seat: seat} do
+      seat
+      |> Changeset.change(verification_deadline_at: DateTime.add(DateTime.utc_now(:second), -60))
+      |> Repo.update!()
+
+      html = resend(view)
+
+      assert html =~ "Your place was released because the booking was not confirmed in time."
+      refute html =~ "The time was released"
+      refute has_element?(view, "[data-testid='resend-verification']")
+      assert %{cancelled_at: %DateTime{}} = Repo.reload!(seat)
+    end
+
+    # The email would never go out on a slot whose time does not hold, so
+    # the press costs the booker no resend and the button stays.
+    @tag :capture_log
+    test "while the slot awaits a new time it sends nothing and keeps the resend",
+         %{view: view, slot: slot, seat: seat} do
+      slot
+      |> Changeset.change(reschedule_requested_at: DateTime.utc_now(:second))
+      |> Repo.update!()
+
+      html = resend(view)
+
+      assert html =~ "The organiser is changing this meeting&#39;s time"
+      refute html =~ "Sent again"
+      assert has_element?(view, "[data-testid='resend-verification']")
+      refute has_element?(view, "[data-testid='resend-verification'][disabled]")
+      assert Repo.reload!(seat).verification_emails_sent == nil
+
+      refute_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_seat_email_verification", "send" => 2}
+      )
     end
   end
 

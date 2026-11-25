@@ -212,8 +212,8 @@ msgstr "реєстрацію закрито"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
-msgid "registration until %{datetime}"
-msgstr "реєстрація до %{datetime}"
+msgid "registration until %{until_datetime}"
+msgstr "реєстрація до %{until_datetime}"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
@@ -227,13 +227,13 @@ msgstr "раніше за мінімальний час до бронюванн�
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
 #, elixir-autogen, elixir-format
-msgid "%{time} does not exist on %{date} because the clocks go forward, so the time was saved as %{saved}."
-msgstr "Часу %{time} %{date} не існує, бо годинники переводять уперед, тож час збережено як %{saved}."
+msgid "%{time} does not exist on %{on_date} because the clocks go forward, so the time was saved as %{saved}."
+msgstr "Часу %{time} %{on_date} не існує, бо годинники переводять уперед, тож час збережено як %{saved}."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
 #, elixir-autogen, elixir-format
-msgid "%{time} happens twice on %{date} because the clocks go back, so the earlier one (%{zone}) was saved."
-msgstr "Час %{time} %{date} настає двічі, бо годинники переводять назад, тож збережено перший із них (%{zone})."
+msgid "%{time} happens twice on %{on_date} because the clocks go back, so the earlier one (%{zone}) was saved."
+msgstr "Час %{time} %{on_date} настає двічі, бо годинники переводять назад, тож збережено перший із них (%{zone})."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
 #, elixir-autogen, elixir-format

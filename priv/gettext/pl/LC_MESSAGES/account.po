@@ -330,13 +330,13 @@ msgstr "Konto zostało usunięte."
 
 #: lib/tymeslot_web/live/account_live/delete_account_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Your account will be deleted on %{date}."
-msgstr "Konto zostanie usunięte %{date}."
+msgid "Your account will be deleted on %{on_date}."
+msgstr "Konto zostanie usunięte %{on_date}."
 
 #: lib/tymeslot_web/live/account_live/handlers.ex
 #, elixir-autogen, elixir-format
-msgid "Your account will be deleted on %{date}. Sign in before then if you change your mind."
-msgstr "Konto zostanie usunięte %{date}. Jeśli zmienisz zdanie, zaloguj się przed tą datą."
+msgid "Your account will be deleted on %{on_date}. Sign in before then if you change your mind."
+msgstr "Konto zostanie usunięte %{on_date}. Jeśli zmienisz zdanie, zaloguj się przed tą datą."
 
 #: lib/tymeslot_web/live/account_live/delete_account_modal.ex
 #, elixir-autogen, elixir-format

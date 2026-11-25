@@ -88,7 +88,7 @@ msgstr ""
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closes %{deadline}"
+msgid "Voting closes %{on_deadline}"
 msgstr ""
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex

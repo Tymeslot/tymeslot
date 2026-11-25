@@ -216,7 +216,9 @@ defmodule Tymeslot.Emails.Shared.Formatting do
 
   def format_all_day(%Date{} = _first, %Date{} = last, locale) do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
-      dgettext("emails", "All day, until %{date}", date: format_date(last, locale))
+      dgettext("emails", "All day, until %{until_date}",
+        until_date: last |> format_date(locale) |> LocaleFormat.with_article(:a, locale)
+      )
     end)
   end
 

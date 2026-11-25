@@ -117,7 +117,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   # Providers infer ownership from the payload where they can: Google stamps
   # `extendedProperties.private.createdBy`, and the iCal normaliser recognises a
   # `…@tymeslot.com` UID. Neither reaches a booking on a CalDAV or Outlook
-  # calendar — a booking's UID is a bare `UUID.uuid4()` (`Bookings.Create`), so
+  # calendar — a booking's UID is a bare `Ecto.UUID.generate()` (`Bookings.Create`), so
   # `created_by_tymeslot` would stay false on every mirrored booking those
   # providers hold.
   #

@@ -410,8 +410,8 @@ msgstr "Konto Stripe nie jest podłączone, więc te zwroty trzeba wykonać w pa
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Cancelled %{date}"
-msgstr "Odwołano %{date}"
+msgid "Cancelled %{on_date}"
+msgstr "Odwołano %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
@@ -420,8 +420,8 @@ msgstr "Wygasła"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Expired, paid %{date}"
-msgstr "Wygasła, opłacona %{date}"
+msgid "Expired, paid %{on_date}"
+msgstr "Wygasła, opłacona %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
@@ -430,8 +430,8 @@ msgstr "Wygasłe rezerwacje zostały opłacone, ale nigdy nie potwierdzone, na p
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Declined %{date}"
-msgstr "Odrzucono %{date}"
+msgid "Declined %{on_date}"
+msgstr "Odrzucono %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format

@@ -198,7 +198,7 @@ msgstr "Зберегти вибір"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Saving..."
-msgstr "Збереження..."
+msgstr "Збереження…"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
@@ -262,7 +262,7 @@ msgstr "Синхронізація календарів з облікового 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Testing..."
-msgstr "Перевірка..."
+msgstr "Перевірка…"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/exchange_config.ex
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
@@ -311,7 +311,7 @@ msgstr "Знайти календарі"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Discovering..."
-msgstr "Пошук..."
+msgstr "Пошук…"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_family_config.ex
 #, elixir-autogen, elixir-format
@@ -391,7 +391,7 @@ msgstr "Підпишіться на опублікований фід кален
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex
 #, elixir-autogen, elixir-format
 msgid "Subscribing..."
-msgstr "Підписка..."
+msgstr "Підписка…"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex
 #, elixir-autogen, elixir-format

@@ -79,13 +79,8 @@ msgstr "Імпортувати в"
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Importing %{done} of %{total} events..."
-msgstr "Імпортування подій: %{done} з %{total}..."
-
-#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
-#, elixir-autogen, elixir-format
 msgid "Reading the file..."
-msgstr "Читання файлу..."
+msgstr "Читання файлу…"
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
@@ -157,11 +152,6 @@ msgstr "Не вдалося завантажити файл. Спробуйте 
 
 #: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
 #, elixir-autogen, elixir-format
-msgid "The file is too large. Files up to %{size} MB can be imported."
-msgstr "Файл завеликий. Можна імпортувати файли до %{size} МБ."
-
-#: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
-#, elixir-autogen, elixir-format
 msgid "The import could not be finished. Some of its events may already be in your calendar."
 msgstr "Не вдалося завершити імпорт. Деякі його події вже можуть бути у вашому календарі."
 
@@ -182,11 +172,6 @@ msgstr "Імпорт зупинено, оскільки ваш календар 
 
 #: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
 #, elixir-autogen, elixir-format
-msgid "This file contains more than %{count} events. Please split it into smaller files."
-msgstr "Цей файл містить понад %{count} подій. Розділіть його на менші файли."
-
-#: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
-#, elixir-autogen, elixir-format
 msgid "This file contains no events to import."
 msgstr "Цей файл не містить подій для імпорту."
 
@@ -199,3 +184,106 @@ msgstr "Не вдалося прочитати цей файл як календ
 #, elixir-autogen, elixir-format
 msgid "Too many imports. Please wait a while before importing another file."
 msgstr "Забагато імпортувань. Зачекайте трохи, перш ніж імпортувати інший файл."
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{from_date} onwards"
+msgstr "З %{from_date}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "1 event"
+msgid_plural "%{count} events"
+msgstr[0] "%{count} подія"
+msgstr[1] "%{count} події"
+msgstr[2] "%{count} подій"
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "1 event before %{before_date} is left out."
+msgid_plural "%{count} events before %{before_date} are left out."
+msgstr[0] "Буде пропущено %{count} подію до %{before_date}."
+msgstr[1] "Буде пропущено %{count} події до %{before_date}."
+msgstr[2] "Буде пропущено %{count} подій до %{before_date}."
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "1 event, more than %{max}"
+msgid_plural "%{count} events, more than %{max}"
+msgstr[0] "%{count} подія, більше ніж %{max}"
+msgstr[1] "%{count} події, більше ніж %{max}"
+msgstr[2] "%{count} подій, більше ніж %{max}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Add a calendar subscription"
+msgstr "Додати підписку на календар"
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Continue"
+msgstr "Продовжити"
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Even the events from today onwards are more than one import can copy. Export a shorter date range from your calendar app and import it in parts."
+msgstr "Навіть подій від сьогодні більше, ніж можна скопіювати за один імпорт. Експортуйте зі свого календарного застосунку коротший діапазон дат та імпортуйте події частинами."
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Import events from"
+msgstr "З якої дати імпортувати події"
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "No events from this date on"
+msgstr "Від цієї дати подій немає"
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Past events are rarely needed for scheduling, so you can leave them out. A repeating event counts once, however often it repeats."
+msgstr "Минулі події рідко потрібні для планування, тож їх можна пропустити. Повторювана подія враховується один раз, хоч би як часто вона повторювалася."
+
+#: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
+#, elixir-autogen, elixir-format
+msgid "The file is too large. Files up to %{size} MB can be imported. Export a shorter date range from your calendar app and try again."
+msgstr "Файл завеликий. Можна імпортувати файли до %{size} МБ. Експортуйте зі свого календарного застосунку коротший діапазон дат і спробуйте ще раз."
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "To keep a whole calendar, with no limit and in step with its changes, subscribe to it by URL instead."
+msgstr "Щоб мати весь календар без обмежень і завжди в актуальному стані, натомість підпишіться на нього за URL-адресою."
+
+#: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
+#, elixir-autogen, elixir-format
+msgid "This file contains more than 1 event, too many to read. Export a shorter date range from your calendar app, or subscribe to the calendar by URL instead."
+msgid_plural "This file contains more than %{count} events, too many to read. Export a shorter date range from your calendar app, or subscribe to the calendar by URL instead."
+msgstr[0] "Цей файл містить понад %{count} подію. Це забагато, тому файл не вдалося прочитати. Експортуйте зі свого календарного застосунку коротший діапазон дат або натомість підпишіться на календар за URL-адресою."
+msgstr[1] "Цей файл містить понад %{count} події. Це забагато, тому файл не вдалося прочитати. Експортуйте зі свого календарного застосунку коротший діапазон дат або натомість підпишіться на календар за URL-адресою."
+msgstr[2] "Цей файл містить понад %{count} подій. Це забагато, тому файл не вдалося прочитати. Експортуйте зі свого календарного застосунку коротший діапазон дат або натомість підпишіться на календар за URL-адресою."
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This file holds 1 event, from %{from_date} to %{to_date}. One import can copy up to %{max}."
+msgid_plural "This file holds %{count} events, from %{from_date} to %{to_date}. One import can copy up to %{max}."
+msgstr[0] "У цьому файлі %{count} подія за період з %{from_date} по %{to_date}. За один імпорт можна скопіювати щонайбільше %{max} із них."
+msgstr[1] "У цьому файлі %{count} події за період з %{from_date} по %{to_date}. За один імпорт можна скопіювати щонайбільше %{max} із них."
+msgstr[2] "У цьому файлі %{count} подій за період з %{from_date} по %{to_date}. За один імпорт можна скопіювати щонайбільше %{max} із них."
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Importing %{done} of 1 event..."
+msgid_plural "Importing %{done} of %{count} events..."
+msgstr[0] "Імпортування %{done} з %{count} події…"
+msgstr[1] "Імпортування %{done} з %{count} подій…"
+msgstr[2] "Імпортування %{done} з %{count} подій…"
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "From each of these dates, this file holds either more events than one import can copy or none at all. Export a shorter date range from your calendar app and import it in parts."
+msgstr "Починаючи з будь-якої з цих дат, у цьому файлі або більше подій, ніж можна скопіювати за один імпорт, або жодної. Експортуйте зі свого календарного застосунку коротший діапазон дат та імпортуйте події частинами."
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "None of the events in this file fall within these dates: they all ended before the earliest one. Export a shorter date range from your calendar app and import it in parts."
+msgstr "Жодна з подій у цьому файлі не припадає на ці дати: усі вони завершилися раніше за найранішу з цих дат. Експортуйте зі свого календарного застосунку коротший діапазон дат та імпортуйте події частинами."

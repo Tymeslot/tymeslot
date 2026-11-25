@@ -46,6 +46,8 @@ msgstr "%{day}. %{month} %{year}"
 
 An invented placeholder is a runtime crash in that locale; a dropped one silently loses the value it carried. `GettextCompletenessTest` rejects both.
 
+**A date placeholder named for its preposition carries the Italian article.** `%{on_date}`, `%{for_date}`, `%{by_deadline}`, `%{until_date}`, `%{from_date}`, `%{to_date}`, `%{before_date}`, `%{on_datetime}` and the like hold the bare date in every language but Italian, so translate the preposition as usual: `msgid "Renews on %{on_date}"` → `msgstr "Verlängert sich am %{on_date}"`. In Italian the code adds the article, merged with the preposition the msgid's English implies, because only the day decides between "il 9 ottobre" and "l'8 ottobre"; the Italian msgstr writes neither (`"Si rinnova %{on_date}"`). The value starts lowercase, so in Italian it may lead a sentence only where the code capitalises the result (`"From %{from_date}"`, `"%{from_date} onwards"`, `"On %{on_date}."`). The Italian glossary lists which article each placeholder receives.
+
 **Never interpolate with `#{}`.** Elixir interpolates before extraction, so the string
 becomes a unique literal on every call and can never be translated. Always `%{variable}`.
 

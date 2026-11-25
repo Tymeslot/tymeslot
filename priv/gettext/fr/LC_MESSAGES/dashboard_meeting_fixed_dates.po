@@ -209,8 +209,8 @@ msgstr "inscriptions closes"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
-msgid "registration until %{datetime}"
-msgstr "inscriptions jusqu’au %{datetime}"
+msgid "registration until %{until_datetime}"
+msgstr "inscriptions jusqu’au %{until_datetime}"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
@@ -224,13 +224,13 @@ msgstr "en deçà du préavis minimum"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
 #, elixir-autogen, elixir-format
-msgid "%{time} does not exist on %{date} because the clocks go forward, so the time was saved as %{saved}."
-msgstr "%{time} n’existe pas le %{date}, car on avance l’heure ce jour-là ; l’heure a donc été enregistrée à %{saved}."
+msgid "%{time} does not exist on %{on_date} because the clocks go forward, so the time was saved as %{saved}."
+msgstr "%{time} n’existe pas le %{on_date}, car on avance l’heure ce jour-là ; l’heure a donc été enregistrée à %{saved}."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
 #, elixir-autogen, elixir-format
-msgid "%{time} happens twice on %{date} because the clocks go back, so the earlier one (%{zone}) was saved."
-msgstr "%{time} survient deux fois le %{date}, car on recule l’heure ce jour-là ; c’est donc la première occurrence (%{zone}) qui a été enregistrée."
+msgid "%{time} happens twice on %{on_date} because the clocks go back, so the earlier one (%{zone}) was saved."
+msgstr "%{time} survient deux fois le %{on_date}, car on recule l’heure ce jour-là ; c’est donc la première occurrence (%{zone}) qui a été enregistrée."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
 #, elixir-autogen, elixir-format

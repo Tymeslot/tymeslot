@@ -8,6 +8,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.ConferenceData do
   knowledge leaks into the web or orchestration layers.
   """
 
+  alias Tymeslot.Clock
+
   @doc """
   Returns the `conference_data` map that should be attached to an event's
   internal representation before it is serialised by `EventMapper.format_event_data/1`.
@@ -25,10 +27,34 @@ defmodule Tymeslot.Integrations.Calendar.Google.ConferenceData do
 
   @doc """
   `create_request/0` for a booking's calendar event, with a `requestId` that
-  `booking_conference?/1` recognises.
+  `booking_conference?/1` recognises and that records when it was made
+  (`booking_requested_at/1`).
   """
   @spec booking_create_request() :: map()
-  def booking_create_request, do: create_request(@booking_request_prefix <> generate_request_id())
+  def booking_create_request do
+    requested_at = DateTime.to_unix(Clock.utc_now())
+    create_request("#{@booking_request_prefix}#{requested_at}-#{generate_request_id()}")
+  end
+
+  @doc """
+  When a raw Google event's conference was asked for by a booking
+  (`booking_create_request/0`), or `nil` for any other conference, and for a
+  request id that records no time.
+  """
+  @spec booking_requested_at(map()) :: DateTime.t() | nil
+  def booking_requested_at(%{
+        "conferenceData" => %{"createRequest" => %{"requestId" => @booking_request_prefix <> id}}
+      }) do
+    with [seconds, _random] <- String.split(id, "-", parts: 2),
+         {unix, ""} <- Integer.parse(seconds),
+         {:ok, requested_at} <- DateTime.from_unix(unix) do
+      requested_at
+    else
+      _other -> nil
+    end
+  end
+
+  def booking_requested_at(_event), do: nil
 
   @doc """
   Whether a raw Google event's conference is one a booking asked for
@@ -76,15 +102,15 @@ defmodule Tymeslot.Integrations.Calendar.Google.ConferenceData do
 
   @doc """
   Where a raw Google event's Meet stands: `{:ok, url}` once Google has made
-  it, `:pending` while a request for one is still being worked on, and
-  `:none` for an event that has none and asked for none, or whose request
-  Google failed.
+  it, `:pending` while a request for one is still being worked on, `:failed`
+  when Google failed the request, and `:none` for an event that has none and
+  asked for none.
   """
-  @spec meet_status(map()) :: {:ok, String.t()} | :pending | :none
+  @spec meet_status(map()) :: {:ok, String.t()} | :pending | :failed | :none
   def meet_status(event) do
     case {meet_url_from_google_event(event), get_in(event, ["conferenceData", "createRequest"])} do
       {url, _request} when is_binary(url) -> {:ok, url}
-      {nil, %{"status" => %{"statusCode" => "failure"}}} -> :none
+      {nil, %{"status" => %{"statusCode" => "failure"}}} -> :failed
       {nil, %{}} -> :pending
       {nil, _no_request} -> :none
     end

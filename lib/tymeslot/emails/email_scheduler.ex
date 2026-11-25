@@ -49,6 +49,10 @@ defmodule Tymeslot.Emails.EmailScheduler do
   defdelegate schedule_seat_confirmation_emails(meeting_id, participant_id), to: SeatScheduler
   defdelegate schedule_cancellation_emails(meeting_id), to: MeetingScheduler
   defdelegate schedule_verification_email(meeting_id, send \\ 1), to: MeetingScheduler
+
+  defdelegate schedule_seat_verification_email(meeting_id, participant_id, send \\ 1),
+    to: SeatScheduler
+
   defdelegate schedule_reschedule_emails(meeting, original, opts \\ []), to: MeetingScheduler
   defdelegate schedule_end_change_emails(meeting), to: EndChangeScheduler
 
@@ -66,7 +70,7 @@ defmodule Tymeslot.Emails.EmailScheduler do
   defdelegate schedule_series_cancellation_emails(series_id, occurrence_ids, cancelled_by),
     to: SeriesScheduler
 
-  defdelegate schedule_seat_cancellation_emails(meeting_id, participant_id, slot_freed?),
+  defdelegate schedule_seat_cancellation_emails(meeting_id, participant_id, slot),
     to: SeatScheduler
 
   defdelegate schedule_reminder_emails(meeting_id, reminder_value, reminder_unit),
@@ -79,7 +83,7 @@ defmodule Tymeslot.Emails.EmailScheduler do
                 meeting_id,
                 participant_id,
                 old_participant_id,
-                old_slot_freed?
+                old_slot
               ),
               to: SeatScheduler
 

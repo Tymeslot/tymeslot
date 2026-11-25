@@ -310,7 +310,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           <.email_verification_section
             requires_email_verification={@requires_email_verification}
             payment_required={@payment_required}
-            group_bookings_enabled={@group_bookings_enabled}
             series_enabled={@series.series_mode != nil}
             errors={
               @form_errors

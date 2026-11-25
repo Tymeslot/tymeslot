@@ -920,11 +920,6 @@ msgstr "Цей час більше недоступний. Виберіть ін
 msgid "email confirmation cannot be combined with payment"
 msgstr "підтвердження електронної пошти не можна поєднувати з оплатою"
 
-#: lib/tymeslot/meeting_types/group_validation.ex
-#, elixir-autogen, elixir-format
-msgid "group bookings cannot require email confirmation"
-msgstr "групові бронювання не можуть вимагати підтвердження електронної пошти"
-
 #: lib/tymeslot/meeting_types/meeting_type_schema.ex
 #, elixir-autogen, elixir-format
 msgid "would give a reserved booking link; choose another name or set a custom link"

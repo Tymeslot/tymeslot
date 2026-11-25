@@ -148,8 +148,9 @@ defmodule Tymeslot.Media.ImageMetadataTest do
   test "keeps the ICC colour profile", %{tmp_dir: tmp_dir} do
     source = Path.join(tmp_dir, "p3.jpg")
     dest = Path.join(tmp_dir, "stored.jpg")
-    {:ok, red} = Image.new(4, 4, color: :red)
-    Image.write!(red, source, icc_profile: :p3)
+    {:ok, black} = Operation.black(4, 4, bands: 3)
+    {:ok, red} = Operation.linear(black, [1.0], [255.0, 0.0, 0.0])
+    :ok = VipsImage.write_to_file(red, source, profile: "p3")
 
     assert :ok = ImageMetadata.strip(source, dest, ".jpg")
 

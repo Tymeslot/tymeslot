@@ -12,6 +12,8 @@ defmodule TymeslotWeb.AccountRestoreHTML do
 
   import TymeslotWeb.Shared.Auth.LayoutComponents, only: [auth_card_layout: 1]
 
+  alias TymeslotWeb.Helpers.LocaleFormat
+
   attr :deletion_date, :string, required: true
   attr :error, :string, default: nil
 
@@ -24,8 +26,13 @@ defmodule TymeslotWeb.AccountRestoreHTML do
         <p class="text-center text-token-base text-tymeslot-600">
           {dgettext(
             "auth",
-            "Your account is in the process of being deleted (scheduled for %{date}). If you want to keep it, restore it here.",
-            date: @deletion_date
+            "Your account is in the process of being deleted (scheduled for %{for_date}). If you want to keep it, restore it here.",
+            for_date:
+              LocaleFormat.with_article(
+                @deletion_date,
+                :none,
+                Gettext.get_locale(TymeslotWeb.Gettext)
+              )
           )}
         </p>
 

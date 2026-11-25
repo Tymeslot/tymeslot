@@ -334,13 +334,13 @@ msgstr "Váš účet byl smazán."
 
 #: lib/tymeslot_web/live/account_live/delete_account_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Your account will be deleted on %{date}."
-msgstr "Váš účet bude smazán dne %{date}."
+msgid "Your account will be deleted on %{on_date}."
+msgstr "Váš účet bude smazán dne %{on_date}."
 
 #: lib/tymeslot_web/live/account_live/handlers.ex
 #, elixir-autogen, elixir-format
-msgid "Your account will be deleted on %{date}. Sign in before then if you change your mind."
-msgstr "Váš účet bude smazán dne %{date}. Pokud si to rozmyslíte, přihlaste se před tímto datem."
+msgid "Your account will be deleted on %{on_date}. Sign in before then if you change your mind."
+msgstr "Váš účet bude smazán dne %{on_date}. Pokud si to rozmyslíte, přihlaste se před tímto datem."
 
 #: lib/tymeslot_web/live/account_live/delete_account_modal.ex
 #, elixir-autogen, elixir-format

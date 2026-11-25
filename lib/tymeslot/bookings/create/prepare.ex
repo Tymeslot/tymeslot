@@ -11,6 +11,7 @@ defmodule Tymeslot.Bookings.Create.Prepare do
   every occurrence shares, and the time is added to it per booking.
   """
 
+  alias Ecto.UUID
   alias Tymeslot.Auth
   alias Tymeslot.Availability.Offer
   alias Tymeslot.BookingPages
@@ -22,7 +23,6 @@ defmodule Tymeslot.Bookings.Create.Prepare do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.Lengths
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
-  alias UUID
 
   @doc """
   The booking data for one booking at the submitted date and time: `common/2`
@@ -44,7 +44,7 @@ defmodule Tymeslot.Bookings.Create.Prepare do
          {:ok, date} <- Date.from_iso8601(date_string) do
       booking_data =
         Map.merge(common, %{
-          meeting_uid: UUID.uuid4(),
+          meeting_uid: UUID.generate(),
           start_datetime: start_datetime,
           end_datetime: end_datetime,
           date: date

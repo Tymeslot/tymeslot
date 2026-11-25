@@ -735,12 +735,12 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closed %{deadline}"
+msgid "Voting closed %{on_deadline}"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closes %{deadline}"
+msgid "Voting closes %{on_deadline}"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
@@ -1010,4 +1010,24 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/polls/poll_location_field.ex
 #, elixir-autogen, elixir-format
 msgid "Video call"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Keep editing"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Leave without saving"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Leave without saving?"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Your changes to this poll are not saved yet. Leaving now discards them."
 msgstr ""

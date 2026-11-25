@@ -99,7 +99,7 @@ msgstr "Доступно за адресою:"
 #: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
 msgid "Processing..."
-msgstr "Обробка..."
+msgstr "Обробка…"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
@@ -110,7 +110,7 @@ msgstr "Фото профілю"
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Saving..."
-msgstr "Збереження..."
+msgstr "Збереження…"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
@@ -150,7 +150,7 @@ msgstr "Помилка завантаження"
 #: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
 msgid "Uploading..."
-msgstr "Завантаження..."
+msgstr "Завантаження…"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format

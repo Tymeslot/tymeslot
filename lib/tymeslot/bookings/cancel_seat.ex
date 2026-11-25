@@ -22,6 +22,16 @@ defmodule Tymeslot.Bookings.CancelSeat do
       organiser notified). The leaver still gets their own seat-cancellation
       email from here, since they are no longer a live recipient of the
       meeting; the organiser is not emailed twice.
+    * last leaver beside held seats (bookers yet to verify their address):
+      the meeting is held for verification again rather than cancelled, and
+      ends for the organiser exactly as a cancelled one does
+      (`SeatRelease.finish_return_to_held/1`), while each held seat keeps its
+      own deadline. To the leaver and the organiser this reads as the last
+      leaver's case.
+    * the slot already held by another leaver, whose seat was given up at
+      the same moment and whose release ran first: the organiser was told
+      then that the meeting is off, so only the leaver is emailed, and the
+      held slot has no calendar event to refresh.
     * seats remain: the host calendar event is refreshed so its participant
       list matches the live participants, and both the participant and the
       organiser are emailed.
@@ -76,7 +86,8 @@ defmodule Tymeslot.Bookings.CancelSeat do
   @type released :: %{
           meeting: Meeting.t(),
           participant: Participant.t(),
-          outcome: {:cancelled, Meeting.t()} | :seats_remain
+          outcome:
+            {:cancelled, Meeting.t()} | {:held, Meeting.t()} | :already_held | :seats_remain
         }
 
   @doc """
@@ -120,7 +131,14 @@ defmodule Tymeslot.Bookings.CancelSeat do
     case outcome do
       {:cancelled, cancelled_meeting} ->
         Cancel.finalise_cancellation(cancelled_meeting, told)
-        Seats.seat_cancelled(meeting, participant, [slot_freed: true] ++ told)
+        Seats.seat_cancelled(meeting, participant, [slot: :freed] ++ told)
+
+      {:held, confirmed_meeting} ->
+        SeatRelease.finish_return_to_held(confirmed_meeting)
+        Seats.seat_cancelled(meeting, participant, [slot: :held] ++ told)
+
+      :already_held ->
+        Seats.seat_cancelled(meeting, participant, [slot: :already_held] ++ told)
 
       :seats_remain ->
         CalendarJobs.schedule_job(meeting, "update")
@@ -213,16 +231,27 @@ defmodule Tymeslot.Bookings.CancelSeat do
 
   # `SeatRelease.release/1` decides under the meeting row lock whether this
   # was the last seat. The seat's cancellation emails go out either way; when
-  # the meeting goes with them they carry `slot_freed: true`, and the
-  # organiser's one email about it says the slot is now empty and free (the
-  # meeting-level cancellation of an emptied meeting sends the organiser
-  # nothing, see `MeetingEmails`).
+  # the meeting goes with them they say so: the organiser's one email about it
+  # says the slot is empty and free (`slot: :freed`), or, when held seats keep
+  # its time, that the meeting is cancelled (`slot: :held`); when another
+  # leaver held it first, that leaver's email was the organiser's, and this
+  # seat's goes to its leaver alone (`slot: :already_held`). The meeting-level
+  # cancellation of an emptied meeting sends the organiser nothing, see
+  # `MeetingEmails`.
   defp after_commit(meeting, cancelled) do
     publish_seat_change(meeting)
 
     case SeatRelease.release(meeting) do
       {:ok, :meeting_cancelled} ->
-        Seats.seat_cancelled(meeting, cancelled, slot_freed: true)
+        Seats.seat_cancelled(meeting, cancelled, slot: :freed)
+        {:ok, :meeting_cancelled}
+
+      {:ok, :returned_to_held} ->
+        Seats.seat_cancelled(meeting, cancelled, slot: :held)
+        {:ok, :meeting_cancelled}
+
+      {:ok, :already_held} ->
+        Seats.seat_cancelled(meeting, cancelled, slot: :already_held)
         {:ok, :meeting_cancelled}
 
       {:ok, :seats_remain} ->

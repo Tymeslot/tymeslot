@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Meetings.Approval
+  alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.MeetingPrice
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -86,22 +87,24 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
           <%= if Approval.refunds_on_release?(@meeting) do %>
             <.with_date
               date={PaymentReturn.approval_deadline_text(@meeting)}
+              article={:none}
               text={
                 dgettext(
                   "booking_payments",
-                  "If there's no answer by %{deadline}, the request lapses and you're refunded automatically.",
-                  deadline: date_marker()
+                  "If there's no answer by %{by_deadline}, the request lapses and you're refunded automatically.",
+                  by_deadline: date_marker()
                 )
               }
             />
           <% else %>
             <.with_date
               date={PaymentReturn.approval_deadline_text(@meeting)}
+              article={:none}
               text={
                 dgettext(
                   "booking_payments",
-                  "If there's no answer by %{deadline}, the request lapses.",
-                  deadline: date_marker()
+                  "If there's no answer by %{by_deadline}, the request lapses.",
+                  by_deadline: date_marker()
                 )
               }
             />
@@ -153,6 +156,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
                 @meeting.attendee_timezone
               )
             }
+            article={:none}
             text={confirmed_text(@series_count)}
           />
         </p>
@@ -216,16 +220,16 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
   defp confirmed_text(count) when is_integer(count) and count > 1 do
     dngettext(
       "booking_payments",
-      "Thank you, your %{count} session is confirmed, the first on %{date}.",
-      "Thank you, your %{count} sessions are confirmed, the first on %{date}.",
+      "Thank you, your %{count} session is confirmed, the first on %{on_date}.",
+      "Thank you, your %{count} sessions are confirmed, the first on %{on_date}.",
       count,
-      date: date_marker()
+      on_date: date_marker()
     )
   end
 
   defp confirmed_text(_count) do
-    dgettext("booking_payments", "Thank you, your booking is confirmed for %{date}.",
-      date: date_marker()
+    dgettext("booking_payments", "Thank you, your booking is confirmed for %{for_date}.",
+      for_date: date_marker()
     )
   end
 
@@ -263,8 +267,17 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
   attr :text, :string, required: true
   attr :date, :string, required: true
 
+  attr :article, :atom,
+    default: nil,
+    doc:
+      "the preposition the message puts before a date (`LocaleFormat.with_article/3`), whose article then leads the date inside its span; nil for an amount"
+
   defp with_date(assigns) do
-    assigns = assign(assigns, :parts, String.split(assigns.text, @date_marker, parts: 2))
+    assigns =
+      assign(assigns,
+        parts: String.split(assigns.text, @date_marker, parts: 2),
+        date: date_with_article(assigns.date, assigns.article)
+      )
 
     ~H"""
     <%= case @parts do %>
@@ -275,4 +288,10 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
     <% end %>
     """
   end
+
+  defp date_with_article(date, nil), do: date
+  defp date_with_article("", _preposition), do: ""
+
+  defp date_with_article(date, preposition),
+    do: LocaleFormat.with_article(date, preposition, Gettext.get_locale(TymeslotWeb.Gettext))
 end

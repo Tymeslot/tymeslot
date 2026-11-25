@@ -170,6 +170,38 @@ defmodule Tymeslot.Emails.GroupSeatPayloadsTest do
       refute render_in_english(:moved, details).text_body =~ "Nobody is left"
     end
 
+    # Seats awaiting their bookers' email verification still hold the time,
+    # so the organiser is told the meeting is off but not that it is free.
+    test "says the meeting is cancelled, not that the time is free, when held seats keep it", %{
+      details: details
+    } do
+      email =
+        render_in_english(:cancelled, Map.merge(details, %{slot_freed: true, slot_held: true}))
+
+      assert email.subject =~ "Meeting cancelled: Ada cancelled"
+
+      assert email.text_body =~
+               "Ada cancelled their spot. No one else has confirmed a spot on this slot, so the meeting has been cancelled."
+
+      refute email.text_body =~ "free again"
+      refute email.text_body =~ "spots taken"
+    end
+
+    test "says the earlier meeting is cancelled, not free, when held seats keep its time", %{
+      details: details
+    } do
+      email =
+        render_in_english(
+          :moved,
+          Map.merge(details, %{old_slot_freed: true, old_slot_held: true})
+        )
+
+      assert email.text_body =~
+               "No one else has confirmed a spot at the earlier time, so that meeting has been cancelled."
+
+      refute email.text_body =~ "free again"
+    end
+
     test "is written in the organiser's language", %{details: details} do
       email = SeatUpdateForOrganizer.render(:booked, "host@example.com", details)
 

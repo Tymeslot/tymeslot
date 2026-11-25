@@ -85,7 +85,7 @@ msgstr "Zeitoptionen"
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Checking your calendar for conflicts…"
-msgstr "Kalender wird auf Konflikte geprüft …"
+msgstr "Kalender wird auf Konflikte geprüft…"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
@@ -735,13 +735,13 @@ msgstr "Abstimmung beendet"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closed %{deadline}"
-msgstr "Abstimmung beendet am %{deadline}"
+msgid "Voting closed %{on_deadline}"
+msgstr "Abstimmung beendet am %{on_deadline}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closes %{deadline}"
-msgstr "Abstimmung endet am %{deadline}"
+msgid "Voting closes %{on_deadline}"
+msgstr "Abstimmung endet am %{on_deadline}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
@@ -915,7 +915,7 @@ msgstr "Zeitoption"
 #: lib/tymeslot_web/live/dashboard/polls/availability_week.ex
 #, elixir-autogen, elixir-format
 msgid "Checking your calendar…"
-msgstr "Kalender wird geprüft …"
+msgstr "Kalender wird geprüft…"
 
 #: lib/tymeslot_web/live/dashboard/polls/availability_week.ex
 #, elixir-autogen, elixir-format
@@ -1011,3 +1011,23 @@ msgstr "Dieser Ort oder Videoanbieter ist nicht mehr verfügbar. Bitte wählen S
 #, elixir-autogen, elixir-format
 msgid "Video call"
 msgstr "Videoanruf"
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Keep editing"
+msgstr "Weiter bearbeiten"
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Leave without saving"
+msgstr "Ohne Speichern verlassen"
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Leave without saving?"
+msgstr "Ohne Speichern verlassen?"
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Your changes to this poll are not saved yet. Leaving now discards them."
+msgstr "Ihre Änderungen an dieser Umfrage sind noch nicht gespeichert. Wenn Sie die Seite jetzt verlassen, werden sie verworfen."

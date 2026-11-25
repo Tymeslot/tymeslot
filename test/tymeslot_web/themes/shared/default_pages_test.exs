@@ -118,6 +118,33 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPagesTest do
              ~r{confirmed for <span class="payment-page-date">3 March 2027 at [^<]+ CET</span>\.}
   end
 
+  # The date is put into the sentence after it is translated, so the article
+  # Italian puts before it, elided before a day read with a vowel, is put in
+  # with it; an amount takes none.
+  test "an Italian confirmed date carries its article inside its span, the amount none" do
+    Gettext.put_locale(TymeslotWeb.Gettext, "it")
+
+    meeting = %{
+      start_time: ~U[2027-03-08 09:00:00Z],
+      attendee_timezone: "Europe/Rome",
+      status: :confirmed
+    }
+
+    out =
+      payment(:processing, %{
+        loading: false,
+        payment: %{status: :paid, amount_cents: 800, currency: "eur"},
+        meeting: meeting,
+        rebook_path: nil,
+        theme_id: "99"
+      })
+
+    assert out =~
+             ~r{confermata per <span class="payment-page-date">l&#39;8 marzo 2027 alle 10:00 CET</span>\.}
+
+    assert out =~ "Pagato: <span class=\"payment-page-date\">8,00\u00A0€</span>"
+  end
+
   test "an unknown meeting action raises as the conventional default does" do
     assert_raise RuntimeError, "Unsupported meeting action: invalid", fn ->
       FixtureTheme.render_meeting_action(assigns(), :invalid)

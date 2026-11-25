@@ -37,7 +37,8 @@ defmodule TymeslotWeb.Themes.Shared.Voice do
   | `:held_message_named` | `name`, `organizer_name` | "%{name}, your request to %{organizer_name} has been sent." |
   | `:organizer_fragment` | `name` | "with %{name}" |
   | `:check_inbox` | none | "Check your inbox" (the headline while the booking waits for the attendee to confirm their email) |
-  | `:check_inbox_message` | `email`, `deadline` | "We have sent a link to %{email}. Click it by %{deadline} to confirm your booking. Until then the time is held for you." (`deadline` is the date and time on the attendee's clock) |
+  | `:check_inbox_message` | `email`, `by_deadline` | "We have sent a link to %{email}. Click it by %{by_deadline} to confirm your booking. Until then the time is held for you." (`by_deadline` is the date and time on the attendee's clock, led by its article where the language puts one there: `LocaleFormat.with_article/3`) |
+  | `:check_inbox_message_seat` | `email`, `by_deadline` | "We have sent a link to %{email}. Click it by %{by_deadline} to confirm your booking. Until then your place is held for you." (the same sentence for a seat on a group meeting, whose place is held rather than the time) |
   | `:submit` | none | the theme's own label for an ordinary booking |
   | `:submit_paid` | none | "Continue to payment" (a paid meeting type: the checkout follows the submit) |
   | `:submit_request` | none | "Request meeting" |
@@ -81,7 +82,8 @@ defmodule TymeslotWeb.Themes.Shared.Voice do
     held_message_named: [:name, :organizer_name],
     organizer_fragment: [:name],
     check_inbox: [],
-    check_inbox_message: [:email, :deadline],
+    check_inbox_message: [:email, :by_deadline],
+    check_inbox_message_seat: [:email, :by_deadline],
     submit: [],
     submit_paid: [],
     submit_request: [],

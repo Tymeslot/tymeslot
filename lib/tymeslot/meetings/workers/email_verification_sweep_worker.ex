@@ -1,6 +1,9 @@
 defmodule Tymeslot.Meetings.Workers.EmailVerificationSweepWorker do
   @moduledoc """
-  Cron backstop that releases unverified bookings whose deadline has passed.
+  Cron backstop that releases unverified bookings, and unverified seats on
+  group meetings, whose deadline has passed. A held group slot is never
+  expired here by its own deadline; it is voided when its last held seat
+  expires (`EmailVerification.expire_seat/1`).
 
   `EmailVerificationExpiryWorker` handles the punctual case; this catches the
   bookings whose job was lost. It runs every 5 minutes rather than every 15
@@ -8,8 +11,9 @@ defmodule Tymeslot.Meetings.Workers.EmailVerificationSweepWorker do
   quarter-hour lag would be half of it again.
 
   One failing booking does not stop the sweep: it is reported and counted,
-  and the rest are still processed. `@batch_limit` bounds a run; a larger
-  backlog is worked through over successive runs, oldest deadline first.
+  and the rest are still processed. `@batch_limit` bounds each kind per run
+  (bookings, then seats); a larger backlog is worked through over successive
+  runs, oldest deadline first.
   """
 
   use Oban.Worker,
@@ -23,6 +27,7 @@ defmodule Tymeslot.Meetings.Workers.EmailVerificationSweepWorker do
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.ParticipantQueries
 
   @batch_limit 200
 
@@ -34,10 +39,18 @@ defmodule Tymeslot.Meetings.Workers.EmailVerificationSweepWorker do
 
   @impl Oban.Worker
   def perform(_job) do
-    result =
-      Clock.utc_now()
+    now = Clock.utc_now()
+    tallied = %{expired: 0, skipped: 0, failed: 0}
+
+    tallied =
+      now
       |> MeetingQueries.list_expired_verifications(@batch_limit)
-      |> Enum.reduce(%{expired: 0, skipped: 0, failed: 0}, &tally(expire_one(&1), &2))
+      |> Enum.reduce(tallied, &tally(expire_one(&1), &2))
+
+    result =
+      now
+      |> ParticipantQueries.list_expired_verifications(@batch_limit)
+      |> Enum.reduce(tallied, &tally(expire_seat(&1), &2))
 
     log(result)
 
@@ -53,6 +66,17 @@ defmodule Tymeslot.Meetings.Workers.EmailVerificationSweepWorker do
   rescue
     exception ->
       ErrorTracking.report_error(exception, __STACKTRACE__, %{meeting_id: meeting.id})
+      :failed
+  end
+
+  defp expire_seat(seat) do
+    case EmailVerification.expire_seat(seat) do
+      {:ok, _expired} -> :expired
+      {:error, :not_awaiting_verification} -> :skipped
+    end
+  rescue
+    exception ->
+      ErrorTracking.report_error(exception, __STACKTRACE__, %{participant_id: seat.id})
       :failed
   end
 

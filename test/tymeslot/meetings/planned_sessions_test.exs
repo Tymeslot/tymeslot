@@ -374,6 +374,48 @@ defmodule Tymeslot.Meetings.PlannedSessionsTest do
     end
   end
 
+  describe "a seat awaiting email verification in the analytics" do
+    setup ctx do
+      session = plan!(ctx.meeting_type, at(3, ~T[10:00:00]))
+      now = DateTime.utc_now(:second)
+
+      session
+      |> Changeset.change(inserted_at: DateTime.add(now, -10, :day))
+      |> Repo.update!()
+
+      %{session: session, now: now, window: {DateTime.add(now, -7, :day), now}}
+    end
+
+    test "is not a sign-up", ctx do
+      held(ctx.session, DateTime.add(ctx.now, -1, :day))
+
+      {from, to} = ctx.window
+      assert Meetings.count_bookings(ctx.user.id, from, to) == 0
+    end
+
+    test "held before the window does not move a later sign-up out of it", ctx do
+      held(ctx.session, DateTime.add(ctx.now, -9, :day))
+
+      insert(:participant,
+        meeting: ctx.session,
+        email: "bob@example.com",
+        inserted_at: DateTime.add(ctx.now, -1, :day)
+      )
+
+      {from, to} = ctx.window
+      assert Meetings.count_bookings(ctx.user.id, from, to) == 1
+    end
+
+    defp held(session, inserted_at) do
+      insert(:participant,
+        meeting: session,
+        email: "held@example.com",
+        inserted_at: inserted_at,
+        verification_deadline_at: DateTime.add(DateTime.utc_now(:second), 30, :minute)
+      )
+    end
+  end
+
   describe "the host's booking limits" do
     test "count a planned session only once someone holds a seat, and then once", ctx do
       # A cap of one a day, across the host's whole account.

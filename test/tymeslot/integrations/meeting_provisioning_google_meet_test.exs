@@ -12,8 +12,11 @@ defmodule Tymeslot.Integrations.MeetingProvisioningGoogleMeetTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
+  alias Tymeslot.Clock
   alias Tymeslot.Integrations.MeetingProvisioning
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Repo
   alias Tymeslot.Test.ClockHelpers
 
   setup :verify_on_exit!
@@ -83,6 +86,23 @@ defmodule Tymeslot.Integrations.MeetingProvisioningGoogleMeetTest do
     stub(Tymeslot.CalendarMock, :fetch_event, fn _ref, _context -> error end)
   end
 
+  # The booking's event is written once, as the booking stands, asking Google
+  # for a Meet with a booking request that records when it was made.
+  defp expect_conference_request(%{meeting: meeting}, result) do
+    event_id = meeting.provider_event_id
+    meeting_id = meeting.id
+
+    expect(Tymeslot.CalendarMock, :update_event, fn ^event_id, event_data, %{id: ^meeting_id} ->
+      asked_at = DateTime.to_unix(Clock.utc_now())
+
+      assert %{createRequest: %{requestId: "tymeslot-booking-" <> request}} =
+               event_data.conference_data
+
+      assert String.starts_with?(request, "#{asked_at}-")
+      result
+    end)
+  end
+
   defp made_meet,
     do: %{"entryPoints" => [%{"entryPointType" => "video", "uri" => @meet_url}]}
 
@@ -122,13 +142,86 @@ defmodule Tymeslot.Integrations.MeetingProvisioningGoogleMeetTest do
       end)
     end
 
-    # Nothing will come to wait for, and the booking's confirmation waits on
-    # the room.
-    test "makes a Meet of its own at once for an event that asked for none" do
+    # An event written before the booking was put on Meet: long after the
+    # booking, so the wait for its jobs is over, yet the Meet still belongs on
+    # the event, which is asked for one in place.
+    test "asks an event that asked for no Meet for one in place, and waits for it" do
+      booking = meet_booking(provider_event_id: "google-event-1")
+      stub_booking_event(booking, nil)
+      expect_conference_request(booking, {:ok, %{}})
+
+      at_seconds(600, fn ->
+        assert MeetingProvisioning.booking_room_placement(booking.meeting) ==
+                 :awaiting_calendar_event
+      end)
+    end
+
+    test "makes a Meet of its own when the calendar refuses the Meet asked for in place" do
+      booking = meet_booking(provider_event_id: "google-event-1")
+      stub_booking_event(booking, nil)
+      expect_conference_request(booking, {:error, :conference_refused})
+
+      at_seconds(600, fn ->
+        assert MeetingProvisioning.booking_room_placement(booking.meeting) == :own_event
+      end)
+    end
+
+    # The booking left Meet after the job read it: the event is not asked,
+    # and the next attempt reads the booking as it now stands.
+    test "does not ask the event for a Meet once the booking has left Meet" do
       booking = meet_booking(provider_event_id: "google-event-1")
       stub_booking_event(booking, nil)
 
+      booking.meeting
+      |> Changeset.change(video_integration_id: nil)
+      |> Repo.update!()
+
+      at_seconds(600, fn ->
+        assert MeetingProvisioning.booking_room_placement(booking.meeting) ==
+                 :awaiting_calendar_event
+      end)
+    end
+
+    # Nothing will come to wait for, and the booking's confirmation waits on
+    # the room.
+    test "makes a Meet of its own at once when Google failed the event's Meet" do
+      booking = meet_booking(provider_event_id: "google-event-1")
+
+      stub_booking_event(booking, %{
+        "createRequest" => %{"status" => %{"statusCode" => "failure"}}
+      })
+
       at_seconds(10, fn ->
+        assert MeetingProvisioning.booking_room_placement(booking.meeting) == :own_event
+      end)
+    end
+
+    test "makes a Meet of its own at once when Google no longer has the event" do
+      booking = meet_booking(provider_event_id: "google-event-1")
+      stub_unreadable_event(booking, {:error, :not_found})
+
+      at_seconds(10, fn ->
+        assert MeetingProvisioning.booking_room_placement(booking.meeting) == :own_event
+      end)
+    end
+
+    test "waits for a Meet asked for after the booking from when it was asked for" do
+      booking = meet_booking(provider_event_id: "google-event-1")
+      requested_at = @booked_at |> DateTime.add(600, :second) |> DateTime.to_unix()
+
+      stub_booking_event(booking, %{
+        "createRequest" => %{
+          "requestId" => "tymeslot-booking-#{requested_at}-0123456789ABCDEF",
+          "status" => %{"statusCode" => "pending"}
+        }
+      })
+
+      at_seconds(719, fn ->
+        assert MeetingProvisioning.booking_room_placement(booking.meeting) ==
+                 :awaiting_calendar_event
+      end)
+
+      at_seconds(721, fn ->
         assert MeetingProvisioning.booking_room_placement(booking.meeting) == :own_event
       end)
     end

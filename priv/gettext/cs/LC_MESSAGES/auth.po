@@ -781,8 +781,8 @@ msgstr "Váš účet se maže a už ho nelze obnovit."
 
 #: lib/tymeslot_web/controllers/auth/account_restore_html.ex
 #, elixir-autogen, elixir-format
-msgid "Your account is in the process of being deleted (scheduled for %{date}). If you want to keep it, restore it here."
-msgstr "Váš účet se právě maže (naplánováno na %{date}). Pokud ho chcete zachovat, obnovte ho zde."
+msgid "Your account is in the process of being deleted (scheduled for %{for_date}). If you want to keep it, restore it here."
+msgstr "Váš účet se právě maže (naplánováno na %{for_date}). Pokud ho chcete zachovat, obnovte ho zde."
 
 #: lib/tymeslot/auth/email_change.ex
 #, elixir-autogen, elixir-format

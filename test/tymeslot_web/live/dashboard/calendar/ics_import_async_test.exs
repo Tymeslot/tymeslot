@@ -19,7 +19,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.IcsImportAsyncTest do
       plan: nil,
       error: nil,
       summary: nil,
-      result: nil
+      result: nil,
+      content: "BEGIN:VCALENDAR",
+      overview: nil,
+      from: nil
     }
 
     %Socket{assigns: %{__changed__: %{}, ics_import: state}}

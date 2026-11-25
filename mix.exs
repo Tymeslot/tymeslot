@@ -4,7 +4,7 @@ defmodule Tymeslot.MixProject do
   def project do
     [
       app: :tymeslot,
-      version: "1.48.1",
+      version: "1.49.0",
       elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -120,7 +120,6 @@ defmodule Tymeslot.MixProject do
       {:dns_cluster, "~> 0.3"},
       {:bandit, "~> 1.8"},
       {:tz, "~> 0.28"},
-      {:uuid, "~> 1.1"},
       # QR codes are drawn server-side (booking-link email, onboarding).
       {:eqrcode, "~> 0.2"},
       {:bcrypt_elixir, "~> 3.2"},
@@ -140,7 +139,7 @@ defmodule Tymeslot.MixProject do
       # libvips through vix, which ships prebuilt binaries: re-encodes uploaded
       # images so their metadata (EXIF location, capture time, device) is never
       # published.
-      {:image, "~> 0.72"},
+      {:vix, "~> 0.42"},
       {:sweet_xml, "~> 0.7"},
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},

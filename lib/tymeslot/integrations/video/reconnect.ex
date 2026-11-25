@@ -1,7 +1,12 @@
 defmodule Tymeslot.Integrations.Video.Reconnect do
   @moduledoc """
-  Saves credentials proven to work, and catches the integration's rooms up on
-  what they missed while it needed reconnecting.
+  Saves credentials proven to work, declares the integration recovered, and
+  catches its rooms up on what they missed while it needed reconnecting.
+
+  A proof is the owner's own evidence that the integration works again, so the
+  health row is reset at once (`HealthCheck.mark_user_recovered/2`) rather than
+  left unhealthy until a scheduled probe passes, which can be an hour away
+  once the probe has backed off.
 
   While an integration is flagged for reconnection, changes to its bookings
   cannot reach the provider: a reschedule or a cancellation is refused and its
@@ -22,6 +27,7 @@ defmodule Tymeslot.Integrations.Video.Reconnect do
   """
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
@@ -37,14 +43,15 @@ defmodule Tymeslot.Integrations.Video.Reconnect do
 
   @doc """
   Saves `attrs` on `integration` as credentials proven to work, clearing its
-  reconnect flag, and catches its rooms up when the row was flagged as it was
-  written.
+  reconnect flag and resetting its health row, and catches its rooms up when
+  the row was flagged as it was written.
   """
   @spec save(VideoIntegrationSchema.t(), map()) ::
           {:ok, VideoIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def save(%VideoIntegrationSchema{} = integration, attrs) do
     case VideoIntegrationQueries.reconnect(integration, attrs) do
       {:ok, updated, was_flagged?} ->
+        HealthCheck.mark_user_recovered(:video, updated.id)
         if was_flagged?, do: catch_up_rooms(updated)
         {:ok, updated}
 

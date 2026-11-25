@@ -177,7 +177,7 @@ msgstr "Під час оновлення сталася непередбачен
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "Refreshing..."
-msgstr "Оновлення..."
+msgstr "Оновлення…"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format

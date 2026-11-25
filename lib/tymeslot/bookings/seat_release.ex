@@ -24,35 +24,86 @@ defmodule Tymeslot.Bookings.SeatRelease do
   `RescheduleSeat` asks inside its move transaction, through
   `cancel_if_emptied/1`, so that a move off a meeting's last seat commits
   with that meeting cancelled or not at all.
+
+  ## Held seats outlive the last counting one
+
+  A seat awaiting its booker's email verification is not live in the sense
+  above: nobody but its booker knows of it. When the last live seat leaves a
+  slot that still holds such seats, the slot is not cancelled, since that
+  would void a held booker's link inside their own window because of
+  somebody else. It is held for verification again (`:awaiting_verification`,
+  as a slot whose only seats are held always is), and each held seat keeps
+  its own deadline: the first to be verified brings the slot back to life
+  (`Tymeslot.Bookings.SlotActivation`), and the last to lapse or be
+  released voids it (`Tymeslot.Meetings.EmailVerification.expire_seat/1`).
+  A seat verifying meanwhile waits on the same row lock, so it finds the
+  slot either still confirmed or already held.
+
+  Two leavers whose seat cancellations both committed before either asked
+  find the slot held by whichever asked first: the second finds it
+  `:awaiting_verification` and leaves it be (`:already_held`), since a held
+  slot ends only through its held seats. The meeting was already over for
+  the organiser, told so by the first leaver's email, so nothing more is
+  owed to them or to the calendar for the second.
+
+  To the organiser and the integrations the meeting is over, exactly as if
+  it had been cancelled: the leaving seat's own email and event say so, and
+  `finish_return_to_held/1` removes what the confirmed slot had (calendar
+  event, video room, reminders, pending room creation). The slot row is
+  reset to what a held slot carries: a verification deadline (its held
+  seats' latest), no video room, and a new calendar identity, so that the
+  event a later activation creates is a new event rather than the deleted
+  one written again, which a provider keeping deleted events by id (Google)
+  refuses. A pending reschedule request is cleared with the rest: it asked
+  the confirmed guests, now gone, for a new time, and left standing it would
+  void the slot's time, so that no held seat could be verified. The slot
+  keeps its `email_verified_at`, the record that the organiser knew of the
+  meeting: its status hides it while held, and should its last held seat
+  lapse it ends as the cancelled meeting it was to them, in their history,
+  rather than as a hold nobody saw.
   """
 
   require Logger
 
+  alias Ecto.UUID
+  alias Tymeslot.Availability
   alias Tymeslot.Bookings.Cancel
+  alias Tymeslot.Bookings.Workers.RescheduleRequestExpiryWorker
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Jobs
+  alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.MeetingTransitionQueries
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Notifications.Events
   alias Tymeslot.Repo
+  alias Tymeslot.Workers.VideoRoomWorker
+  alias Tymeslot.Workers.VideoSyncWorker
 
   @doc """
   Cancels `meeting` when no live participant remains on it.
 
   Returns `{:ok, :meeting_cancelled}` when it cancelled the meeting (having
-  run the cancellation side effects), `{:ok, :seats_remain}` when someone is
+  run the cancellation side effects), `{:ok, :returned_to_held}` when held
+  seats kept it and it is held for verification again (having run
+  `finish_return_to_held/1`), `{:ok, :already_held}` when another leaver
+  had held it already (see the module doc), `{:ok, :seats_remain}` when someone is
   still on the slot, including the case where a booker took a seat while the
   leaver was committing, and `{:error, :release_check_failed}` when the
   emptiness check itself could not be completed — the meeting's status is
   unchanged in that case (the transaction rolled back), but a caller must not
   read this as "seats remain": that would be reporting an unknown as a known
   answer. Its caller (`CancelSeat.after_commit/2`) handles this alongside
-  the other two outcomes.
+  the other outcomes.
   """
   @spec release(Meeting.t()) ::
-          {:ok, :meeting_cancelled | :seats_remain} | {:error, :release_check_failed}
+          {:ok, :meeting_cancelled | :returned_to_held | :already_held | :seats_remain}
+          | {:error, :release_check_failed}
   def release(%Meeting{} = meeting) do
     result =
       Repo.transaction(fn ->
@@ -67,8 +118,12 @@ defmodule Tymeslot.Bookings.SeatRelease do
         Cancel.finalise_cancellation(cancelled_meeting)
         {:ok, :meeting_cancelled}
 
-      {:ok, :seats_remain} ->
-        {:ok, :seats_remain}
+      {:ok, {:held, confirmed_meeting}} ->
+        finish_return_to_held(confirmed_meeting)
+        {:ok, :returned_to_held}
+
+      {:ok, remains} when remains in [:already_held, :seats_remain] ->
+        {:ok, remains}
 
       {:error, reason} ->
         # The seat is released either way; an emptied meeting that failed to
@@ -99,17 +154,23 @@ defmodule Tymeslot.Bookings.SeatRelease do
 
   @doc """
   The status half of `release/1`, inside the caller's own transaction:
-  cancels `meeting` under its row lock when no live participant remains on
-  it, and leaves the side effects to the caller, who runs
-  `Tymeslot.Bookings.Cancel.finalise_cancellation/1` on the cancelled
-  meeting once its transaction has committed.
+  under `meeting`'s row lock, when no live participant remains on it,
+  cancels it, or holds it for verification again when held seats remain
+  (see the module doc). The side effects are the caller's, once its
+  transaction has committed: `Tymeslot.Bookings.Cancel.finalise_cancellation/1`
+  on a `{:cancelled, meeting}`, and `finish_return_to_held/1` on a
+  `{:held, meeting}`, which carries the meeting as it was before, still
+  naming the calendar event and video room it let go of. A slot already
+  held for verification is left to its held seats (`:already_held`), with
+  nothing for the caller to finish.
 
   For a caller whose own transaction must not commit unless the meeting is
   cancelled with it (a seat move that has already treated the old meeting's
   time as free): an `{:error, reason}` is the caller's to roll back.
   """
   @spec cancel_if_emptied(Meeting.t()) ::
-          {:ok, {:cancelled, Meeting.t()} | :seats_remain} | {:error, Ecto.Changeset.t()}
+          {:ok, {:cancelled, Meeting.t()} | {:held, Meeting.t()} | :already_held | :seats_remain}
+          | {:error, Ecto.Changeset.t() | :not_confirmed}
   def cancel_if_emptied(%Meeting{} = meeting) do
     locked = GroupMeetingQueries.lock_for_update(meeting.id)
 
@@ -123,12 +184,54 @@ defmodule Tymeslot.Bookings.SeatRelease do
       locked.planned ->
         {:ok, :seats_remain}
 
+      # Held by another leaver whose release ran first: it ends when its
+      # last held seat lapses or is released
+      # (`Tymeslot.Meetings.EmailVerification.expire_seat/1`), never here.
+      locked.status == :awaiting_verification ->
+        {:ok, :already_held}
+
       ParticipantQueries.count_live_for_meeting(meeting.id) > 0 ->
         {:ok, :seats_remain}
 
       true ->
-        flip_to_cancelled(locked)
+        vacate(locked, ParticipantQueries.latest_held_deadline(meeting.id))
     end
+  end
+
+  @doc """
+  The side effects of a slot `cancel_if_emptied/1` held for verification
+  again, once the caller's transaction has committed. `confirmed_meeting` is
+  the slot as it was before (the `{:held, meeting}` outcome), so the jobs
+  enqueued here still name its calendar event and video room.
+
+  What `Tymeslot.Bookings.Cancel.finalise_cancellation/1` undoes for a
+  cancelled slot, bar the announcement, which is the leaving seat's (see the
+  module doc): the organiser's availability, the calendar event, the video
+  room, the reminders, any room creation not yet run, and the expiry of a
+  reschedule request the slot no longer carries. Each step is
+  best effort and never fails the caller, as there.
+  """
+  @spec finish_return_to_held(Meeting.t()) :: :ok
+  def finish_return_to_held(%Meeting{} = confirmed_meeting) do
+    Availability.changed(confirmed_meeting.organizer_user_id)
+    :ok = Meetings.release_calendar_event(confirmed_meeting)
+    release_video_room(confirmed_meeting)
+    Jobs.delete_meeting_jobs(VideoRoomWorker, confirmed_meeting.id)
+    Jobs.delete_meeting_jobs(RescheduleRequestExpiryWorker, confirmed_meeting.id)
+    Events.slot_returned_to_held(confirmed_meeting)
+  end
+
+  # A held seat keeps a confirmed slot, held again. A slot with no held seat
+  # is cancelled. A group slot is only ever confirmed here, as
+  # `cancel_if_emptied/1` leaves a held one to its seats; a slot in any other
+  # status is cancelled too, its held seats going with it rather than
+  # outliving a slot `SlotActivation` could not bring back.
+  defp vacate(%Meeting{status: :confirmed} = slot, %DateTime{} = deadline),
+    do: return_to_held(slot, deadline)
+
+  defp vacate(slot, _deadline) do
+    :ok = EmailVerification.release_all_held(slot.id)
+    flip_to_cancelled(slot)
   end
 
   defp flip_to_cancelled(meeting) do
@@ -137,6 +240,51 @@ defmodule Tymeslot.Bookings.SeatRelease do
     case MeetingQueries.update_meeting_status(meeting, attrs) do
       {:ok, cancelled} -> {:ok, {:cancelled, cancelled}}
       {:error, _changeset} = error -> error
+    end
+  end
+
+  # A held slot carries no room and no calendar event; a fresh
+  # `calendar_uid` with no `provider_event_id` is what makes the next
+  # activation's calendar job a create of a new event. The old event's
+  # calendar (`calendar_integration_id`, `calendar_path`) stays, for the job
+  # deleting it, and `email_verified_at` stays as the module doc says.
+  defp return_to_held(meeting, deadline) do
+    changes = [
+      verification_deadline_at: deadline,
+      reschedule_requested_at: nil,
+      calendar_uid: UUID.generate(),
+      provider_event_id: nil,
+      meeting_url: nil,
+      video_room_id: nil,
+      video_provider: nil,
+      organizer_video_url: nil,
+      attendee_video_url: nil,
+      video_room_enabled: false,
+      video_room_created_at: nil,
+      video_room_expires_at: nil
+    ]
+
+    with {:ok, _held} <-
+           MeetingTransitionQueries.transition_to_awaiting_verification(meeting.id, changes) do
+      {:ok, {:held, meeting}}
+    end
+  end
+
+  defp release_video_room(%Meeting{video_room_id: nil}), do: :ok
+  defp release_video_room(%Meeting{organizer_user_id: nil}), do: :ok
+
+  defp release_video_room(meeting) do
+    case VideoSyncWorker.release(meeting) do
+      {:ok, _scheduled} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to enqueue video room release for a slot held again",
+          meeting_id: meeting.id,
+          reason: LogFormat.reason(reason)
+        )
+
+        :ok
     end
   end
 end

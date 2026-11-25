@@ -7,10 +7,10 @@ defmodule Tymeslot.MeetingTypes.EmailVerificationRule do
   A paid booking is confirmed by its payment, so a type cannot also ask the
   booker to verify their email address. Both fields are read with
   `get_field/2`, so turning either on for a type that already has the other is
-  refused too. The error sits on `:requires_email_verification`. Group
-  bookings and series exclude it too, with their other conflicts
-  (`Tymeslot.MeetingTypes.GroupValidation`,
-  `Tymeslot.MeetingTypes.SeriesSettings.conflicts/1`).
+  refused too. The error sits on `:requires_email_verification`. A series
+  excludes it too, with its other conflicts
+  (`Tymeslot.MeetingTypes.SeriesSettings.conflicts/1`); a group type may
+  require it, each seat being held until its booker confirms.
 
   The message is a msgid of the `errors` domain, registered with
   `dgettext_noop/2` and translated where the form shows it.

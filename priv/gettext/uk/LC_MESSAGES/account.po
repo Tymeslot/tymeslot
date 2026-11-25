@@ -334,13 +334,13 @@ msgstr "Ваш обліковий запис видалено."
 
 #: lib/tymeslot_web/live/account_live/delete_account_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Your account will be deleted on %{date}."
-msgstr "Ваш обліковий запис буде видалено %{date}."
+msgid "Your account will be deleted on %{on_date}."
+msgstr "Ваш обліковий запис буде видалено %{on_date}."
 
 #: lib/tymeslot_web/live/account_live/handlers.ex
 #, elixir-autogen, elixir-format
-msgid "Your account will be deleted on %{date}. Sign in before then if you change your mind."
-msgstr "Ваш обліковий запис буде видалено %{date}. Якщо передумаєте, увійдіть до цієї дати."
+msgid "Your account will be deleted on %{on_date}. Sign in before then if you change your mind."
+msgstr "Ваш обліковий запис буде видалено %{on_date}. Якщо передумаєте, увійдіть до цієї дати."
 
 #: lib/tymeslot_web/live/account_live/delete_account_modal.ex
 #, elixir-autogen, elixir-format

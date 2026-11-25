@@ -14,12 +14,14 @@ defmodule Tymeslot.Bookings.Cancel do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
+  alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.MeetingTransitionQueries
   alias Tymeslot.Notifications.Events
+  alias Tymeslot.Repo
   alias Tymeslot.Workers.VideoSyncWorker
 
   @external_cancellation_reason "Cancelled externally via calendar sync"
@@ -385,6 +387,11 @@ defmodule Tymeslot.Bookings.Cancel do
   # and only the caller whose write actually cancelled the row goes on to
   # delete the calendar event and tell everyone. The loser gets
   # `{:error, :already_cancelled}` and does nothing further.
+  #
+  # A group slot's seats still awaiting email verification go with it, in the
+  # same transaction and after the slot row (the lock order every seat
+  # transition keeps), silently: nobody but each held booker knew of them,
+  # and a seat left live on a cancelled slot could later be confirmed into it.
   defp transition_to_cancelled(meeting, cancellation_reason) do
     changes =
       Enum.reject(
@@ -395,7 +402,7 @@ defmodule Tymeslot.Bookings.Cancel do
         fn {_key, value} -> is_nil(value) end
       )
 
-    case MeetingTransitionQueries.transition_to_cancelled(meeting.id, changes) do
+    case cancel_with_held_seats(meeting.id, changes) do
       {:ok, updated_meeting} ->
         Logger.info("Meeting status updated to cancelled",
           meeting_id: meeting.id,
@@ -412,6 +419,19 @@ defmodule Tymeslot.Bookings.Cancel do
 
         error
     end
+  end
+
+  defp cancel_with_held_seats(meeting_id, changes) do
+    {:ok, result} =
+      Repo.transaction(fn ->
+        with {:ok, cancelled} <-
+               MeetingTransitionQueries.transition_to_cancelled(meeting_id, changes) do
+          :ok = EmailVerification.release_all_held(cancelled.id)
+          {:ok, cancelled}
+        end
+      end)
+
+    result
   end
 
   # Enqueues the video-sync job that deletes the provider-side meeting (e.g.

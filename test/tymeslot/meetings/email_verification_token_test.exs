@@ -15,6 +15,7 @@ defmodule Tymeslot.Meetings.EmailVerificationTokenTest do
   alias Ecto.Changeset
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Meetings.EmailVerificationToken
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Repo
   alias Tymeslot.SignedToken
 
@@ -110,5 +111,80 @@ defmodule Tymeslot.Meetings.EmailVerificationTokenTest do
 
     refute inspect(decoded) =~ meeting.uid
     refute payload =~ meeting.uid
+  end
+
+  describe "a seat token" do
+    defp held_seat(seat_attrs \\ %{}) do
+      user = insert(:user)
+
+      slot =
+        insert(:group_meeting, %{
+          organizer_user: user,
+          organizer_user_id: user.id,
+          status: :confirmed
+        })
+
+      seat =
+        insert(
+          :participant,
+          Map.merge(
+            %{
+              meeting: slot,
+              meeting_id: slot.id,
+              verification_deadline_at: DateTime.add(DateTime.utc_now(:second), 30, :minute)
+            },
+            seat_attrs
+          )
+        )
+
+      {slot, seat}
+    end
+
+    test "a seat token verifies to its seat" do
+      {slot, seat} = held_seat()
+
+      assert {:ok, {:seat, participant, meeting}} =
+               seat |> EmailVerificationToken.sign_seat() |> EmailVerificationToken.verify()
+
+      assert participant.id == seat.id
+      assert meeting.id == slot.id
+    end
+
+    test "a seat token for a cancelled seat is still decoded but the page reads it as expired" do
+      {_slot, seat} = held_seat()
+      token = EmailVerificationToken.sign_seat(seat)
+
+      seat |> Changeset.change(cancelled_at: DateTime.utc_now(:second)) |> Repo.update!()
+
+      assert {:ok, {:seat, participant, _meeting}} = EmailVerificationToken.verify(token)
+      refute ParticipantSchema.live?(participant)
+    end
+
+    test "a seat token whose deadline changed is stale, and one for a gone seat is not found" do
+      {_slot, seat} = held_seat()
+      token = EmailVerificationToken.sign_seat(seat)
+
+      seat
+      |> Changeset.change(
+        verification_deadline_at: DateTime.add(seat.verification_deadline_at, 1, :minute)
+      )
+      |> Repo.update!()
+
+      assert {:error, :stale} = EmailVerificationToken.verify(token)
+
+      Repo.delete!(seat)
+      assert {:error, :not_found} = EmailVerificationToken.verify(token)
+    end
+
+    test "a seat token never contains the management token" do
+      {_slot, seat} = held_seat()
+      token = EmailVerificationToken.sign_seat(seat)
+
+      [_header, payload, _signature] = String.split(token, ".")
+      decoded = payload |> Base.url_decode64!(padding: false) |> :erlang.binary_to_term([:safe])
+
+      refute inspect(decoded) =~ seat.management_token
+      refute payload =~ seat.management_token
+    end
   end
 end

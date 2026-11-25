@@ -271,6 +271,14 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   end
 
   @doc """
+  Deletes every pending job `worker_module` holds for one group-meeting seat,
+  by its `"participant_id"` argument.
+  """
+  @spec delete_participant_jobs(module(), term()) :: {non_neg_integer(), nil}
+  def delete_participant_jobs(worker_module, participant_id),
+    do: delete_pending_jobs(worker_module, %{"participant_id" => participant_id})
+
+  @doc """
   Deletes existing reminder email jobs for a meeting to avoid duplicates
   when rescheduling.
   """

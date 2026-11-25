@@ -68,8 +68,8 @@ msgstr "%{organizer} не зміг(ла) прийняти це бронюван�
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
-msgid "%{organizer} will reply by %{deadline} at the latest."
-msgstr "%{organizer} відповість щонайпізніше до %{deadline}."
+msgid "%{organizer} will reply by %{by_deadline} at the latest."
+msgstr "%{organizer} відповість щонайпізніше до %{by_deadline}."
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
@@ -463,8 +463,8 @@ msgstr "Тим часом новий час зарезервовано для в
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
-msgid "The slot is held until you answer. If you haven't replied by %{deadline}, the request lapses and %{name} is told the time is free again."
-msgstr "Час зарезервовано, доки ви не відповісте. Без відповіді до %{deadline} запит скасується, а %{name} дізнається, що час знову вільний."
+msgid "The slot is held until you answer. If you haven't replied by %{by_deadline}, the request lapses and %{name} is told the time is free again."
+msgstr "Час зарезервовано, доки ви не відповісте. Без відповіді до %{by_deadline} запит скасується, а %{name} дізнається, що час знову вільний."
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
@@ -543,8 +543,8 @@ msgstr "Будь ласка, підтвердьте бронювання"
 
 #: lib/tymeslot/emails/templates/booking_email_verification.ex
 #, elixir-autogen, elixir-format
-msgid "Your booking is not confirmed yet. Click the button below by %{deadline} to confirm it, and we will hold the time for you until then."
-msgstr "Ваше бронювання ще не підтверджено. Натисніть кнопку нижче до %{deadline}, щоб підтвердити його. Доти ми зберігатимемо цей час за вами."
+msgid "Your booking is not confirmed yet. Click the button below by %{by_deadline} to confirm it, and we will hold the time for you until then."
+msgstr "Ваше бронювання ще не підтверджено. Натисніть кнопку нижче до %{by_deadline}, щоб підтвердити його. Доти ми зберігатимемо цей час за вами."
 
 #: lib/tymeslot/emails/templates/reschedule_request_unanswered.ex
 #, elixir-autogen, elixir-format
@@ -617,3 +617,8 @@ msgstr "Ви попросили %{name} обрати новий час для ц
 #, elixir-autogen, elixir-format
 msgid "You asked for this meeting to be moved, and the request lapsed before anyone still on it picked a new time. Its original time had already been given up, so the meeting has expired. The participants have been told and can book again from your booking page."
 msgstr "Ви попросили перенести цю зустріч, але запит утратив чинність раніше, ніж хтось із її учасників, що ще залишалися, обрав новий час. Початковий час уже було звільнено, тому зустріч протерміновано. Учасників повідомлено, і вони можуть знову забронювати зустріч на вашій сторінці бронювання."
+
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking is not confirmed yet. Click the button below by %{by_deadline} to confirm it, and we will hold your place until then."
+msgstr "Ваше бронювання ще не підтверджено. Натисніть кнопку нижче до %{by_deadline}, щоб підтвердити його. Доти ми зберігатимемо за вами місце."

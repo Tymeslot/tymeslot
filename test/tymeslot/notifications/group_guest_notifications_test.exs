@@ -63,7 +63,19 @@ defmodule Tymeslot.Notifications.GroupGuestNotificationsTest do
     {:ok, [left_guest]} =
       Guests.create_for_participant(meeting.id, left.id, ["left@example.com"])
 
-    for guest <- [staying_guest, left_guest] do
+    # A seat awaiting its booker's email verification, and its guest: nobody
+    # but the booker may learn of either until the booker verifies.
+    held =
+      insert(:participant,
+        meeting: meeting,
+        name: "Held Booker",
+        verification_deadline_at: DateTime.add(DateTime.utc_now(:second), 30, :minute)
+      )
+
+    {:ok, [held_guest]} =
+      Guests.create_for_participant(meeting.id, held.id, ["held@example.com"])
+
+    for guest <- [staying_guest, left_guest, held_guest] do
       {:ok, _guest} = GuestQueries.mark_confirmation_sent(guest, DateTime.utc_now(:second))
     end
 
@@ -90,6 +102,7 @@ defmodule Tymeslot.Notifications.GroupGuestNotificationsTest do
 
       assert_received {:guest_cancellation, "stays@example.com", details}
       refute_received {:guest_cancellation, "left@example.com", _details}
+      refute_received {:guest_cancellation, "held@example.com", _details}
 
       assert details.attendee_name == "Staying Booker"
       assert details.attendee_locale == "uk"

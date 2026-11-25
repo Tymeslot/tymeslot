@@ -224,7 +224,7 @@ msgstr "Скасувати сесії"
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_series_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancelling..."
-msgstr "Скасування..."
+msgstr "Скасування…"
 
 #: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
 #, elixir-autogen, elixir-format

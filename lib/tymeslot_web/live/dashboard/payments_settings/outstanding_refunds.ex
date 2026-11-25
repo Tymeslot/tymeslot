@@ -213,19 +213,23 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefunds do
   defp format_date_cell(_payment), do: ""
 
   defp expired_date_cell(%{paid_at: %DateTime{} = paid_at}),
-    do: dgettext("dashboard_payments", "Expired, paid %{date}", date: format_date(paid_at))
+    do: dgettext("dashboard_payments", "Expired, paid %{on_date}", on_date: on_date(paid_at))
 
   defp expired_date_cell(_payment), do: dgettext("dashboard_payments", "Expired")
 
   defp released_date_cell(%{cancelled_at: %DateTime{} = cancelled_at} = meeting) do
     if Approval.declined?(meeting),
-      do: dgettext("dashboard_payments", "Declined %{date}", date: format_date(cancelled_at)),
-      else: dgettext("dashboard_payments", "Cancelled %{date}", date: format_date(cancelled_at))
+      do: dgettext("dashboard_payments", "Declined %{on_date}", on_date: on_date(cancelled_at)),
+      else: dgettext("dashboard_payments", "Cancelled %{on_date}", on_date: on_date(cancelled_at))
   end
 
   defp released_date_cell(_meeting), do: ""
 
-  defp format_date(%DateTime{} = datetime) do
-    LocaleFormat.format_short_date_with_year(datetime, Gettext.get_locale(TymeslotWeb.Gettext))
+  defp on_date(%DateTime{} = datetime) do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+
+    datetime
+    |> LocaleFormat.format_short_date_with_year(locale)
+    |> LocaleFormat.with_article(:none, locale)
   end
 end
