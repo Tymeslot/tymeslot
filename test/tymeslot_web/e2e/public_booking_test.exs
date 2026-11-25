@@ -4,7 +4,7 @@ defmodule TymeslotWeb.E2E.PublicBookingTest do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Profiles
-  alias Wallaby.Element
+  alias TymeslotWeb.E2E.BookerSteps
 
   @moduletag :e2e
   @moduletag :bookings
@@ -33,21 +33,13 @@ defmodule TymeslotWeb.E2E.PublicBookingTest do
       |> visit("/#{profile.username}/#{slug}")
       |> wait_for_live()
 
-    # Select a calendar day (pick the first available day).
-    # Multiple enabled days match the selector — grab the first and click it directly.
-    session
-    |> find(css("[data-testid='calendar-day']:not([disabled])", count: :any))
-    |> List.first()
-    |> Element.click()
-
-    # Select a time slot (pick the first available).
-    # Multiple slots may be visible — wait for at least one then click the first.
-    session = assert_has(session, css("[data-testid='time-slot']", minimum: 1))
-
-    session
-    |> find(css("[data-testid='time-slot']", count: :any))
-    |> List.first()
-    |> Element.click()
+    # Pick the first available day, then its first time. Each waits for its
+    # buttons first: the days and the times render after the LiveView
+    # connects and loads them, so a bare `find` could see none yet.
+    session =
+      session
+      |> BookerSteps.pick_first("[data-testid='calendar-day']:not([disabled])")
+      |> BookerSteps.pick_first("[data-testid='time-slot']")
 
     # Click next to go to booking form
     session = click(session, css("[data-testid='next-step']"))
