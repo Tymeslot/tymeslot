@@ -50,34 +50,34 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarDays do
         meeting_type \\ nil
       ) do
     if organizer_profile do
-      if Demo.demo_profile?(organizer_profile) do
-        # Delegate to demo provider for calendar days
-        Demo.get_calendar_days(
-          user_timezone,
-          year,
-          month,
-          week_start,
-          organizer_profile,
-          availability_map
-        )
-      else
-        schedule = Schedules.resolve_for(meeting_type, organizer_profile)
-        config = availability_config(schedule, organizer_profile, meeting_type)
+      config = month_config(organizer_profile, meeting_type, user_timezone)
 
-        Calculate.get_calendar_days(
-          user_timezone,
-          year,
-          month,
-          week_start,
-          config,
-          availability_map
-        )
-      end
+      Calculate.get_calendar_days(
+        user_timezone,
+        year,
+        month,
+        week_start,
+        config,
+        availability_map
+      )
     else
       # Return empty calendar days when profile is nil
       []
     end
     |> trim_trailing_other_month_weeks()
+  end
+
+  # A demo profile's days come from the provider's predicate; every other
+  # profile's from its own schedule.
+  defp month_config(organizer_profile, meeting_type, user_timezone) do
+    case Demo.day_available_fn(organizer_profile, user_timezone) do
+      nil ->
+        schedule = Schedules.resolve_for(meeting_type, organizer_profile)
+        availability_config(schedule, organizer_profile, meeting_type)
+
+      available? ->
+        %{fallback_availability_fn: available?}
+    end
   end
 
   @doc """
@@ -148,8 +148,8 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarDays do
 
   # Resolved once rather than inside the loop: each branch is loop-invariant
   # across the seven days, and building a closure here means only the branch
-  # actually taken pays its cost (a demo grid fetch or a schedule prefetch)
-  # instead of both running and one being discarded on every render.
+  # actually taken pays its cost (the fallback's schedule prefetch) instead of
+  # every branch running and all but one being discarded on every render.
   defp day_availability_lookup(
          week_start,
          organizer_profile,
@@ -178,35 +178,20 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarDays do
           end
         end
 
-      Demo.demo_profile?(organizer_profile) ->
-        # Demo profiles answer the fallback question with the same demo
-        # generator the month grid uses, not Core's hard-coded business
-        # hours. Should the provider's generator have no days for a profile
-        # it calls a demo one, fall back to business hours rather than
-        # render every day of the week as unavailable.
-        demo_days =
-          demo_calendar_days(week_start, organizer_profile, availability_map, user_timezone)
-
-        if demo_days == %{} do
-          business_hours_lookup(
-            week_start,
-            organizer_profile,
-            availability_map,
-            meeting_type,
-            user_timezone
-          )
-        else
-          fn _date, date_string -> {Map.get(demo_days, date_string, false), false} end
-        end
-
       true ->
-        business_hours_lookup(
-          week_start,
-          organizer_profile,
-          availability_map,
-          meeting_type,
-          user_timezone
-        )
+        case Demo.day_available_fn(organizer_profile, user_timezone) do
+          nil ->
+            business_hours_lookup(
+              week_start,
+              organizer_profile,
+              availability_map,
+              meeting_type,
+              user_timezone
+            )
+
+          available? ->
+            demo_lookup(available?, user_timezone)
+        end
     end
   end
 
@@ -267,26 +252,15 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarDays do
     end
   end
 
-  # A week can straddle a month boundary, so build the lookup from every
-  # month it touches rather than assuming `week_start`'s month covers it.
-  # Each month's grid holds all of that month's days whichever weekday it
-  # starts on, so the grid's own anchoring is immaterial here.
-  defp demo_calendar_days(week_start, organizer_profile, availability_map, user_timezone) do
-    0..6
-    |> Enum.map(&Date.add(week_start, &1))
-    |> Enum.map(&{&1.year, &1.month})
-    |> Enum.uniq()
-    |> Enum.flat_map(fn {year, month} ->
-      Demo.get_calendar_days(
-        user_timezone,
-        year,
-        month,
-        :monday,
-        organizer_profile,
-        availability_map
-      )
-    end)
-    |> Map.new(&{&1.date, &1.available})
+  # Demo profiles answer the fallback question with the same predicate the
+  # month grid uses, not Core's business hours, and a past day is closed as it
+  # is in the grid (`Calculate.get_calendar_days/6`).
+  defp demo_lookup(available?, user_timezone) do
+    today = CalendarHelpers.visitor_today(user_timezone)
+
+    fn date, _date_string ->
+      {Date.compare(date, today) != :lt and available?.(date), false}
+    end
   end
 
   # Only the fallback path needs a schedule; a supplied availability map already

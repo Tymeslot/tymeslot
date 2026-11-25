@@ -71,7 +71,7 @@ defmodule Tymeslot.Demo.NoOp do
   end
 
   @impl Tymeslot.Demo.Behaviour
-  def get_orchestrator(_context), do: Tymeslot.Bookings.Orchestrator
+  def get_orchestrator(_context), do: :default
 
   @impl Tymeslot.Demo.Behaviour
   def get_available_slots(
@@ -100,15 +100,5 @@ defmodule Tymeslot.Demo.NoOp do
   end
 
   @impl Tymeslot.Demo.Behaviour
-  def get_calendar_days(
-        _user_timezone,
-        _year,
-        _month,
-        _week_start,
-        _organizer_profile,
-        _availability_map \\ nil
-      ) do
-    # NoOp implementation returns empty list; caller should fall back to real logic
-    []
-  end
+  def day_available_fn(_organizer_profile, _user_timezone), do: nil
 end

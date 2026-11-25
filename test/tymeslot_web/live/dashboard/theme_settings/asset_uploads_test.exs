@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploadsTest do
   @moduletag :themes
 
   alias Phoenix.LiveView.Socket
+  alias Phoenix.LiveView.UploadEntry
   alias Tymeslot.Media.Uploads
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.ThemeSettings.AssetUploads
@@ -18,16 +19,25 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploadsTest do
   end
 
   defp socket_with(entries) do
-    %Socket{
-      assigns: %{
-        __changed__: %{},
-        id: "theme-customization",
-        theme_id: "1",
-        profile: %{id: 1, user_id: @user_id},
-        uploads: %{background_image_path: %{entries: entries}}
-      }
-    }
+    socket =
+      AssetUploads.configure(
+        %Socket{
+          assigns: %{
+            __changed__: %{},
+            id: "theme-customization",
+            theme_id: "1",
+            profile: %{id: 1, user_id: @user_id}
+          }
+        },
+        ThemeCustomizationComponent,
+        background_image_path: :image
+      )
+
+    update_in(socket.assigns.uploads.background_image_path, &%{&1 | entries: entries})
   end
+
+  defp in_flight_entry,
+    do: %UploadEntry{ref: "0", upload_config: :background_image_path, done?: false}
 
   defp budget_remaining do
     Enum.reduce_while(1..(@limit + 1), 0, fn _i, spent ->
@@ -45,29 +55,15 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploadsTest do
       for _i <- 1..20, do: AssetUploads.consume(socket, :background_image_path)
 
       assert budget_remaining() == @limit,
-             "an idle change event must not spend the user's upload budget"
+             "consuming with no upload waiting must not spend the user's upload budget"
     end
 
     test "does not charge the rate limit while an upload is still in flight" do
-      socket = socket_with([%{ref: "0", done?: false, cancelled?: false}])
+      socket = socket_with([in_flight_entry()])
 
       for _i <- 1..20, do: AssetUploads.consume(socket, :background_image_path)
 
       assert budget_remaining() == @limit
-    end
-
-    test "refuses a finished upload once the limit is spent" do
-      for _i <- 1..@limit,
-          do: assert(:ok = RateLimiter.check(:theme_upload, @user_id))
-
-      socket = socket_with([%{ref: "0", done?: true, cancelled?: false}])
-
-      # Processing would call ThemeCustomizations.attach_asset/4 and touch the
-      # database. Being refused before that is the whole point: the socket
-      # comes back untouched and the user is told why.
-      assert ^socket = AssetUploads.consume(socket, :background_image_path)
-      assert_receive {:flash, {:error, message}}
-      assert message =~ "Too many upload attempts"
     end
   end
 

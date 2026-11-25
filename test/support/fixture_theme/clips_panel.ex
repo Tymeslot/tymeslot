@@ -22,13 +22,9 @@ defmodule TymeslotWeb.Test.FixtureTheme.ClipsPanel do
         novalidate
         id={"fixture-clip-upload-#{field}"}
         phx-change="upload_asset"
-        phx-submit="upload_asset"
         phx-target={@myself}
-        data-auto-upload="true"
       >
-        <input type="hidden" name="asset_field" value={field} />
         <.live_file_input upload={@uploads[field]} />
-        <button type="submit" class="hidden">Upload</button>
       </form>
     </div>
     """

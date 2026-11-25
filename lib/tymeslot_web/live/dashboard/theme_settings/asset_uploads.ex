@@ -11,8 +11,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploads do
   One upload per asset field of the theme's spec
   (`ThemeCustomizations.asset_fields/1`), named after the field
   (`@uploads.background_image_path`), with the constraints of the field's kind.
-  An upload form sends `upload_asset` with a hidden `asset_field` input naming
-  its field.
+  Uploads start on selection, and the progress callback is the only thing that
+  saves one, once its entry finishes; an upload form's change event only
+  validates.
 
   ## Consuming happens in a later message
 
@@ -26,7 +27,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploads do
   use Gettext, backend: TymeslotWeb.Gettext
 
   import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [allow_upload: 3, consume_uploaded_entries: 3, send_update: 3]
+
+  import Phoenix.LiveView,
+    only: [allow_upload: 3, cancel_upload: 3, consume_uploaded_entries: 3, send_update: 3]
 
   alias Tymeslot.Media.Uploads
   alias Tymeslot.Security.RateLimiter
@@ -69,44 +72,39 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploads do
   `ThemeCustomizations.attach_asset/4`, and assigns the saved customisation.
   A field the theme does not declare is ignored.
 
-  Readiness is checked *before* the rate limit, and deliberately so. Both
-  entry points reach here: the `phx-change` validate handler fires on every
-  change event during an upload, so charging the limit first would spend a
-  user's whole budget on events that had nothing to consume, and lock them out
-  of their own upload part-way through. Charging only when there is genuinely a
-  finished file to process makes the limit mean "uploads processed", which is
-  the thing worth limiting.
-
-  A rate-limited or not-yet-finished upload returns the socket untouched: the
-  entry stays put and the next form event (`upload_asset`) tries again.
-
-  ## Each entry is consumed once
-
-  Both entry points fire for the same finished upload: the progress callback,
-  and the form's submit, which `AutoUpload` clicks on selection and LiveView
-  holds back until the upload completes. A consumed channel upload stays in
-  `entries` until the LiveView handles its upload channel's exit, so the
-  second trigger would otherwise find it still finished, charge the rate limit
-  again and call into the stopped channel, which crashes the LiveView after
-  the file was saved. The refs of consumed entries are therefore remembered
-  (`:consumed_upload_refs`) and never count as ready again.
+  Readiness is checked *before* the rate limit, so the limit counts uploads
+  processed rather than calls. A not-yet-finished upload returns the socket
+  untouched. A finished one the rate limit refuses is cancelled, so the
+  picker is free for the user to pick the file again once the limit allows.
   """
   @spec consume(Phoenix.LiveView.Socket.t(), atom()) :: Phoenix.LiveView.Socket.t()
   def consume(socket, field) do
     declared = ThemeCustomizations.asset_fields(socket.assigns.theme_id)
 
     if Keyword.has_key?(declared, field) and ready?(socket, field) do
-      rate_limited(socket, fn -> process(socket, field) end)
+      rate_limited(socket, field)
     else
       socket
     end
   end
 
-  defp rate_limited(socket, fun) do
+  defp rate_limited(socket, field) do
+    case RateLimiter.check(:theme_upload, socket.assigns.profile.user_id) do
+      :ok -> process(socket, field)
+      refused -> refuse(socket, field, refused)
+    end
+  end
+
+  defp refuse(socket, field, refused) do
+    socket =
+      Enum.reduce(socket.assigns.uploads[field].entries, socket, fn entry, acc ->
+        cancel_upload(acc, field, entry.ref)
+      end)
+
     RateLimit.with_rate_limit(
-      RateLimiter.check(:theme_upload, socket.assigns.profile.user_id),
+      refused,
       socket,
-      fun,
+      fn -> socket end,
       message:
         dgettext(
           "dashboard_appearance",
@@ -131,8 +129,6 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploads do
 
     # The file must be stored inside the callback: the temporary upload is
     # deleted as soon as it returns.
-    socket = remember_consumed(socket, field)
-
     results =
       consume_uploaded_entries(socket, field, fn %{path: path}, entry ->
         {:ok,
@@ -188,30 +184,13 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.AssetUploads do
   defp success_message(_field), do: dgettext("dashboard_appearance", "File uploaded successfully")
 
   # Consuming an in-flight entry would truncate the file, so every entry must
-  # have finished or been cancelled first; one already consumed is not
-  # waiting to be (see "Each entry is consumed once" in the module docs).
+  # have finished or been cancelled first.
   defp ready?(socket, field) do
-    case pending_entries(socket, field) do
-      [] -> false
-      entries -> Enum.all?(entries, &(&1.done? or &1.cancelled?))
-    end
-  end
-
-  defp pending_entries(socket, field) do
-    consumed = consumed_refs(socket)
-
     case socket.assigns[:uploads][field] do
-      %{entries: entries} -> Enum.reject(entries, &MapSet.member?(consumed, &1.ref))
-      nil -> []
+      %{entries: [_first | _rest] = entries} -> Enum.all?(entries, &(&1.done? or &1.cancelled?))
+      _no_entries -> false
     end
   end
-
-  defp remember_consumed(socket, field) do
-    refs = socket.assigns.uploads[field].entries |> Enum.map(& &1.ref) |> MapSet.new()
-    assign(socket, :consumed_upload_refs, MapSet.union(consumed_refs(socket), refs))
-  end
-
-  defp consumed_refs(socket), do: socket.assigns[:consumed_upload_refs] || MapSet.new()
 
   @doc """
   The message to show for an error LiveView reports on an upload of `kind`
