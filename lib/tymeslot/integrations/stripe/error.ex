@@ -90,8 +90,16 @@ defmodule Tymeslot.Integrations.Stripe.Error do
   end
 
   @doc """
-  Whether trying the same call again later can succeed: a connection failure,
-  a 409 (idempotency conflict), a 429 or a 5xx. False for any other value.
+  Whether the failure is transient, so the same call may succeed later: a
+  connection failure, a 409 (idempotency conflict), a 429 or a 5xx. False for
+  any other value.
+
+  It does not say the request may be resent as it was. Stripe stores a POST's
+  5xx under its idempotency key and replays it for 24 hours, so a caller that
+  retries a POST under a fixed key (`IdempotencyKey.for_intent/3`) sends a new
+  key after a 5xx, as `Tymeslot.MeetingPayments.RefundOutcome` does. Stripe's
+  `stripe-should-retry` header is not read here; `RetryPolicy` honours it
+  within one call.
   """
   @spec retryable?(term()) :: boolean()
   def retryable?(%__MODULE__{type: "api_connection_error"}), do: true
