@@ -5,6 +5,8 @@ defmodule Tymeslot.Demo do
   This delegates to the configured demo provider (NoOp by default, or SaaS implementation).
   """
 
+  alias Tymeslot.Bookings.Orchestrator
+
   @doc """
   Gets the configured demo provider module.
   """
@@ -58,8 +60,17 @@ defmodule Tymeslot.Demo do
   def find_by_duration_string(user_id, duration_string),
     do: provider().find_by_duration_string(user_id, duration_string)
 
+  @doc """
+  The `Tymeslot.Bookings.Submitter` a booking in `context` goes through: the
+  provider's choice, with `:default` meaning Core's real orchestrator.
+  """
   @spec get_orchestrator(map()) :: module()
-  def get_orchestrator(context), do: provider().get_orchestrator(context)
+  def get_orchestrator(context) do
+    case provider().get_orchestrator(context) do
+      :default -> Orchestrator
+      submitter -> submitter
+    end
+  end
 
   @spec get_available_slots(String.t(), String.t(), String.t(), integer(), map(), map() | nil) ::
           {:ok, [map()]} | {:error, any()}
@@ -110,29 +121,11 @@ defmodule Tymeslot.Demo do
           duration_minutes
         )
 
-  @spec get_calendar_days(
-          String.t(),
-          integer(),
-          integer(),
-          :monday | :sunday,
-          map(),
-          map() | atom() | nil
-        ) :: [map()]
-  def get_calendar_days(
-        user_timezone,
-        year,
-        month,
-        week_start,
-        organizer_profile,
-        availability_map
-      ),
-      do:
-        provider().get_calendar_days(
-          user_timezone,
-          year,
-          month,
-          week_start,
-          organizer_profile,
-          availability_map
-        )
+  @doc """
+  The demo's day predicate for `organizer_profile`'s calendars, or `nil` when
+  the profile is not a demo. See `c:Tymeslot.Demo.Behaviour.day_available_fn/2`.
+  """
+  @spec day_available_fn(map(), String.t()) :: (Date.t() -> boolean()) | nil
+  def day_available_fn(organizer_profile, user_timezone),
+    do: provider().day_available_fn(organizer_profile, user_timezone)
 end

@@ -5,7 +5,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   """
   use Gettext, backend: TymeslotWeb.Gettext
   alias Calendar
-  alias Tymeslot.Availability.TimeSlots
+  alias Tymeslot.Availability
   alias Tymeslot.MeetingTypes.Lengths
   alias Tymeslot.Timezones
   alias Tymeslot.Utils.DateTimeUtils
@@ -128,7 +128,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
     with {:ok, start_date} <- parse_date(date),
          {:ok, start_time} <- DateTimeUtils.parse_time_string(time),
          {:ok, start} <- DateTimeUtils.resolve_local(start_date, start_time, timezone),
-         finish = DateTime.add(start, TimeSlots.parse_duration(duration), :minute),
+         finish = DateTime.add(start, Availability.parse_duration(duration), :minute),
          :gt <- Date.compare(DateTime.to_date(finish), start_date) do
       dgettext("datetime", "Ends %{time} on %{weekday} %{day} %{month}",
         time: format_time_by_locale(finish),
