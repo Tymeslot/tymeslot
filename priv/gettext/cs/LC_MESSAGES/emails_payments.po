@@ -14,7 +14,7 @@ msgstr ""
 #: lib/tymeslot/emails/templates/charge_dispute_opened.ex
 #, elixir-autogen, elixir-format
 msgid "%{amount} disputed by the cardholder"
-msgstr "%{amount} sporováno držitelem karty"
+msgstr "Držitel karty zahájil spor o %{amount}"
 
 #: lib/tymeslot/emails/templates/charge_dispute_opened.ex
 #, elixir-autogen, elixir-format
