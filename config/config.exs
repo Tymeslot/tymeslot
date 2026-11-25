@@ -206,6 +206,9 @@ config :tymeslot,
   admin_alerts_impl: Tymeslot.Infrastructure.AdminAlerts.EmailNotifier,
   admin_alerts_enabled: false,
   admin_alert_email: nil,
+  # Modules implementing Tymeslot.Infrastructure.AdminAlerts.AlertTypeProvider,
+  # for a downstream overlay that raises alert types of its own.
+  admin_alert_type_providers: [],
 
   # Repos whose connection pool `PoolPressureMonitor` watches. A downstream
   # overlay with its own repo adds it here.

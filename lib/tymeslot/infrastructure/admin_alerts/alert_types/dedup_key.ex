@@ -15,22 +15,8 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.DedupKey do
   @keyed_on %{
     # One alert per ErrorTracker error.
     new_error: {:error_id, nil},
-    # Enqueue failures embed per-occurrence detail (attempt count, error
-    # text), so dedup on the event family instead: a burst of drops from the
-    # same broken event type collapses into a single alert per window, while a
-    # distinct event family still raises its own alert.
-    payment_event_enqueue_failed: {:event, "unknown"},
     # Anomaly messages embed per-run counts, so dedup on the anomaly kind.
     analytics_tracking_anomaly: {:kind, "unknown"},
-    # Every enquiry sent while the contact recipient is suppressed is
-    # rejected the same way, so a run of failed forms is one incident: key on
-    # the recipient, not the job. Only one contact recipient is configured, so
-    # its masked form cannot stand for two different inboxes.
-    contact_recipient_rejected: {:recipients_masked, "unknown"},
-    # The message embeds `days_past_due`, which the daily dunning run
-    # increments on every pass over the same stuck row, so a message-based
-    # key would change daily. One alert per stuck subscription per window.
-    dunning_stalled: {:stripe_subscription_id, "unknown"},
     # The message carries the hook's refusal, whose text can differ between
     # the daily runs of one stuck deletion: one alert per stuck account.
     account_deletion_stalled: {:user_id, "unknown"},
@@ -42,9 +28,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.DedupKey do
     late_payment_refund_failed: {:booking_payment_id, "unknown"},
     # One alert per account: two accounts failing must not collapse into one.
     connect_revocation_failed: {:stripe_account_id, "unknown"},
-    # Each unfinished withdrawal is a host owed a refund or a cancellation,
-    # so one alert per withdrawal.
-    subscription_withdrawal_unfinished: {:withdrawal_id, "unknown"},
     # A volume that refuses deletes fails every one of them for the same
     # reason, so key on the reason rather than the path: one alert per cause.
     upload_delete_failed: {:reason_code, "unknown"},
@@ -90,21 +73,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.DedupKey do
     provider = Map.get(metadata, :provider, "unknown")
 
     "invalid_calendar_event:#{provider}:#{integration_id}:#{Messages.reason_text(metadata)}"
-  end
-
-  # One orphaned event is its own incident: another event whose referent never
-  # appeared is a second one the operator has to reconcile by hand, so key on
-  # the event rather than the message. Stripe's event id is the identity where
-  # the event carries one; otherwise the object it refers to, and failing that
-  # the job, which is unique to the event.
-  def dedup_key(:payment_event_orphaned, metadata) do
-    event_type = Map.get(metadata, :event_type, "unknown")
-
-    identity =
-      Map.get(metadata, :event_id) || Map.get(metadata, :referent_id) ||
-        "job #{Map.get(metadata, :job_id, "unknown")}"
-
-    "payment_event_orphaned:#{event_type}:#{identity}"
   end
 
   # Call sites identify the affected recipient through whichever id they have
