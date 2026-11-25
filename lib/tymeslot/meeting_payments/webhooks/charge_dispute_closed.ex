@@ -178,9 +178,11 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
     end
   end
 
-  # An expired booking was never held for anyone who paid for it: its
-  # payment completed after the expiry, and was refused. A cancelled one
-  # was refused the same way only when its payment was recorded after the
+  # Every expired booking counts, whatever expired it. One whose payment
+  # completed after the expiry was refused; but a confirmed, paid booking
+  # whose reschedule request lapsed is expired too, and is refunded here
+  # as well, although its expiry refunds nothing. A cancelled one was
+  # refused the same way only when its payment was recorded after the
   # cancellation (`CheckoutSessionCompleted`); one paid for first went
   # ahead, and its host chose its refund when cancelling it, which a dispute
   # does not overturn.
