@@ -494,6 +494,33 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
 
       assert Repo.all(RefundSchema) == []
     end
+
+    # A paid booking whose reschedule request lapsed went ahead as far as the
+    # payment is concerned: its refund is the host's call, not the dispute's.
+    test "schedules no refund for a won dispute on a booking whose reschedule request lapsed" do
+      meeting =
+        insert(:meeting,
+          status: :expired,
+          reschedule_requested_at: DateTime.add(DateTime.utc_now(:second), -8, :day)
+        )
+
+      bp =
+        insert_payment(
+          meeting: meeting,
+          status: :disputed,
+          amount_cents: 5000,
+          paid_at: DateTime.add(DateTime.utc_now(:second), -10, :day),
+          stripe_charge_id: "ch_LATE_DISPUTED"
+        )
+
+      assert :ok =
+               ChargeDisputeClosed.handle(
+                 dispute_event("evt_DISPUTE_WON", "charge.dispute.closed", %{"status" => "won"})
+               )
+
+      assert Repo.reload!(bp).status == :paid
+      assert Repo.all(RefundSchema) == []
+    end
   end
 
   defp disputed_expired_payment(attrs) do

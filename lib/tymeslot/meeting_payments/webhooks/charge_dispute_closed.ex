@@ -180,15 +180,22 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
     end
   end
 
-  # Every expired booking counts, whatever expired it. One whose payment
-  # completed after the expiry was refused; but a confirmed, paid booking
-  # whose reschedule request lapsed is expired too, and is refunded here
-  # as well, although its expiry refunds nothing. A cancelled one counts
-  # only when its payment completed after the cancellation, which
+  # An expired booking counts unless a reschedule request lapsed on it: that
+  # one was confirmed and paid, keeps `reschedule_requested_at` as the record
+  # of why it expired, and its payment is left for the host to refund
+  # (`Bookings.RescheduleRequestExpiry`). Any other expiry released a booking
+  # still waiting on its payment, so one paid later was refused. A cancelled
+  # one counts only when its payment completed after the cancellation, which
   # `refused?` says: the completion then refused the booking and recorded
   # a `:late_payment` refund (`CheckoutSessionCompleted`), whichever second
   # each landed in. One paid for first went ahead, and its host chose its
   # refund when cancelling it, which a dispute does not overturn.
+  defp released_before_paid?(
+         %{status: :expired, reschedule_requested_at: %DateTime{}},
+         _refused?
+       ),
+       do: false
+
   defp released_before_paid?(%{status: :expired}, _refused?), do: true
   defp released_before_paid?(%{status: :cancelled}, refused?), do: refused?
   defp released_before_paid?(_meeting, _refused?), do: false
