@@ -176,9 +176,24 @@ defmodule Tymeslot.Integrations.MeetingProvisioningGoogleMeetTest do
       |> Changeset.change(video_integration_id: nil)
       |> Repo.update!()
 
-      at_seconds(600, fn ->
+      at_seconds(10, fn ->
         assert MeetingProvisioning.booking_room_placement(booking.meeting) ==
                  :awaiting_calendar_event
+      end)
+    end
+
+    # A meeting that keeps reading as changed (cancelled while its event
+    # still stands) would otherwise be read again every few seconds for good.
+    test "makes a Meet of its own once a booking that keeps changing outlasts the wait" do
+      booking = meet_booking(provider_event_id: "google-event-1")
+      stub_booking_event(booking, nil)
+
+      booking.meeting
+      |> Changeset.change(status: :cancelled)
+      |> Repo.update!()
+
+      at_seconds(121, fn ->
+        assert MeetingProvisioning.booking_room_placement(booking.meeting) == :own_event
       end)
     end
 

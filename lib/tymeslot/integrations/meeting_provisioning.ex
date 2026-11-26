@@ -404,14 +404,23 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   # `booking_event_video_fields/1`, or again after it went missing). It is
   # asked for one in place, and the next attempt finds it pending or made.
   # A meeting that changed under the conference lock is read again on the
-  # next attempt as well. A calendar that allows no Meet refuses the request,
-  # and the room is made on its own.
+  # next attempt, within the same wait as the event: one that keeps reading
+  # as changed (inactive, or its slot void, while its event still stands)
+  # would otherwise be waited for without end. A calendar that allows no Meet
+  # refuses the request, and the room is made on its own.
   defp request_event_meet(meeting, event_id, calendar) do
     case Meetings.request_event_conference(meeting.id, event_id) do
-      :ok -> :awaiting_calendar_event
-      {:skipped, :changed} -> :awaiting_calendar_event
-      {:error, reason} when reason in [:not_found, :conference_refused] -> :own_event
-      {:error, reason} -> unreadable_event(meeting, calendar, reason)
+      :ok ->
+        :awaiting_calendar_event
+
+      {:skipped, :changed} ->
+        waiting_since_provisioning(meeting)
+
+      {:error, reason} when reason in [:not_found, :conference_refused] ->
+        :own_event
+
+      {:error, reason} ->
+        unreadable_event(meeting, calendar, reason)
     end
   end
 
@@ -438,9 +447,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   defp unreadable_event(_meeting, _calendar, reason) when reason in @lasting_read_failures,
     do: :own_event
 
-  defp unreadable_event(meeting, _calendar, _reason),
-    do:
-      meeting |> provisioning_started_at() |> waiting_or_own_event(@calendar_event_grace_seconds)
+  defp unreadable_event(meeting, _calendar, _reason), do: waiting_since_provisioning(meeting)
 
   # The event is addressed by its Google id within the booking calendar; the
   # booking's own `uid` is its cancel and reschedule capability and is never
@@ -504,6 +511,10 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   # link: a second calendar entry, or a second link, is the lesser harm.
   defp booking_event_placement(meeting, _cal_id, grace_seconds),
     do: meeting |> provisioning_started_at() |> waiting_or_own_event(grace_seconds)
+
+  defp waiting_since_provisioning(meeting),
+    do:
+      meeting |> provisioning_started_at() |> waiting_or_own_event(@calendar_event_grace_seconds)
 
   defp waiting_or_own_event(%DateTime{} = since, grace_seconds) do
     if DateTime.diff(Clock.utc_now(), since, :second) < grace_seconds,
