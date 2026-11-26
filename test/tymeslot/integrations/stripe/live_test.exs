@@ -133,16 +133,31 @@ defmodule Tymeslot.Integrations.Stripe.LiveTest do
       end
     )
 
-    sub =
-      step(flow, "Subscriptions.create", [needs: cust ++ prc], fn ->
-        %{
-          customer: id(customer),
-          items: [%{price: id(price)}],
-          payment_behavior: "default_incomplete"
-        }
-        |> Subscriptions.create()
-        |> then(&track(flow, :subscription, &1))
+    # A paid subscription, so the recorded subscription and invoice fixtures
+    # are `active` and `paid` as Tymeslot's own come back from Checkout.
+    card =
+      step(flow, "payment_methods.attach (pm_card_visa)", [needs: cust], fn ->
+        raw(:attach_payment_method, :post, ["payment_methods", "pm_card_visa", "attach"], %{
+          customer: id(customer)
+        })
       end)
+
+    sub =
+      step(
+        flow,
+        "Subscriptions.create",
+        [needs: cust ++ prc ++ [{"payment_methods.attach (pm_card_visa)", card}]],
+        fn ->
+          %{
+            customer: id(customer),
+            items: [%{price: id(price)}],
+            default_payment_method: id(card),
+            payment_behavior: "error_if_incomplete"
+          }
+          |> Subscriptions.create()
+          |> then(&track(flow, :subscription, &1))
+        end
+      )
 
     sub_dep = [{"Subscriptions.create", sub}]
 
@@ -156,6 +171,19 @@ defmodule Tymeslot.Integrations.Stripe.LiveTest do
 
     step(flow, "Subscriptions.update (resume)", [needs: sub_dep], fn ->
       Subscriptions.update(id(sub), %{cancel_at_period_end: false})
+    end)
+
+    # Stripe Tax refuses a customer it cannot place, and Checkout collects the
+    # address in production; the flow's customer has none until this step.
+    step(flow, "customers.update (tax address)", [needs: cust], fn ->
+      raw(:update_customer, :post, ["customers", id(customer)], %{
+        address: %{
+          line1: "Unter den Linden 1",
+          city: "Berlin",
+          postal_code: "10117",
+          country: "DE"
+        }
+      })
     end)
 
     step(flow, "Subscriptions.update (automatic tax)", [needs: sub_dep], fn ->
@@ -297,7 +325,9 @@ defmodule Tymeslot.Integrations.Stripe.LiveTest do
         %{
           type: "express",
           country: "GB",
-          capabilities: %{card_payments: %{requested: true}, transfers: %{requested: true}}
+          capabilities: %{card_payments: %{requested: true}, transfers: %{requested: true}},
+          # Checkout refuses an account without a name to show the payer.
+          business_profile: %{name: "Tymeslot live suite"}
         }
         |> Accounts.create()
         |> skip_if(@missing_connect)
