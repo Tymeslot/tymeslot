@@ -34,6 +34,7 @@ defmodule Tymeslot.Workers.SendConnectAccountRestricted do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
+  alias Tymeslot.Profiles
   alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.TransactionalEmailDelivery
 
@@ -81,7 +82,7 @@ defmodule Tymeslot.Workers.SendConnectAccountRestricted do
   end
 
   defp send_email(account, args, job) do
-    case UserQueries.get_user(account.user_id) do
+    case UserQueries.get_user_with_profile(account.user_id) do
       {:ok, %UserSchema{email: email} = user} when is_binary(email) and email != "" ->
         DeliveryClaims.once(job, "restricted_email", fn -> deliver(account, user, args, job) end)
 
@@ -114,7 +115,7 @@ defmodule Tymeslot.Workers.SendConnectAccountRestricted do
   defp build_context(account, user, args) do
     %RestrictionContext{
       host_email: user.email,
-      host_name: user_display_name(user),
+      host_name: Profiles.user_display_name(user),
       host_user_id: user.id,
       disabled_reason: account.disabled_reason || args["disabled_reason"],
       previous_disabled_reason: args["previous_disabled_reason"],
@@ -123,9 +124,4 @@ defmodule Tymeslot.Workers.SendConnectAccountRestricted do
       dashboard_url: args["dashboard_url"]
     }
   end
-
-  defp user_display_name(%UserSchema{name: name}) when is_binary(name) and name != "",
-    do: name
-
-  defp user_display_name(_user), do: nil
 end

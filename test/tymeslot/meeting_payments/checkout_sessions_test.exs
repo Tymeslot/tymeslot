@@ -126,6 +126,31 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
       assert bp.status == :pending
     end
 
+    # The emails built from the snapshot greet and name the host by it, and a
+    # host's display name is usually on their profile, not the account.
+    test "snapshots the host's profile name when the account has none",
+         %{user: user, meeting_type: mt} do
+      user = user |> Changeset.change(name: nil) |> Repo.update!()
+      {:ok, profile} = Profiles.get_or_create_profile(user.id)
+      {:ok, _profile} = Profiles.update_full_name(profile, "Bob Host")
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          meeting_type_ref: mt,
+          attendee_email: "alice@example.com",
+          status: :awaiting_payment
+        )
+
+      StripeStub.expect(
+        :create_checkout_session,
+        StripeFixtures.object("checkout_session_payment", %{"id" => "cs_TEST_NAME"})
+      )
+
+      assert {:ok, %{booking_payment: bp}} = CheckoutSessions.create_session_for_booking(meeting)
+      assert bp.host_name == "Bob Host"
+    end
+
     test "returns :payments_unavailable when host has no charges-enabled account",
          %{user: user, meeting_type: mt} do
       # Manually disable charges via direct query

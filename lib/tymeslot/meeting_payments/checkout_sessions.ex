@@ -226,7 +226,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   defp fetch_host(nil), do: {:error, :host_missing}
 
   defp fetch_host(user_id) do
-    case UserQueries.get_user(user_id) do
+    case UserQueries.get_user_with_profile(user_id) do
       {:ok, user} -> {:ok, user}
       {:error, :not_found} -> {:error, :host_not_found}
     end
@@ -282,7 +282,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
       stripe_account_id: account.stripe_account_id,
       host_user_id: host.id,
       host_email: host.email,
-      host_name: host.name,
+      host_name: Profiles.user_display_name(host),
       attendee_email: meeting.attendee_email,
       attendee_name: meeting.attendee_name,
       meeting_type_name: meeting_type.name,
