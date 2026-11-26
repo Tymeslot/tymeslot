@@ -252,12 +252,19 @@ defmodule Tymeslot.Release do
   caps how many are read. The candidates
   (`Tymeslot.MeetingPayments.DisputeLossBackfill`) can be counted first:
 
-      SELECT count(*) FROM booking_payments
+      SELECT count(*) FROM booking_payments AS b
       WHERE stripe_charge_id IS NOT NULL
         AND ((disputed_lost_cents = 0 AND refunded_amount_cents > 0
-              AND status IN ('refunded', 'partially_refunded'))
+              AND status IN ('refunded', 'partially_refunded')
+              AND b.inserted_at < (SELECT inserted_at FROM schema_migrations
+                                   WHERE version = 20261120141652)
+              AND (stripe_dispute_id IS NOT NULL
+                   OR b.inserted_at < (SELECT inserted_at FROM schema_migrations
+                                       WHERE version = 20261103142458)))
           OR (disputed_lost_cents > 0
-              AND stripe_refunded_cents + disputed_lost_cents = amount_cents));
+              AND stripe_refunded_cents + disputed_lost_cents = amount_cents
+              AND b.inserted_at < (SELECT inserted_at FROM schema_migrations
+                                   WHERE version = 20261124084318)));
 
   It prints a line per payment corrected (or, in a dry run, to be
   corrected) with the payment id, charge id, lost cents, and the refunds

@@ -153,12 +153,15 @@ defmodule Tymeslot.ReleaseTest do
     @describetag :payments
 
     setup do
+      # Created before the test database ran the migration that keeps
+      # dispute losses apart, so its figures may hold one the old way.
       payment =
         insert(:paid_booking_payment,
           stripe_charge_id: "ch_release",
           amount_cents: 10_000,
           refunded_amount_cents: 4_000,
-          status: :partially_refunded
+          status: :partially_refunded,
+          inserted_at: ~U[2026-01-01 00:00:00Z]
         )
 
       lost = StripeFixtures.object("dispute_lost", %{"charge" => "ch_release", "amount" => 3_000})

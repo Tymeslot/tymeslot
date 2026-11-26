@@ -29,14 +29,22 @@ defmodule Tymeslot.MeetingPayments.DisputeLossBackfill do
   The candidates are payments with a charge and either of two shapes. The
   first is something refunded, no loss recorded, and status `refunded` or
   `partially_refunded`: every release that handled disputes left a lost
-  one in one of those two statuses. The dispute markers
-  (`stripe_dispute_id`, `dispute_closed_at`) cannot narrow it further:
-  disputes closed before those columns existed carry none. A `disputed`
-  row is out of scope: a refund on it is refused while it is `disputed`
+  one in one of those two statuses. Only a payment created before the
+  deployment ran the `disputed_lost_cents` migration can hold a loss
+  recorded that way, and of those, one created after it ran the dispute
+  tracking migration carries the closed dispute's id (`stripe_dispute_id`):
+  the release that added the column stamps it on every dispute that
+  closes. A payment created earlier may have lost a dispute that left no
+  marker, so it is read whatever it carries. A `disputed` row is out of
+  scope: a refund on it is refused while it is `disputed`
   (`:under_dispute`), so it cannot be refunded too much. The second is a
   recorded loss whose refunds and loss add up to exactly the amount paid,
-  the shape a hidden refund was filled in as; a payment whose refunds and
-  loss truly come to the amount paid has it too, and is left as it is.
+  on a payment created before the deployment ran the `stripe_refunded_cents`
+  migration: the shape a hidden refund was filled in as. A payment whose
+  refunds and loss truly come to the amount paid has it too, and is left
+  as it is. When each migration ran is read from the deployment's own
+  `schema_migrations` (`BookingPaymentQueries.dispute_loss_candidates/2`),
+  since a self-hosted deployment upgrades when it chooses.
 
   Each candidate costs one Stripe call to list its disputes, and one more
   to read the charge when one was lost; a payment with no lost dispute, or

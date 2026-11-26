@@ -26,6 +26,26 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     :status
   ]
 
+  # The migrations after which this deployment recorded a dispute on its
+  # payment (`stripe_dispute_id`), a lost dispute's share apart from the
+  # refunds (`disputed_lost_cents`), and the refunds made apart from both
+  # (`stripe_refunded_cents`).
+  @dispute_tracking_migration 20_261_103_142_458
+  @disputed_lost_migration 20_261_120_141_652
+  @stripe_refunded_migration 20_261_124_084_318
+
+  # When this deployment ran the migration `version`, by its own clock
+  # (Ecto records it in UTC); a deployment's releases, not the calendar,
+  # decide how it recorded a payment.
+  defmacrop migrated_at(version) do
+    quote do
+      fragment(
+        "(SELECT m.inserted_at FROM schema_migrations AS m WHERE m.version = ?)",
+        unquote(version)
+      )
+    end
+  end
+
   # What the pending refunds of the payment `id` add up to, correlated to the
   # row the enclosing query reads.
   defmacrop pending_refund_sum(id) do
@@ -508,9 +528,18 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   @doc """
   Up to `limit` payments whose refund figures may misstate a lost dispute,
   in id order after `after_id` (`nil` for the first page): a charge, and
-  either something refunded, no dispute loss recorded and a refunded
-  status, or a loss recorded whose refunds and loss add up to exactly the
-  amount paid. Only the fields
+  either
+
+    * something refunded, no dispute loss recorded and a refunded status,
+      on a payment created before this deployment recorded losses apart
+      (its `disputed_lost_cents` migration ran), and either created before
+      it tracked disputes on the payment at all or carrying a dispute id;
+    * or a loss recorded whose refunds and loss add up to exactly the
+      amount paid, on a payment created before this deployment recorded
+      the refunds apart (its `stripe_refunded_cents` migration ran).
+
+  A payment created after those migrations ran was recorded by code that
+  gets its figures right, so it is never read. Only the fields
   `Tymeslot.MeetingPayments.DisputeLossBackfill` reads are loaded (the
   others hold their defaults); its moduledoc says why these rows.
   """
@@ -523,9 +552,13 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
       [b],
       not is_nil(b.stripe_charge_id) and
         ((b.disputed_lost_cents == 0 and b.refunded_amount_cents > 0 and
-            b.status in [:refunded, :partially_refunded]) or
+            b.status in [:refunded, :partially_refunded] and
+            b.inserted_at < migrated_at(^@disputed_lost_migration) and
+            (not is_nil(b.stripe_dispute_id) or
+               b.inserted_at < migrated_at(^@dispute_tracking_migration))) or
            (b.disputed_lost_cents > 0 and
-              b.stripe_refunded_cents + b.disputed_lost_cents == b.amount_cents))
+              b.stripe_refunded_cents + b.disputed_lost_cents == b.amount_cents and
+              b.inserted_at < migrated_at(^@stripe_refunded_migration)))
     )
     |> after_id(after_id)
     |> order_by([b], asc: b.id)

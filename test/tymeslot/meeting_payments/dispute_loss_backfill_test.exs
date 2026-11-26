@@ -10,15 +10,34 @@ defmodule Tymeslot.MeetingPayments.DisputeLossBackfillTest do
   alias Tymeslot.StripeFixtures
   alias Tymeslot.StripeStub
 
+  # Created before this test database ran its migrations, as a payment
+  # whose figures the backfill may correct was.
   defp refunded_payment(attrs) do
     insert(
       :paid_booking_payment,
       Keyword.merge(
-        [amount_cents: 10_000, refunded_amount_cents: 10_000, status: :refunded],
+        [
+          amount_cents: 10_000,
+          refunded_amount_cents: 10_000,
+          status: :refunded,
+          inserted_at: ~U[2026-01-01 00:00:00Z]
+        ],
         attrs
       )
     )
   end
+
+  # Dates the migration `version` as having run on this deployment `at`.
+  defp migrated(version, at) do
+    assert %{num_rows: 1} =
+             Repo.query!("UPDATE schema_migrations SET inserted_at = $1 WHERE version = $2", [
+               DateTime.to_naive(at),
+               version
+             ])
+  end
+
+  defp disputes_read,
+    do: Enum.map(StripeStub.requests(:list_disputes), & &1.query["charge"])
 
   defp disputes(charge_id, disputes) do
     disputes
@@ -324,6 +343,67 @@ defmodule Tymeslot.MeetingPayments.DisputeLossBackfillTest do
 
     assert %{candidates: 0} = run!(dry_run: false)
     assert StripeStub.requests(:list_disputes) == []
+  end
+
+  describe "how far back the candidates go" do
+    # The deployment tracked disputes on the payment from March, kept
+    # losses apart from June and the refunds made apart from September.
+    setup do
+      migrated(20_261_103_142_458, ~U[2026-03-01 00:00:00Z])
+      migrated(20_261_120_141_652, ~U[2026-06-01 00:00:00Z])
+      migrated(20_261_124_084_318, ~U[2026-09-01 00:00:00Z])
+      StripeStub.stub(:list_disputes, StripeFixtures.list([], url: "/v1/disputes"))
+      :ok
+    end
+
+    test "a refunded payment created once losses were kept apart is never read" do
+      refunded_payment(
+        stripe_charge_id: "ch_new",
+        stripe_dispute_id: "dp_new",
+        inserted_at: ~U[2026-07-01 00:00:00Z]
+      )
+
+      assert %{candidates: 0} = run!([])
+      assert disputes_read() == []
+    end
+
+    test "one created while disputes were tracked is read only if it saw one" do
+      refunded_payment(stripe_charge_id: "ch_plain", inserted_at: ~U[2026-04-01 00:00:00Z])
+
+      refunded_payment(
+        stripe_charge_id: "ch_disputed",
+        stripe_dispute_id: "dp_1",
+        inserted_at: ~U[2026-04-01 00:00:00Z]
+      )
+
+      assert %{candidates: 1} = run!([])
+      assert disputes_read() == ["ch_disputed"]
+    end
+
+    test "one created before disputes were tracked is read without a dispute on it" do
+      refunded_payment(stripe_charge_id: "ch_old", inserted_at: ~U[2026-02-01 00:00:00Z])
+
+      assert %{candidates: 1} = run!([])
+      assert disputes_read() == ["ch_old"]
+    end
+
+    test "a recorded loss is read only on a payment created before refunds were kept apart" do
+      for {charge, inserted_at} <- [
+            {"ch_hid", ~U[2026-08-01 00:00:00Z]},
+            {"ch_recent", ~U[2026-10-01 00:00:00Z]}
+          ] do
+        refunded_payment(
+          stripe_charge_id: charge,
+          stripe_refunded_cents: 0,
+          disputed_lost_cents: 10_000,
+          stripe_dispute_id: "dp_" <> charge,
+          inserted_at: inserted_at
+        )
+      end
+
+      assert %{candidates: 1} = run!([])
+      assert disputes_read() == ["ch_hid"]
+    end
   end
 
   test "limit caps how many candidates are read" do
