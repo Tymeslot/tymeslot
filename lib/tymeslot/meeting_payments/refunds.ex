@@ -17,9 +17,12 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   A payment `refusal/1` rules out is refused before anything is recorded:
   one never paid (`:not_paid`), one past the 60-day refund window
   (`:outside_refund_window`), and one Stripe holds for a dispute
-  (`:under_dispute`).
+  (`:under_dispute`). The one exception is `request_remaining_refund/2`
+  under a dispute, which records the refund already failed, so the
+  dispute's close can tell it was owed.
   """
 
+  alias Ecto.Changeset
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Money
@@ -34,6 +37,10 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   require Logger
 
   @refund_window_days 60
+
+  # The failure code of a refund recorded while a dispute held the money
+  # (`request_remaining_refund/2`).
+  @held_by_dispute "under_dispute"
 
   # How long the Stripe call of `refund_now/4` may take: someone waits on it.
   @interactive_deadline_ms 10_000
@@ -148,33 +155,62 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   `source`, with its job enqueued to run at once (`request_refund/4`), for
   a refund the attendee is owed in full and nobody waits on.
 
-  A payment `refusal/1` rules out, or with nothing left, records none and
-  returns `{:ok, :none}`: the money stays on the host's outstanding
-  refunds. Both are checked before `request_refund/4`, whose refusal would
-  abort a transaction the caller holds, so `payment` must be current (as
-  under its row lock); its pending refunds are read afresh.
+  A payment with nothing left, or one `refusal/1` rules out, records no
+  refund to make and returns `{:ok, :none}`: the money stays on the host's
+  outstanding refunds. A payment under dispute still records the refund,
+  settled `failed` with code `#{@held_by_dispute}` and never sent to Stripe,
+  which refuses to refund a disputed charge: that is the row an attempt
+  leaves when the dispute opens after the refund was recorded, so whichever
+  came first, the dispute's close finds the refund was owed
+  (`Webhooks.ChargeDisputeClosed`). All of this is checked before
+  `request_refund/4`, whose refusal would abort a transaction the caller
+  holds, so `payment` must be current (as under its row lock); its pending
+  refunds are read afresh.
   """
   @spec request_remaining_refund(BookingPaymentSchema.t(), refund_source()) ::
           {:ok, RefundSchema.t() | :none} | {:error, refusal()}
-  def request_remaining_refund(%BookingPaymentSchema{} = payment, source) do
-    pending = RefundQueries.pending_cents(payment.id)
+  def request_remaining_refund(%BookingPaymentSchema{} = payment, source)
+      when source in @requestable_sources do
+    remaining = RefundedTotal.refundable_cents(payment, RefundQueries.pending_cents(payment.id))
+    request_remaining(payment, remaining, source, refusal(payment))
+  end
 
-    with :ok <- refusal(payment),
-         remaining when remaining > 0 <- RefundedTotal.refundable_cents(payment, pending) do
-      request_refund(payment, remaining, source, enqueue_now: true)
-    else
-      {:error, reason} ->
-        Logger.warning("Refund cannot be made automatically, left to the host",
-          booking_payment_id: payment.id,
-          source: source,
-          reason: reason
-        )
+  defp request_remaining(_payment, remaining, _source, _refusal) when remaining <= 0,
+    do: {:ok, :none}
 
-        {:ok, :none}
+  defp request_remaining(payment, remaining, source, :ok),
+    do: request_refund(payment, remaining, source, enqueue_now: true)
 
-      _nothing_left ->
-        {:ok, :none}
-    end
+  defp request_remaining(payment, remaining, source, {:error, :under_dispute}) do
+    %RefundSchema{}
+    |> RefundSchema.request_changeset(%{
+      booking_payment_id: payment.id,
+      amount_cents: remaining,
+      source: source
+    })
+    |> Changeset.change(
+      status: :failed,
+      failure_code: @held_by_dispute,
+      settled_at: DateTime.utc_now(:second)
+    )
+    |> RefundQueries.insert!()
+
+    Logger.info("Refund held back by a dispute, recorded for the dispute's close",
+      booking_payment_id: payment.id,
+      source: source
+    )
+
+    {:ok, :none}
+  end
+
+  defp request_remaining(payment, _remaining, source, {:error, reason}) do
+    Logger.warning("Refund cannot be made automatically, left to the host",
+      booking_payment_id: payment.id,
+      source: source,
+      reason: reason
+    )
+
+    {:ok, :none}
   end
 
   @doc """

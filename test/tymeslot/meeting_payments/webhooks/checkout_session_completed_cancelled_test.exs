@@ -180,6 +180,67 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedCancelledTes
                [{:late_payment, :failed}, {:late_payment, :succeeded}]
     end
 
+    # The dispute lands before the completion: the completion refuses the
+    # booking while Stripe holds the money, so its refund is recorded failed
+    # rather than made, and the won dispute's close still finds it owed.
+    test "refunds a payment whose dispute opened before its completion was recorded" do
+      meeting = cancelled_meeting()
+
+      bp =
+        insert_payment(
+          meeting: meeting,
+          status: :pending,
+          stripe_checkout_session_id: "cs_CANCELLED_PAID",
+          stripe_payment_intent_id: "pi_CANCELLED_PAID"
+        )
+
+      assert :ok =
+               ChargeDisputeCreated.handle(
+                 dispute_event("evt_DISPUTE_FIRST", "charge.dispute.created", %{
+                   "reason" => "fraudulent",
+                   "payment_intent" => "pi_CANCELLED_PAID"
+                 })
+               )
+
+      assert %{status: :disputed, paid_at: nil} = Repo.reload!(bp)
+
+      StripeStub.stub(
+        :retrieve_payment_intent,
+        StripeStubResponses.payment_intent("pi_CANCELLED_PAID", "ch_CANCELLED_PAID")
+      )
+
+      assert :ok =
+               CheckoutSessionCompleted.handle(
+                 cancelled_paid_event("evt_COMPLETED_DISPUTED", meeting)
+               )
+
+      assert %{status: :disputed, paid_at: %DateTime{}} = Repo.reload!(bp)
+
+      assert [%{source: :late_payment, status: :failed, failure_code: "under_dispute"}] =
+               refunds(bp)
+
+      refute_enqueued(worker: ExecuteRefund)
+
+      assert :ok =
+               ChargeDisputeClosed.handle(
+                 dispute_event("evt_DISPUTE_FIRST_WON", "charge.dispute.closed", %{
+                   "status" => "won"
+                 })
+               )
+
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_DISPUTE_FIRST"))
+      assert %{success: 1} = drain_payments()
+
+      assert [%{form: %{"charge" => "ch_CANCELLED_PAID", "amount" => "5000"}}] =
+               StripeStub.requests(:create_refund)
+
+      assert %{status: :refunded, refunded_amount_cents: 5000} = Repo.reload!(bp)
+      assert {:ok, %{status: :cancelled}} = MeetingQueries.get_meeting(meeting.id)
+
+      assert bp |> refunds() |> Enum.map(&{&1.source, &1.status}) |> Enum.sort() ==
+               [{:late_payment, :failed}, {:late_payment, :succeeded}]
+    end
+
     test "refunds nothing the host did not choose for a booking paid before it was cancelled" do
       now = DateTime.utc_now(:second)
 

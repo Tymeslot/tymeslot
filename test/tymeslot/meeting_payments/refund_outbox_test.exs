@@ -15,6 +15,7 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
 
   import Tymeslot.AdminAlertsCaptureHelpers
   import Tymeslot.Factory
+  import Tymeslot.Test.ClockHelpers
 
   alias Ecto.Changeset
   alias Tymeslot.MeetingPayments.RefundQueries
@@ -150,6 +151,25 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
 
     test "records nothing for a payment it may not refund, inside the caller's transaction",
          %{payment: payment} do
+      stale =
+        payment
+        |> Changeset.change(paid_at: DateTime.add(DateTime.utc_now(:second), -61, :day))
+        |> Repo.update!()
+
+      assert {:ok, :none} =
+               Repo.transaction(fn ->
+                 {:ok, :none} = Refunds.request_remaining_refund(stale, :late_payment)
+                 :none
+               end)
+
+      assert RefundQueries.list_for_payment(payment.id) == []
+    end
+
+    # Stripe refuses to refund a disputed charge, so nothing is sent, but the
+    # refund owed is on record for the dispute's close.
+    test "records a disputed payment's refund failed, with no job, inside the caller's transaction",
+         %{payment: payment} do
+      insert(:booking_payment_refund, booking_payment: payment, amount_cents: 1_000)
       disputed = payment |> Changeset.change(status: :disputed) |> Repo.update!()
 
       assert {:ok, :none} =
@@ -158,7 +178,15 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
                  :none
                end)
 
-      assert RefundQueries.pending_cents(payment.id) == 0
+      assert [%{amount_cents: 4_000, source: :late_payment, failure_code: "under_dispute"} = held] =
+               payment.id
+               |> RefundQueries.list_for_payment()
+               |> Enum.filter(&(&1.status == :failed))
+
+      assert held.settled_at
+      assert RefundQueries.pending_cents(payment.id) == 1_000
+      refute_enqueued(worker: ExecuteRefund, args: %{"refund_id" => held.id})
+      assert StripeStub.requests() == []
     end
   end
 
@@ -266,6 +294,8 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
 
       assert {:pending, refund} = Refunds.refund_now(payment, 2_000, :host, [])
 
+      # Once Stripe has had time to list a refund the 5xx'd request made.
+      freeze_clock(DateTime.add(RefundQueries.get(refund.id).updated_at, 10 * 60, :second))
       StripeStub.expect(:list_refunds, StripeFixtures.list([]))
       StripeStub.expect(:create_refund, StripeStubResponses.refund("re_SECOND"))
 
