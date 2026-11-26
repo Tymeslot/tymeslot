@@ -15,6 +15,7 @@ defmodule Tymeslot.Emails.Templates.AccountDeletionNotice do
 
   alias Tymeslot.Auth.AccountDeletion.Policy
   alias Tymeslot.Emails.Shared.{Buttons, Formatting, Greeting, MjmlEmail, TemplateHelper, Text}
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   @intent :alert
 
@@ -87,7 +88,12 @@ defmodule Tymeslot.Emails.Templates.AccountDeletionNotice do
   defp title(_url), do: dgettext("emails_account", "Your account is scheduled for deletion")
 
   defp subtitle(_at, nil), do: dgettext("emails_account", "Everything in it is gone.")
-  defp subtitle(at, _url), do: dgettext("emails_account", "On %{date}.", date: date(at))
+  # Italian opens with the date's article alone ("L'8 ottobre 2026.").
+  defp subtitle(at, _url),
+    do:
+      LocaleFormat.capitalize_first(
+        dgettext("emails_account", "On %{on_date}.", on_date: on_date(at))
+      )
 
   defp summary(_at, nil) do
     dgettext(
@@ -99,8 +105,8 @@ defmodule Tymeslot.Emails.Templates.AccountDeletionNotice do
   defp summary(at, _url) do
     dgettext(
       "emails_account",
-      "As you asked, your Tymeslot account is scheduled for deletion on %{date}. Until then it is frozen: your booking page is offline and nobody can book you. If you change your mind, sign in before that date and you can restore your account.",
-      date: date(at)
+      "As you asked, your Tymeslot account is scheduled for deletion on %{on_date}. Until then it is frozen: your booking page is offline and nobody can book you. If you change your mind, sign in before that date and you can restore your account.",
+      on_date: on_date(at)
     )
   end
 
@@ -151,6 +157,10 @@ defmodule Tymeslot.Emails.Templates.AccountDeletionNotice do
     )
   end
 
-  # Rendered inside the recipient's locale (see `RecipientLocale`).
-  defp date(day), do: Formatting.format_date(day, Gettext.get_locale(TymeslotWeb.Gettext))
+  # Rendered inside the recipient's locale (see `RecipientLocale`), led by the
+  # article both sentences put before it (`LocaleFormat.with_article/3`).
+  defp on_date(day) do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+    day |> Formatting.format_date(locale) |> LocaleFormat.with_article(:none, locale)
+  end
 end

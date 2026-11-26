@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.PaidGroupDashboardTest do
   @moduletag :live
   @moduletag :integration
 
+  import Ecto.Query, only: [from: 2]
   import Mox
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
@@ -23,12 +24,13 @@ defmodule TymeslotWeb.Dashboard.PaidGroupDashboardTest do
   alias Plug.Test
   alias Tymeslot.CalendarGrid
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
-  alias Tymeslot.MeetingPayments.Workers.GroupCancelRefund
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Repo
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.TestMocks
   alias TymeslotWeb.Components.CoreComponents.Feedback
 
@@ -58,7 +60,9 @@ defmodule TymeslotWeb.Dashboard.PaidGroupDashboardTest do
     view
   end
 
-  defp refund_jobs, do: all_enqueued(worker: GroupCancelRefund)
+  # The refunds the host's cancellation recorded.
+  defp refund_jobs,
+    do: Repo.all(from(r in RefundSchema, where: r.source == :cancellation))
 
   defp status(meeting), do: Repo.get!(MeetingSchema, meeting.id).status
 
@@ -200,7 +204,7 @@ defmodule TymeslotWeb.Dashboard.PaidGroupDashboardTest do
       |> render_submit()
 
       assert status(ctx.session) == :cancelled
-      assert [%{args: %{"amount_cents" => 3000}}] = refund_jobs()
+      assert [%{amount_cents: 3000}] = refund_jobs()
     end
 
     test "with full refunds schedules a refund per seat", %{conn: conn} = ctx do
@@ -350,9 +354,9 @@ defmodule TymeslotWeb.Dashboard.PaidGroupDashboardTest do
       refunded = paid_seat(ctx, "ada@example.com")
       kept = paid_seat(ctx, "grace@example.com")
 
-      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
-        assert params.charge == refunded.stripe_charge_id
-        {:ok, %{id: "re_seat"}}
+      StripeStub.expect(:create_refund, fn %{form: form} = request ->
+        assert form["charge"] == refunded.stripe_charge_id
+        StripeStubResponses.refund(request, "re_seat")
       end)
 
       {:ok, view, _html} = live(conn, "/dashboard/integrations?tab=payments")

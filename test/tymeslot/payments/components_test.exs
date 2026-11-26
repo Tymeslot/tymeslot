@@ -1,18 +1,14 @@
 defmodule Tymeslot.Payments.ComponentsTest do
-  # async: false: :stripe_provider is read through Payments.Config by every payment path.
-  use Tymeslot.DataCase, async: false
+  use Tymeslot.DataCase, async: true
   @moduletag :payments
-
-  import Mox
 
   alias Ecto.Changeset
   alias Tymeslot.Factory
   alias Tymeslot.Payments.{ChangesetHelpers, PendingTransactions, Validation}
   alias Tymeslot.Payments.PaymentTransactionSchema
   alias Tymeslot.Repo
-
-  setup :set_mox_from_context
-  setup :verify_on_exit!
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
   describe "Validation.validate_amount/1" do
     test "accepts a valid amount" do
@@ -82,7 +78,7 @@ defmodule Tymeslot.Payments.ComponentsTest do
           stripe_id: "pi_abc123"
         )
 
-      # No Stripe mock expectation — if expire_checkout_session were called, verify_on_exit! would fail
+      # No stub is installed, so a Stripe request would fail the test.
       assert :ok = PendingTransactions.supersede_pending_transaction(pending_tx)
 
       updated = Repo.get!(PaymentTransactionSchema, pending_tx.id)
@@ -95,13 +91,14 @@ defmodule Tymeslot.Payments.ComponentsTest do
       assert :ok = PendingTransactions.supersede_pending_transaction_if_needed(user.id)
     end
 
-    test "supersede_pending_transaction_if_needed/1 supersedes pending transactions" do
+    test "supersede_pending_transaction_if_needed/1 supersedes a pending transaction with a session" do
       user = Factory.insert(:user)
 
       pending_tx =
         Factory.insert(:payment_transaction,
           user: user,
-          status: :pending
+          status: :pending,
+          stripe_id: "pi_abc123"
         )
 
       assert :ok = PendingTransactions.supersede_pending_transaction_if_needed(user.id)
@@ -110,16 +107,45 @@ defmodule Tymeslot.Payments.ComponentsTest do
       assert updated.status == :failed
       assert updated.metadata["superseded"] == true
     end
+
+    test "supersede_pending_transaction_if_needed/1 leaves a checkout still being prepared" do
+      user = Factory.insert(:user)
+
+      pending_tx =
+        Factory.insert(:payment_transaction, user: user, status: :pending, stripe_id: nil)
+
+      assert :ok = PendingTransactions.supersede_pending_transaction_if_needed(user.id)
+
+      assert Repo.get!(PaymentTransactionSchema, pending_tx.id).status == :pending
+    end
+
+    test "supersede_pending_transaction_if_needed/1 supersedes a sessionless one past the cutoff" do
+      user = Factory.insert(:user)
+
+      pending_tx =
+        Factory.insert(:payment_transaction,
+          user: user,
+          status: :pending,
+          stripe_id: nil,
+          inserted_at: DateTime.add(DateTime.utc_now(:second), -121)
+        )
+
+      assert :ok = PendingTransactions.supersede_pending_transaction_if_needed(user.id)
+
+      assert Repo.get!(PaymentTransactionSchema, pending_tx.id).status == :failed
+    end
+
+    test "supersede_pending_transaction/1 leaves a transaction no longer pending" do
+      user = Factory.insert(:user)
+      completed = Factory.insert(:payment_transaction, user: user, status: :completed)
+
+      assert :ok = PendingTransactions.supersede_pending_transaction(completed)
+
+      assert Repo.get!(PaymentTransactionSchema, completed.id).status == :completed
+    end
   end
 
   describe "PendingTransactions checkout session expiry" do
-    setup do
-      original = Application.get_env(:tymeslot, :stripe_provider)
-      Application.put_env(:tymeslot, :stripe_provider, Tymeslot.Payments.StripeMock)
-      on_exit(fn -> Application.put_env(:tymeslot, :stripe_provider, original) end)
-      :ok
-    end
-
     test "expires the Stripe checkout session when stripe_id is a checkout session" do
       user = Factory.insert(:user)
       session_id = "cs_live_abc123"
@@ -131,11 +157,15 @@ defmodule Tymeslot.Payments.ComponentsTest do
           stripe_id: session_id
         )
 
-      expect(Tymeslot.Payments.StripeMock, :expire_checkout_session, fn ^session_id ->
-        {:ok, %{id: session_id, status: "expired"}}
-      end)
+      StripeStub.expect(
+        :expire_checkout_session,
+        StripeFixtures.object("checkout_session_expired", %{"id" => session_id})
+      )
 
       assert :ok = PendingTransactions.supersede_pending_transaction(pending_tx)
+
+      assert [%{method: :post, path: "/v1/checkout/sessions/cs_live_abc123/expire"}] =
+               StripeStub.requests()
 
       updated = Repo.get!(PaymentTransactionSchema, pending_tx.id)
       assert updated.status == :failed
@@ -153,9 +183,7 @@ defmodule Tymeslot.Payments.ComponentsTest do
           stripe_id: session_id
         )
 
-      expect(Tymeslot.Payments.StripeMock, :expire_checkout_session, fn ^session_id ->
-        {:error, %{message: "Session already expired"}}
-      end)
+      StripeStub.expect(:expire_checkout_session, {:error_fixture, "invalid_request_error"})
 
       assert :ok = PendingTransactions.supersede_pending_transaction(pending_tx)
 

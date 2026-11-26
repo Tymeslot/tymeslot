@@ -56,6 +56,7 @@ defmodule Tymeslot.Workers.PollManagementEmailsTest do
       assert :ok =
                perform_job(EmailWorker, %{
                  "action" => "send_poll_deadline_reminders",
+                 "relevant_until" => nil,
                  "poll_id" => ctx.poll.id,
                  "reminder_value" => 1,
                  "reminder_unit" => "days"
@@ -281,6 +282,7 @@ defmodule Tymeslot.Workers.PollManagementEmailsTest do
   defp reminder_args(poll, deadline) do
     %{
       "action" => "send_poll_deadline_reminders",
+      "relevant_until" => nil,
       "poll_id" => poll.id,
       "deadline_at" => PollScheduler.deadline_arg(deadline),
       "reminder_value" => 1,

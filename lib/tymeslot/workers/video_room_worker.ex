@@ -24,16 +24,18 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
 
   ## Waiting for the booking's calendar event
 
-  A Teams meeting on the same Microsoft account as the booking's Outlook
-  calendar is attached to the booking's own event, which the calendar job
-  writes alongside this one. Until it exists, the job hands over to a fresh
-  copy of itself a few seconds later rather than snoozing. A snooze counts as
-  an execution, and `Recovery` measures executions: a wait of a dozen seconds
-  would otherwise enter recovery and announce the booking without its link.
-  The wait is bounded by the meeting, not the job:
-  `Tymeslot.Integrations.MeetingProvisioning.teams_room_placement/1` stops
-  asking for it two minutes after the booking, and the meeting gets a Teams
-  event of its own instead.
+  A room the booking's calendar carries is placed on the booking's own event,
+  which the calendar job writes alongside this one: a Teams meeting on the
+  same Microsoft account as the booking's Outlook calendar, or the Meet
+  conference Google makes for an event of the same Google account as the
+  Meet integration. Until the event, and its Meet conference, exist, the job
+  hands over to a fresh copy of itself a few seconds later rather than
+  snoozing. A snooze counts as an execution, and `Recovery` measures
+  executions: a wait of a dozen seconds would otherwise enter recovery and
+  announce the booking without its link. The wait is bounded by the meeting,
+  not the job: `Tymeslot.Integrations.MeetingProvisioning.booking_room_placement/1`
+  stops asking for it two minutes after the booking's jobs were set off, and
+  the room is then made by the video provider on its own.
   """
 
   use Oban.Worker,
@@ -60,7 +62,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   # reading and writing the meeting, and asking the circuit breaker.
   @local_work_margin_ms 10_000
 
-  # How long a Teams meeting waits between looks for the booking's calendar
+  # How long a room waits between looks for the booking's calendar
   # event; see "Waiting for the booking's calendar event" above.
   @calendar_event_wait_seconds 3
 

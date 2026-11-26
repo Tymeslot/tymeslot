@@ -11,7 +11,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
   alias Ecto.Changeset
   alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
-  alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
+  alias Tymeslot.MeetingPayments.RefundQueries
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.SeatHolds
@@ -139,8 +140,10 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
     )
   end
 
+  # The refund a refused seat's completion recorded (`:late_payment`).
   defp refunds_for(payment),
-    do: all_enqueued(worker: RefundLatePayment, args: %{"booking_payment_id" => payment.id})
+    do:
+      payment.id |> RefundQueries.list_for_payment() |> Enum.filter(&(&1.source == :late_payment))
 
   defp lapsed_seat(ctx, meeting, email) do
     held_seat(
@@ -224,7 +227,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
 
     assert length(ParticipantQueries.list_live_for_meeting(meeting.id)) == 1
     assert Repo.reload!(payment).last_event_id == "evt_one"
-    refute_enqueued(worker: RefundLatePayment)
+    refute Repo.exists?(RefundSchema)
   end
 
   test "a late payment with room books the seat", ctx do
@@ -247,7 +250,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
     assert [%{id: participant_id}] = ParticipantQueries.list_live_for_meeting(paid.meeting_id)
     assert paid.participant_id == participant_id
     assert SeatHolds.get(hold.id).status == :converted
-    refute_enqueued(worker: RefundLatePayment)
+    refute Repo.exists?(RefundSchema)
   end
 
   test "a late payment without room is refunded", ctx do
@@ -271,7 +274,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
     paid = Repo.reload!(payment)
     assert paid.status == :paid
     assert paid.participant_id == nil
-    assert_enqueued(worker: RefundLatePayment, args: %{"booking_payment_id" => paid.id})
+    assert [_one] = refunds_for(paid)
     assert_receive :expired
     assert length(ParticipantQueries.list_live_for_meeting(full.id)) == 2
   end
@@ -284,7 +287,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
 
     paid = Repo.reload!(payment)
     assert paid.status == :paid
-    assert_enqueued(worker: RefundLatePayment, args: %{"booking_payment_id" => paid.id})
+    assert [_one] = refunds_for(paid)
     assert %{status: :released, released_reason: :failed} = SeatHolds.get(hold.id)
     assert ParticipantQueries.list_live_for_meeting(meeting.id) == []
   end
@@ -302,7 +305,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
 
     paid = Repo.reload!(payment)
     assert %{status: :paid, seat_hold_id: nil} = paid
-    assert_enqueued(worker: RefundLatePayment, args: %{"booking_payment_id" => paid.id})
+    assert [_one] = refunds_for(paid)
     assert Repo.reload!(meeting).status == :awaiting_payment
     assert calendar_creates(ctx.user, meeting.id) == []
   end
@@ -384,7 +387,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
 
     paid = Repo.reload!(payment)
     assert paid.status == :paid
-    assert_enqueued(worker: RefundLatePayment, args: %{"booking_payment_id" => paid.id})
+    assert [_one] = refunds_for(paid)
     assert ParticipantQueries.list_live_for_meeting(meeting.id) == []
   end
 
@@ -498,8 +501,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
     assert %{status: :released, released_reason: :failed} = SeatHolds.get(hold.id)
     assert Repo.get!(MeetingSchema, meeting.id).status == :confirmed
     assert length(ParticipantQueries.list_live_for_meeting(meeting.id)) == 2
-    assert [job] = refunds_for(paid)
-    assert {:discard, :under_dispute} = perform_job(RefundLatePayment, job.args)
+    assert [%{status: :failed, failure_code: "under_dispute"}] = refunds_for(paid)
   end
 
   # The booker's email has a free seat on the meeting already, which only

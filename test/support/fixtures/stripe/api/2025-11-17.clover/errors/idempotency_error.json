@@ -1,0 +1,9 @@
+{
+  "status": 400,
+  "body": {
+    "error": {
+      "message": "Keys for idempotent requests can only be used with the same parameters they were first used with. Try using a key other than 'tymeslot:refund:1:1' if you meant to execute a different request.",
+      "type": "idempotency_error"
+    }
+  }
+}

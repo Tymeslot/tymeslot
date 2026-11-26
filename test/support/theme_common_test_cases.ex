@@ -140,6 +140,7 @@ defmodule TymeslotWeb.ThemeCommonTestCases do
         attendee_timezone: "UTC"
       },
       organizer_profile: %ProfileSchema{username: "testuser", full_name: "Test User"},
+      booking_path: "/testuser",
       theme_tokens:
         ThemeCustomizations.tokens(theme_id, %ThemeCustomizationSchema{
           theme_id: theme_id,

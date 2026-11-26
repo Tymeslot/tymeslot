@@ -20,24 +20,22 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
   @moduletag :bookings
   @moduletag :live
 
-  import Mox
-
+  import Ecto.Query, only: [from: 2]
   import Tymeslot.Factory
   import TymeslotWeb.CalendarSurfaceHelpers
 
   alias Ecto.Changeset
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
-  alias Tymeslot.MeetingPayments.Workers.GroupCancelRefund
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.Workers.CalendarEventDeleteWorker
   alias Tymeslot.Workers.EmailWorker
 
   @async_timeout 1_000
-
-  setup :verify_on_exit!
 
   setup %{conn: conn}, do: owner(conn)
 
@@ -84,6 +82,10 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
   defp reload(meeting), do: Repo.get!(MeetingSchema, meeting.id)
 
   defp emails, do: all_enqueued(worker: EmailWorker)
+
+  # The refunds a host's cancellation of a group session recorded.
+  defp cancellation_refunds,
+    do: Repo.all(from(r in RefundSchema, where: r.source == :cancellation))
 
   describe "opening a dialog" do
     test "Cancel, Decline and Reschedule send nothing until confirmed", %{
@@ -244,9 +246,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
         refunded_amount_cents: 0
       )
 
-    expect(StripeAdapterMock, :create_refund, fn params, _opts ->
-      assert params.amount == 5000
-      {:ok, %{id: "re_calendar_full"}}
+    StripeStub.expect(:create_refund, 1, fn request ->
+      assert request.form["amount"] == "5000"
+      StripeStubResponses.refund(request, "re_calendar_full")
     end)
 
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
@@ -302,7 +304,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
 
     assert render(lv) =~ "Session cancelled. Refunds are on their way."
     assert reload(session).status == :cancelled
-    assert length(all_enqueued(worker: GroupCancelRefund)) == 2
+    assert length(cancellation_refunds()) == 2
   end
 
   test "a seat paid while the calendar's cancel dialog was open is shown before anything is cancelled",
@@ -341,14 +343,14 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
     assert has_element?(lv, "#cancel-meeting-form", "1 participant paid for this session")
     assert has_element?(lv, "input[name=cancel_refund_choice][value=full]")
     assert reload(session).status == :confirmed
-    assert all_enqueued(worker: GroupCancelRefund) == []
+    assert cancellation_refunds() == []
 
     lv
     |> form("#cancel-meeting-form", %{"cancel_refund_choice" => "full"})
     |> render_submit()
 
     assert reload(session).status == :cancelled
-    assert length(all_enqueued(worker: GroupCancelRefund)) == 1
+    assert length(cancellation_refunds()) == 1
   end
 
   describe "the calendar copy a drawn booking hides" do

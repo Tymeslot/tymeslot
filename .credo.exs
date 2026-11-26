@@ -193,7 +193,11 @@
           # of them fails silently rather than raising.
           {CredoChecks.PhantomLiveCallback, [priority: :high]},
           {CredoChecks.PutFlashInLiveComponent, [priority: :normal]},
-          {CredoChecks.HttpClientBoundary, [priority: :normal]},
+          # The Stripe client talks to one fixed host with its own Req.Test
+          # stub, retry policy and timeouts; the wrapper's SSRF guard, body cap
+          # and shared test stub are for user-supplied destinations.
+          {CredoChecks.HttpClientBoundary,
+           [priority: :normal, allowed: ["lib/tymeslot/integrations/stripe/client.ex"]]},
           {CredoChecks.ProviderResponseBoundary,
            [
              priority: :normal,

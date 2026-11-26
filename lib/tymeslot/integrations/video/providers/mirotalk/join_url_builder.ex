@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
 
   require Logger
 
+  alias Ecto.UUID
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
@@ -109,7 +110,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
       role: role,
       exp: DateTime.to_unix(meeting_time),
       iat: DateTime.to_unix(DateTime.utc_now()),
-      jti: UUID.uuid4()
+      jti: UUID.generate()
     }
 
     encoded_header = header |> Jason.encode!() |> Base.url_encode64(padding: false)

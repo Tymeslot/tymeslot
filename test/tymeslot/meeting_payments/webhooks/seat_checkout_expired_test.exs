@@ -98,7 +98,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutExpiredTest do
 
     assert %{status: :released, released_reason: :expired} = SeatHolds.get(hold.id)
     assert Repo.get!(MeetingSchema, meeting.id).status == :expired
-    assert Seats.seats_taken(meeting.id) == 0
+    assert Seats.seats_occupied(meeting.id) == 0
     assert Repo.reload!(payment).status == :failed
     assert_receive :expired
     assert {:ok, _changed} = AccountCurrency.change_default_currency(account, "usd")
@@ -143,7 +143,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutExpiredTest do
 
     assert SeatHolds.get(hold.id).status == :released
     assert Repo.get!(MeetingSchema, meeting.id).status == :confirmed
-    assert Seats.seats_taken(meeting.id) == 1
+    assert Seats.seats_occupied(meeting.id) == 1
   end
 
   test "the last hold lapsing on an emptied confirmed meeting cancels it", ctx do

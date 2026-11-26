@@ -23,7 +23,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
   than written as another (see `Outlook.RecurrenceConverter`).
 
   `:online_meeting`, the Graph fields of a Teams meeting the event is to
-  carry (`MeetingProvisioning.booking_online_meeting/1`), are written as
+  carry (`MeetingProvisioning.booking_event_video_fields/1`), are written as
   they are; event data without it leaves the event's online meeting alone.
   """
   @spec format_event_data(map()) ::

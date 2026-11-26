@@ -18,6 +18,10 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
   attr :offered_locales, :list, default: nil
   attr :legal_links, :map, required: true
 
+  attr :booking_path, :string,
+    required: true,
+    doc: "the booking page to send the guest back to (`PathHandlers.meeting_booking_path/2`)"
+
   @doc """
   Renders the cancel confirmed page in Quill theme style.
   """
@@ -77,7 +81,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
                 <div class="space-y-4">
                   <.action_button
                     type="button"
-                    phx-click={JS.navigate("/")}
+                    phx-click={JS.navigate(@booking_path)}
                     variant={:primary}
                     class="w-full"
                   >

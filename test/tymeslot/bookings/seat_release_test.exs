@@ -27,8 +27,7 @@ defmodule Tymeslot.Bookings.SeatReleaseTest do
   alias Tymeslot.Bookings.CancelSeat
   alias Tymeslot.Bookings.Create
   alias Tymeslot.Bookings.SeatRelease
-  alias Tymeslot.MeetingPayments.Workers.GroupCancelRefund
-  alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
+  alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
@@ -177,14 +176,13 @@ defmodule Tymeslot.Bookings.SeatReleaseTest do
         host_user_id: ctx.user.id
       )
 
-    # No Stripe call is expected: `verify_on_exit!` fails any made.
+    # No Stripe call is expected: none is stubbed.
     assert {:ok, _result} = CancelSeat.execute(payer.management_token)
 
     unchanged = Repo.reload!(payment)
     assert unchanged.status == :paid
     assert unchanged.refunded_amount_cents == 0
     assert unchanged.participant_id == payer.id
-    refute_enqueued(worker: GroupCancelRefund)
-    refute_enqueued(worker: RefundLatePayment)
+    assert RefundQueries.list_for_payment(payment.id) == []
   end
 end

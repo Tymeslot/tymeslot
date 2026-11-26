@@ -171,13 +171,6 @@ msgstr "%{amount} remboursés à ce jour"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
 #, elixir-autogen, elixir-format
-msgid "%{count} session cancelled. Refund of %{amount} issued."
-msgid_plural "%{count} sessions cancelled. Refund of %{amount} issued."
-msgstr[0] "%{count} séance annulée. Remboursement de %{amount} effectué."
-msgstr[1] "%{count} séances annulées. Remboursement de %{amount} effectué."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
-#, elixir-autogen, elixir-format
 msgid "%{count} session cancelled. The attendee has been told."
 msgid_plural "%{count} sessions cancelled. The attendee has been told."
 msgstr[0] "%{count} séance annulée. Le participant a été informé."
@@ -417,3 +410,25 @@ msgstr "Aucun remboursement n'est possible, car le paiement fait l'objet d'un li
 #, elixir-autogen, elixir-format
 msgid "No refund can be made: the series was not paid."
 msgstr "Aucun remboursement n'est possible, car la série n'a pas été payée."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} being processed"
+msgstr "%{amount} en cours de traitement"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled. Refund of %{amount} is being processed."
+msgid_plural "%{count} sessions cancelled. Refund of %{amount} is being processed."
+msgstr[0] "%{count} séance annulée. Le remboursement de %{amount} est en cours."
+msgstr[1] "%{count} séances annulées. Le remboursement de %{amount} est en cours."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{lost} lost in a dispute"
+msgstr "%{lost} perdus lors d'un litige"
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{refunded} refunded so far, plus %{lost} lost in a dispute"
+msgstr "%{refunded} remboursés à ce jour, plus %{lost} perdus lors d'un litige"

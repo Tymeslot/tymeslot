@@ -198,8 +198,8 @@ msgstr "Відхилити всі сесії"
 
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format
-msgid "Every session is held until you answer. If you haven't replied by %{deadline}, the request lapses and %{name} is told the times are free again."
-msgstr "Усі сесії зарезервовано, доки ви не відповісте. Без відповіді до %{deadline} запит скасується, а %{name} дізнається, що цей час знову вільний."
+msgid "Every session is held until you answer. If you haven't replied by %{by_deadline}, the request lapses and %{name} is told the times are free again."
+msgstr "Усі сесії зарезервовано, доки ви не відповісте. Без відповіді до %{by_deadline} запит скасується, а %{name} дізнається, що цей час знову вільний."
 
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format
@@ -213,8 +213,8 @@ msgstr "Вітаю, %{name}! %{host} не може провести наведе
 
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format
-msgid "Hi %{name}, %{host} has your request for the sessions below. They are held for you but not booked until %{host} approves them, and you'll hear either way by %{deadline}."
-msgstr "Вітаю, %{name}! %{host} уже має ваш запит на наведені нижче сесії. Їх зарезервовано за вами, але заброньовано їх буде лише тоді, коли %{host} їх підтвердить. Хоч якою буде відповідь, ви отримаєте її до %{deadline}."
+msgid "Hi %{name}, %{host} has your request for the sessions below. They are held for you but not booked until %{host} approves them, and you'll hear either way by %{by_deadline}."
+msgstr "Вітаю, %{name}! %{host} уже має ваш запит на наведені нижче сесії. Їх зарезервовано за вами, але заброньовано їх буде лише тоді, коли %{host} їх підтвердить. Хоч якою буде відповідь, ви отримаєте її до %{by_deadline}."
 
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format

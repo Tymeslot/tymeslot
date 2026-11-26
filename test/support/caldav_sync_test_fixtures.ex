@@ -10,6 +10,8 @@ defmodule Tymeslot.CalDAVSyncTestFixtures do
     * a dual-path stub responder used by tier and force-fetch tests
   """
 
+  import Tymeslot.Factory, only: [insert: 2]
+
   alias Plug.Conn
 
   @path1 "/calendars/user/work/"
@@ -53,21 +55,84 @@ defmodule Tymeslot.CalDAVSyncTestFixtures do
   @spec ical_path2() :: String.t()
   def ical_path2, do: @ical_path2
 
+  @doc """
+  An iCalendar payload for one event 30 days ahead, inside the sync window.
+  """
+  @spec future_ical(String.t()) :: String.t()
+  def future_ical(uid) do
+    start_at = DateTime.add(DateTime.utc_now(), 30, :day)
+    fmt = &Calendar.strftime(&1, "%Y%m%dT%H%M%SZ")
+
+    """
+    BEGIN:VCALENDAR
+    VERSION:2.0
+    PRODID:-//Test//Test//EN
+    BEGIN:VEVENT
+    UID:#{uid}
+    DTSTART:#{fmt.(start_at)}
+    DTEND:#{fmt.(DateTime.add(start_at, 3600, :second))}
+    SUMMARY:#{uid}
+    END:VEVENT
+    END:VCALENDAR
+    """
+  end
+
+  @doc """
+  Caches one event per uid on `path`, last confirmed an hour ago, so the
+  deletion breaker treats an empty listing as suspicious.
+  """
+  @spec insert_confirmed_events(struct(), String.t(), [String.t()]) :: :ok
+  def insert_confirmed_events(integration, path, uids) do
+    start_at = DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.truncate(:microsecond)
+    synced = DateTime.utc_now() |> DateTime.add(-3600, :second) |> DateTime.truncate(:microsecond)
+
+    for uid <- uids do
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        uid: uid,
+        provider: "caldav",
+        provider_calendar_id: path,
+        provider_event_id: "#{path}#{uid}.ics",
+        summary: "Cached #{uid}",
+        start_at: start_at,
+        end_at: DateTime.add(start_at, 3600, :second),
+        all_day: false,
+        synced_at: synced
+      )
+    end
+
+    :ok
+  end
+
   @spec caldav_report_xml(String.t(), String.t()) :: String.t()
-  def caldav_report_xml(href, ical_data) do
+  def caldav_report_xml(href, ical_data), do: caldav_report_xml([{href, ical_data}])
+
+  @doc """
+  A calendar-query REPORT answer listing each `{href, ical_data}` pair; an
+  empty list is a valid listing of an empty calendar.
+  """
+  @spec caldav_report_xml([{String.t(), String.t()}]) :: String.t()
+  def caldav_report_xml(entries) do
+    responses =
+      Enum.map_join(entries, "\n", fn {href, ical_data} ->
+        """
+          <D:response>
+            <D:href>#{href}</D:href>
+            <D:propstat>
+              <D:prop>
+                <D:getetag>"test-etag"</D:getetag>
+                <C:calendar-data>#{String.trim(ical_data)}</C:calendar-data>
+              </D:prop>
+              <D:status>HTTP/1.1 200 OK</D:status>
+            </D:propstat>
+          </D:response>
+        """
+      end)
+
     """
     <?xml version="1.0" encoding="UTF-8"?>
     <D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
-      <D:response>
-        <D:href>#{href}</D:href>
-        <D:propstat>
-          <D:prop>
-            <D:getetag>"test-etag"</D:getetag>
-            <C:calendar-data>#{String.trim(ical_data)}</C:calendar-data>
-          </D:prop>
-          <D:status>HTTP/1.1 200 OK</D:status>
-        </D:propstat>
-      </D:response>
+    #{responses}
     </D:multistatus>
     """
   end

@@ -121,6 +121,7 @@ defmodule Tymeslot.Security.RateLimiterKeysTest do
     dashboard_meeting_approval: {42, ["dashboard_meeting_approval:42"]},
     dashboard_add_guests: {42, ["dashboard_add_guests:42"]},
     dashboard_quick_add_meeting: {42, ["dashboard_quick_add_meeting:42"]},
+    connect_status_check: {42, ["connect_status_check:42"]},
     payment_initiation: {42, ["payment_initiation:user:42"]},
     availability_add_break: {7, ["availability:add_break:7"]},
     availability_quick_break: {7, ["availability:quick_break:7"]},

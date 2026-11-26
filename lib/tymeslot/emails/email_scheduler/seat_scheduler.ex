@@ -1,13 +1,18 @@
 defmodule Tymeslot.Emails.EmailScheduler.SeatScheduler do
   @moduledoc """
-  Schedules the emails a single group-booking seat receives (confirmation,
-  cancellation, reschedule, reminder, session moved, reschedule request),
-  one Oban job per seat, so each recipient retries independently
-  (`Tymeslot.Notifications.Email.GroupMeetingEmails`).
+  Schedules the per-seat emails of a group booking via Oban.
+
+  Each participant's copy of an email is its own job, unique per seat and per
+  logical email (`schedule_seat_email/5`), so one recipient's failure or retry
+  never holds up or duplicates another's. That covers the seat's own
+  confirmation, cancellation and reschedule, and each participant's share of
+  the whole-meeting cancellation, reminder, session move and reschedule
+  request that a meeting-level job dispatches.
   """
 
   alias Tymeslot.Emails.EmailActions
   alias Tymeslot.Emails.EmailScheduler.Helpers
+  alias Tymeslot.Notifications.Events.Seats
   alias Tymeslot.Workers.EmailWorker
 
   # The per-seat action names live in `Tymeslot.Emails.EmailActions` with
@@ -71,7 +76,7 @@ defmodule Tymeslot.Emails.EmailScheduler.SeatScheduler do
           [
             # 1 hour — comfortably past the ~330s worst-case circuit-open
             # snooze on either the seat job itself or the meeting-level
-            # dispatcher that re-runs this. See the moduledoc above.
+            # dispatcher that re-runs this. See the @doc above.
             period: 3600,
             fields: [:args, :queue],
             keys: [:action, :meeting_id, :participant_id | extra_keys]
@@ -91,15 +96,46 @@ defmodule Tymeslot.Emails.EmailScheduler.SeatScheduler do
     do: schedule_seat_email(seat_action(:seat_confirmation), meeting_id, participant_id)
 
   @doc """
-  Schedules the cancellation emails for a single group-booking seat.
-  `slot_freed?` says the seat was the last one and its leaving cancelled the
-  meeting.
+  Schedules the organiser's email that a group slot they were told had been
+  cancelled is going ahead after all: `participant_id` is the seat that
+  brought it back (`Tymeslot.Bookings.SlotActivation`).
   """
-  @spec schedule_seat_cancellation_emails(term(), term(), boolean()) ::
+  @spec schedule_seat_slot_revived_email(term(), term()) :: :ok | {:error, term()}
+  def schedule_seat_slot_revived_email(meeting_id, participant_id),
+    do: schedule_seat_email(seat_action(:seat_slot_revived), meeting_id, participant_id)
+
+  @doc """
+  Schedules the verification email for one held seat of a group meeting.
+  `send` numbers it, so a resend is not swallowed by the first job.
+  """
+  @spec schedule_seat_verification_email(term(), term(), pos_integer()) ::
           :ok | {:error, term()}
-  def schedule_seat_cancellation_emails(meeting_id, participant_id, slot_freed?) do
+  def schedule_seat_verification_email(meeting_id, participant_id, send \\ 1)
+      when is_integer(send) and send > 0 do
+    schedule_seat_email(
+      seat_action(:seat_email_verification),
+      meeting_id,
+      participant_id,
+      %{"send" => send},
+      [:send]
+    )
+  end
+
+  @doc """
+  Schedules the cancellation emails for a single group-booking seat. `slot`
+  says what the seat's leaving did to its slot
+  (`t:Tymeslot.Notifications.Events.Seats.slot_outcome/0`), carried as
+  `"slot_freed"` (the meeting was cancelled with it), `"slot_held"` (held
+  seats still occupy its time) and `"organizer_told"` (another leaver had
+  already ended it for the organiser, who is sent nothing).
+  """
+  @spec schedule_seat_cancellation_emails(term(), term(), Seats.slot_outcome()) ::
+          :ok | {:error, term()}
+  def schedule_seat_cancellation_emails(meeting_id, participant_id, slot) do
     schedule_seat_email(seat_action(:seat_cancellation), meeting_id, participant_id, %{
-      "slot_freed" => slot_freed?
+      "slot_freed" => slot != :goes_ahead,
+      "slot_held" => slot == :held,
+      "organizer_told" => slot == :already_held
     })
   end
 
@@ -110,19 +146,22 @@ defmodule Tymeslot.Emails.EmailScheduler.SeatScheduler do
   cancelled row it moved from, whose own calendar entry (UID, revision and
   time) the job cancels for the participant and their guests. A seat move
   never rewrites that row, so it is read when the job runs.
-  `old_slot_freed?` says the move emptied, and so cancelled, the old meeting.
+  `old_slot` says what the move did to the old slot, carried as
+  `schedule_seat_cancellation_emails/3` carries it, under `"old_slot_freed"`
+  and `"old_slot_held"`.
   """
-  @spec schedule_seat_reschedule_emails(term(), term(), term(), boolean()) ::
+  @spec schedule_seat_reschedule_emails(term(), term(), term(), Seats.slot_outcome()) ::
           :ok | {:error, term()}
   def schedule_seat_reschedule_emails(
         meeting_id,
         participant_id,
         old_participant_id,
-        old_slot_freed?
+        old_slot
       ) do
     schedule_seat_email(seat_action(:seat_reschedule), meeting_id, participant_id, %{
       "old_participant_id" => old_participant_id,
-      "old_slot_freed" => old_slot_freed?
+      "old_slot_freed" => old_slot != :goes_ahead,
+      "old_slot_held" => old_slot == :held
     })
   end
 
@@ -141,16 +180,27 @@ defmodule Tymeslot.Emails.EmailScheduler.SeatScheduler do
   Schedules one live participant's reminder.
 
   Dispatched per live participant from the meeting-level reminder job, for
-  the reason given at `schedule_seat_meeting_cancellation_email/2`.
+  the reason given at `schedule_seat_meeting_cancellation_email/2`, and
+  dropped unsent once the meeting has started (`relevant_until`).
   """
-  @spec schedule_seat_reminder_email(term(), term(), term(), term()) ::
+  @spec schedule_seat_reminder_email(term(), term(), term(), term(), DateTime.t() | nil) ::
           :ok | {:error, term()}
-  def schedule_seat_reminder_email(meeting_id, participant_id, reminder_value, reminder_unit) do
+  def schedule_seat_reminder_email(
+        meeting_id,
+        participant_id,
+        reminder_value,
+        reminder_unit,
+        relevant_until
+      ) do
     schedule_seat_email(
       seat_action(:seat_reminder),
       meeting_id,
       participant_id,
-      %{"reminder_value" => reminder_value, "reminder_unit" => reminder_unit},
+      %{
+        "reminder_value" => reminder_value,
+        "reminder_unit" => reminder_unit,
+        "relevant_until" => EmailActions.relevant_until(relevant_until)
+      },
       [:reminder_value, :reminder_unit]
     )
   end
@@ -187,7 +237,9 @@ defmodule Tymeslot.Emails.EmailScheduler.SeatScheduler do
 
   `requested_at` (the meeting's `reschedule_requested_at`, as ISO 8601, or
   `nil`) names the request: a re-run of the same dispatch is a duplicate, a
-  later request is a new email.
+  later request is a new email. Dropped unsent once the request can no longer
+  be answered, judged when it runs
+  (`Tymeslot.Notifications.Email.RescheduleRequestEmails.check_answerable/1`).
   """
   @spec schedule_seat_reschedule_request(term(), term(), String.t() | nil) ::
           :ok | {:error, term()}

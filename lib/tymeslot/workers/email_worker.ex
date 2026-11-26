@@ -22,6 +22,7 @@ defmodule Tymeslot.Workers.EmailWorker do
     # Higher priority (0-3, lower number = higher priority)
     priority: 1
 
+  alias Tymeslot.Clock
   alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.EmailActions
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
@@ -70,11 +71,12 @@ defmodule Tymeslot.Workers.EmailWorker do
   # actions are recorded.
   @meeting_gone "Meeting not found"
   @meeting_cancelled "Meeting cancelled"
+  @no_longer_relevant "No longer relevant"
 
   @impl ExpectedJobOutcome
   def expected_outcome?(reason),
     do:
-      reason in [@meeting_gone, @meeting_cancelled] or
+      reason in [@meeting_gone, @meeting_cancelled, @no_longer_relevant] or
         EmailHandlers.expected_discard?(reason) or
         TransactionalEmailDelivery.recipient_rejected?(reason) or
         reason == ReauthHandling.discard_reason()
@@ -95,7 +97,16 @@ defmodule Tymeslot.Workers.EmailWorker do
     # `Tymeslot.Infrastructure.ObanLogger` sets it at job start.
     Logger.metadata(job_id: job.id, attempt: attempt)
 
-    execute_email_job_with_timeout(action, args, job)
+    if EmailActions.relevant?(args, Clock.utc_now()) do
+      execute_email_job_with_timeout(action, args, job)
+    else
+      Logger.info("Email no longer relevant, not sent",
+        action: action,
+        relevant_until: args["relevant_until"]
+      )
+
+      {:discard, @no_longer_relevant}
+    end
   end
 
   def perform(%Oban.Job{args: args, attempt: attempt} = job) do

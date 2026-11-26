@@ -516,8 +516,9 @@ defmodule Tymeslot.Meetings.MeetingSchema do
 
   Group meetings hold no attendee — bookers live in `meeting_participants` —
   so `attendee_name`/`attendee_email` are not required. Status is
-  `:confirmed` whatever the caller passes, with one exception: a slot
-  created by a seat hold (`Tymeslot.Meetings.SeatHolds`) passes
+  `:confirmed` whatever the caller passes, with two exceptions: a slot held
+  for its first booker's email check passes `:awaiting_verification`, and a
+  slot created by a seat hold (`Tymeslot.Meetings.SeatHolds`) passes
   `status: :awaiting_payment`, and keeps it until its first paid seat
   confirms it. Any other status is ignored.
 
@@ -529,13 +530,14 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   """
   @spec group_changeset(t(), map()) :: Ecto.Changeset.t()
   def group_changeset(meeting, attrs) do
-    meeting
-    |> base_changeset(attrs, @group_required_fields)
-    |> put_change(:status, group_status(attrs))
+    changeset = base_changeset(meeting, attrs, @group_required_fields)
+    put_change(changeset, :status, group_status(get_change(changeset, :status)))
   end
 
-  defp group_status(%{status: :awaiting_payment}), do: :awaiting_payment
-  defp group_status(_attrs), do: :confirmed
+  defp group_status(status) when status in [:awaiting_payment, :awaiting_verification],
+    do: status
+
+  defp group_status(_status), do: :confirmed
 
   @status_transition_fields [
     :status,

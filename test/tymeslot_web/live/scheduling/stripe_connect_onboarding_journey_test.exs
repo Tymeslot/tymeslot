@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Live.Scheduling.StripeConnectOnboardingJourneyTest do
 
   import Ecto.Query, only: [where: 2]
   import Mox
+  import Tymeslot.StripeConnectTestHelpers, only: [expect_exchange: 2, expect_retrieve: 2]
   import Tymeslot.AuthTestHelpers, only: [log_in_user: 2]
   import Tymeslot.BookingTestHelpers, only: [seed_booking_account: 3]
   import Tymeslot.ConfigTestHelpers
@@ -28,11 +29,12 @@ defmodule TymeslotWeb.Live.Scheduling.StripeConnectOnboardingJourneyTest do
   alias Ecto.Changeset
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Workers.ResyncConnectAccount
   alias Tymeslot.PaymentTestHelpers
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias TymeslotWeb.BookingDriver
 
   @secret "whsec_connect_journey"
@@ -96,22 +98,8 @@ defmodule TymeslotWeb.Live.Scheduling.StripeConnectOnboardingJourneyTest do
     assert authorise_url.host == "connect.stripe.com"
     %{"state" => state} = URI.decode_query(authorise_url.query)
 
-    expect(StripeAdapterMock, :exchange_oauth_code, fn "code_journey" ->
-      {:ok, %{stripe_user_id: @account_id}}
-    end)
-
-    expect(StripeAdapterMock, :retrieve_account, fn @account_id ->
-      {:ok,
-       %{
-         "id" => @account_id,
-         "country" => "DE",
-         "default_currency" => "eur",
-         "charges_enabled" => false,
-         "payouts_enabled" => false,
-         "details_submitted" => false,
-         "requirements" => %{"disabled_reason" => nil}
-       }}
-    end)
+    expect_exchange("code_journey", @account_id)
+    expect_retrieve(@account_id, %{"country" => "DE", "default_currency" => "eur"})
 
     callback_conn =
       build_conn()
@@ -190,12 +178,11 @@ defmodule TymeslotWeb.Live.Scheduling.StripeConnectOnboardingJourneyTest do
     # charged on the host's connected account.
     assert "paid-consult" in offered_types(profile)
 
-    test_pid = self()
-
-    expect(StripeAdapterMock, :create_checkout_session, fn params, opts ->
-      send(test_pid, {:checkout, params, opts})
-      {:ok, %{id: "cs_journey", url: @checkout_url}}
-    end)
+    StripeStub.expect(
+      :create_checkout_session,
+      1,
+      StripeStubResponses.checkout_session("cs_journey", @checkout_url)
+    )
 
     {:ok, view, _html} = live(build_conn(), "/#{profile.username}?timezone=Etc/UTC")
     BookingDriver.book(view, meeting_type: "paid-consult", until: :attendee)
@@ -207,8 +194,8 @@ defmodule TymeslotWeb.Live.Scheduling.StripeConnectOnboardingJourneyTest do
     |> render_submit()
 
     assert_redirect(view, @checkout_url, 5_000)
-    assert_received {:checkout, _params, opts}
-    assert opts[:connect_account] == @account_id
+    assert [%{form: _form, headers: headers}] = StripeStub.requests(:create_checkout_session)
+    assert headers["stripe-account"] == @account_id
   end
 
   defp offered_types(profile) do

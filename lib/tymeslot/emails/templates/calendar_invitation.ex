@@ -41,6 +41,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
   }
 
   alias Tymeslot.Integrations.Calendar.IcsGenerator
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -123,7 +124,11 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
   # What the email calls itself: an invitation, the recipient's removal from
   # an event, the cancellation of one event, or of a whole series.
   defp copy(details, locale) do
-    date_short = Formatting.format_date_short(details.date, locale)
+    on_date =
+      details.date
+      |> Formatting.format_date_short(locale)
+      |> LocaleFormat.with_article(:none, locale)
+
     name = details.organizer_name
     title = details.event_title
 
@@ -135,9 +140,9 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
           title: dgettext("emails", "You're Invited"),
           subtitle: dgettext("emails", "%{name} has invited you to an event.", name: name),
           subject:
-            dgettext("emails", "Calendar Invitation - %{title} on %{date}",
+            dgettext("emails", "Calendar Invitation - %{title} on %{on_date}",
               title: title,
-              date: date_short
+              on_date: on_date
             )
         }
 
@@ -148,7 +153,10 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
           title: dgettext("emails", "Removed from Event"),
           subtitle: dgettext("emails", "%{name} has removed you from an event.", name: name),
           subject:
-            dgettext("emails", "Removed from %{title} on %{date}", title: title, date: date_short)
+            dgettext("emails", "Removed from %{title} on %{on_date}",
+              title: title,
+              on_date: on_date
+            )
         }
 
       Map.get(details, :series) == true ->
@@ -173,7 +181,10 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
           subtitle:
             dgettext("emails", "%{name} has cancelled an event you were invited to.", name: name),
           subject:
-            dgettext("emails", "Cancelled - %{title} on %{date}", title: title, date: date_short)
+            dgettext("emails", "Cancelled - %{title} on %{on_date}",
+              title: title,
+              on_date: on_date
+            )
         }
     end
   end

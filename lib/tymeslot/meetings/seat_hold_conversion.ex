@@ -152,7 +152,7 @@ defmodule Tymeslot.Meetings.SeatHoldConversion do
 
   defp join_target_for(meeting, hold) do
     reserved = own_held_seats(meeting, hold)
-    seats_left = meeting.capacity - Seats.seats_taken(meeting.id) + reserved
+    seats_left = meeting.capacity - Seats.seats_occupied(meeting.id) + reserved
 
     if SeatWrites.joinable?(meeting, hold.seats, seats_left) and
          (reserved > 0 or SeatWrites.registration_open?(meeting)),

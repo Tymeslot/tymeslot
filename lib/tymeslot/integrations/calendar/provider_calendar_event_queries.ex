@@ -398,7 +398,8 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   prefers a linked cache row over the live meeting — doesn't keep showing
   the pre-update time until the next inbound sync cycle happens to reconcile
   it. Limited to the handful of fields Tymeslot actually knows it just
-  wrote; everything else on the row (etag, provider_metadata, the offline
+  wrote, `provider_metadata` among them only for a write that changed a
+  Google event's conference; everything else on the row (etag, the offline
   sync-queue bookkeeping columns, ...) is left untouched for a real inbound
   sync to reconcile, matching `update_notification_baseline/3`'s narrow
   targeted-update pattern rather than `upsert_batch/1`'s full-row replace.
@@ -419,7 +420,8 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
       :description,
       :location,
       :status,
-      :transparency
+      :transparency,
+      :provider_metadata
     ])
     |> ProviderCalendarEventSchema.validate_timing()
     |> Repo.update()

@@ -8,9 +8,9 @@ defmodule Tymeslot.MeetingPayments.ChargeBackfill do
   returns. That is a Stripe call, so it is never made inside a transaction.
   """
 
+  alias Tymeslot.Integrations.Stripe.PaymentIntents
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
-  alias Tymeslot.MeetingPayments.StripeAdapter
 
   @doc """
   Fetches the charge id of `intent_id` from the payment's connected account
@@ -27,7 +27,7 @@ defmodule Tymeslot.MeetingPayments.ChargeBackfill do
 
   def backfill(payment, intent_id) do
     with {:ok, intent} <-
-           StripeAdapter.retrieve_payment_intent(intent_id,
+           PaymentIntents.retrieve(intent_id, %{expand: ["latest_charge"]},
              connect_account: payment.stripe_account_id
            ),
          {:ok, charge_id} <- charge_id(intent) do
@@ -35,13 +35,7 @@ defmodule Tymeslot.MeetingPayments.ChargeBackfill do
     end
   end
 
-  # The mock adapter yields string-keyed maps, as a webhook event arrives;
-  # the real Stripity adapter returns an atom-keyed `%Stripe.PaymentIntent{}`
-  # whose expanded `latest_charge` is a `%Stripe.Charge{}` struct. Handle both
-  # so the charge id is captured regardless of adapter.
   defp charge_id(%{"latest_charge" => %{"id" => id}}) when is_binary(id), do: {:ok, id}
   defp charge_id(%{"latest_charge" => id}) when is_binary(id), do: {:ok, id}
-  defp charge_id(%{latest_charge: %{id: id}}) when is_binary(id), do: {:ok, id}
-  defp charge_id(%{latest_charge: id}) when is_binary(id), do: {:ok, id}
   defp charge_id(_intent), do: {:error, :charge_not_available}
 end

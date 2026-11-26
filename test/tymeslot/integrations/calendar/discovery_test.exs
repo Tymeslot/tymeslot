@@ -46,6 +46,11 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryTest do
                Discovery.discover_calendars_for_integration(%{provider: "unknown"})
     end
 
+    test "answers an error for a provider without the optional discovery callback" do
+      assert {:error, :discovery_unsupported} =
+               Discovery.discover_calendars_for_integration(%{provider: "debug"})
+    end
+
     test "discovers for baikal provider via decrypt chain" do
       # Exercises the full credential-decrypt → resolve_provider_atom →
       # provider_module_for → Baikal.Provider.new → Baikal.Provider.discover_calendars
@@ -138,6 +143,18 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryTest do
 
       assert {:ok, calendars} = Discovery.discover_calendars_for_integration(integration)
       assert Enum.map(calendars, & &1.name) == ["Personal"]
+    end
+  end
+
+  describe "discovers_calendars?/1" do
+    test "is true for a provider that implements discovery" do
+      assert Discovery.discovers_calendars?(%{provider: "google"})
+      assert Discovery.discovers_calendars?(%{provider: "caldav"})
+    end
+
+    test "is false for a provider without the callback, and for an unknown one" do
+      refute Discovery.discovers_calendars?(%{provider: "debug"})
+      refute Discovery.discovers_calendars?(%{provider: "unknown"})
     end
   end
 

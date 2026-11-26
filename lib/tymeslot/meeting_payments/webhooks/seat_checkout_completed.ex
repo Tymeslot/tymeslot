@@ -21,9 +21,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompleted do
       hold whose meeting the host cancelled, or a host whose account is
       pending deletion: the payment is recorded paid, the hold released as
       failed, its meeting settled (`SeatRelease.settle_after_hold/1`), and
-      the payment refunded in full by `Workers.RefundLatePayment`, inserted
-      in the same transaction. A disputed payment's refund is left to its
-      dispute (`RefundLatePayment` discards it).
+      a refund of all of it recorded in the same transaction
+      (`Refunds.request_remaining_refund/2`). A disputed payment's refund is
+      left to its dispute's close.
     * A payment this handler settled already (paid, refunded, or disputed
       after it was paid): a no-op.
 
@@ -51,7 +51,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompleted do
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Webhooks.LockedPayment
   alias Tymeslot.MeetingPayments.Webhooks.PaymentCompletion
-  alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
+  alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Meetings.SeatHoldSchema
@@ -170,15 +170,17 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompleted do
     end
   end
 
-  # The payment truly was taken, so it is recorded paid and refunded in full
-  # by `RefundLatePayment`, inserted in this same transaction, which also
+  # The payment truly was taken, so it is recorded paid with a refund of all
+  # of it (`Refunds.request_remaining_refund/2`, source `:late_payment`),
+  # recorded in this same transaction and made by its own job, which also
   # backfills the charge id it needs. A hold still held is released as
   # failed, its meeting locked first. A payment disputed already stays
-  # `disputed`; the job then leaves it to the dispute (`RefundLatePayment`).
+  # `disputed`, and its refund is recorded failed for the dispute's close
+  # (`Webhooks.ChargeDisputeClosed`).
   defp refund(locked, event_id, object, cause) do
     with {:ok, paid} <- PaymentCompletion.mark_paid(locked, event_id, object),
          {:ok, released} <- release_hold(locked.seat_hold_id),
-         {:ok, _job} <- Oban.insert(RefundLatePayment.new_for(paid.id)) do
+         {:ok, _refund} <- Refunds.request_remaining_refund(paid, :late_payment) do
       {:ok, {:refund_scheduled, paid, released, cause}}
     end
   end

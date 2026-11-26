@@ -28,7 +28,6 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
   alias Tymeslot.CalendarMock
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingPayments.BookingPayments
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired
   alias Tymeslot.Meetings.MeetingSchema
@@ -38,6 +37,8 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.TestMocks
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.BookingDriver
@@ -53,6 +54,12 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
     Mox.set_mox_from_context(tags)
     RateLimiter.clear_all()
     AvailabilityCache.clear_all()
+
+    # Landing on the cancelled page ends the checkout at Stripe.
+    StripeStub.stub(
+      :expire_checkout_session,
+      StripeFixtures.object("checkout_session_expired", %{"id" => @session_id})
+    )
 
     # Core ships with meeting payments off; without this the paid branch
     # never reaches the Stripe adapter.
@@ -79,9 +86,10 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
     |> stub(:get_booking_integration_info, fn _user_id -> {:error, :no_integration} end)
 
     # The completion webhook looks up the charge; these payments have none.
-    stub(StripeAdapterMock, :retrieve_payment_intent, fn _id, _opts ->
-      {:ok, %{"latest_charge" => nil}}
-    end)
+    StripeStub.stub(
+      :retrieve_payment_intent,
+      StripeFixtures.object("payment_intent_with_latest_charge", %{"latest_charge" => nil})
+    )
 
     :ok
   end
@@ -323,12 +331,13 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
     test "returning through the cancel URL releases the hold", %{conn: conn, profile: profile} do
       %{cancel_url: cancel_url, hold_id: hold_id} = book_seat_to_checkout(conn, profile)
       %{meeting_id: meeting_id} = SeatHolds.get(hold_id)
-      assert Seats.seats_taken(meeting_id) == 2
+      assert Seats.seats_occupied(meeting_id) == 2
       test_pid = self()
 
-      expect(StripeAdapterMock, :expire_checkout_session, fn @session_id, opts ->
-        send(test_pid, {:expired_session, opts[:connect_account]})
-        {:ok, %{id: @session_id, status: "expired"}}
+      StripeStub.expect(:expire_checkout_session, fn %{path: path, headers: headers} ->
+        assert path =~ @session_id
+        send(test_pid, {:expired_session, headers["stripe-account"]})
+        StripeFixtures.object("checkout_session_expired", %{"id" => @session_id})
       end)
 
       {:ok, view, _html} = live(conn, cancel_url)
@@ -345,7 +354,7 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
       assert :ok = CheckoutSessionExpired.handle(seat_expired_event(payment))
 
       assert %{status: :released} = SeatHolds.get(hold_id)
-      assert Seats.seats_taken(meeting_id) == 0
+      assert Seats.seats_occupied(meeting_id) == 0
     end
 
     # Without the signed return token the visitor only reads the page.
@@ -410,9 +419,13 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
   defp book_seat_to_checkout(conn, profile) do
     test_pid = self()
 
-    expect(StripeAdapterMock, :create_checkout_session, fn params, _opts ->
-      send(test_pid, {:checkout_session, params})
-      {:ok, %{id: @session_id, url: @checkout_url}}
+    StripeStub.expect(:create_checkout_session, fn %{form: form} ->
+      send(test_pid, {:checkout_session, form})
+
+      StripeFixtures.object("checkout_session_payment", %{
+        "id" => @session_id,
+        "url" => @checkout_url
+      })
     end)
 
     {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=UTC")
@@ -431,7 +444,7 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
     assert_received {:checkout_session, params}
 
     success_url =
-      params.success_url |> String.replace("{CHECKOUT_SESSION_ID}", @session_id) |> path_of()
+      params["success_url"] |> String.replace("{CHECKOUT_SESSION_ID}", @session_id) |> path_of()
 
     %{"hold_id" => hold_id} =
       Regex.named_captures(
@@ -439,7 +452,7 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
         success_url
       ) || flunk("expected a seat processing URL, got #{success_url}")
 
-    %{success_url: success_url, cancel_url: path_of(params.cancel_url), hold_id: hold_id}
+    %{success_url: success_url, cancel_url: path_of(params["cancel_url"]), hold_id: hold_id}
   end
 
   defp seat_completed_event(payment) do
@@ -508,12 +521,13 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
   # contract, asserts the visitor is sent to Stripe Checkout, and returns
   # the return URLs the checkout session was created with, as paths.
   defp book_to_checkout(conn, profile) do
-    test_pid = self()
+    StripeStub.expect(:create_checkout_session, 1, fn request ->
+      assert request.headers["stripe-account"] == "acct_RETURN"
 
-    expect(StripeAdapterMock, :create_checkout_session, fn params, opts ->
-      assert opts[:connect_account] == "acct_RETURN"
-      send(test_pid, {:checkout_session, params})
-      {:ok, %{id: @session_id, url: @checkout_url}}
+      StripeFixtures.object("checkout_session_payment", %{
+        "id" => @session_id,
+        "url" => @checkout_url
+      })
     end)
 
     {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=UTC")
@@ -531,14 +545,14 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
     |> render_submit()
 
     assert_redirect(view, @checkout_url, 5_000)
-    assert_received {:checkout_session, params}
+    assert [%{form: form}] = StripeStub.requests(:create_checkout_session)
 
     %{
       success_url:
-        params.success_url
+        form["success_url"]
         |> String.replace("{CHECKOUT_SESSION_ID}", @session_id)
         |> path_of(),
-      cancel_url: path_of(params.cancel_url)
+      cancel_url: path_of(form["cancel_url"])
     }
   end
 

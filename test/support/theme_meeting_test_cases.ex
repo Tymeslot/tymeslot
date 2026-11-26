@@ -74,8 +74,8 @@ defmodule TymeslotWeb.ThemeMeetingTestCases do
   @doc """
   Tests the cancel confirmed page rendering and navigation.
   """
-  @spec test_cancel_confirmed_page(term()) :: term()
-  def test_cancel_confirmed_page(view) do
+  @spec test_cancel_confirmed_page(term(), String.t()) :: term()
+  def test_cancel_confirmed_page(view, username) do
     assert render(view) =~ "Meeting Cancelled"
     assert render(view) =~ "Your meeting has been successfully cancelled"
     assert render(view) =~ "Cancellation emails have been sent"
@@ -86,7 +86,7 @@ defmodule TymeslotWeb.ThemeMeetingTestCases do
              |> render_click()
 
     assert redirect_type in [:redirect, :live_redirect]
-    assert to == "/"
+    assert to == "/" <> username
   end
 
   @doc """

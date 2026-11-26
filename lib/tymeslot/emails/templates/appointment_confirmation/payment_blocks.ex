@@ -35,10 +35,15 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  # Payment states that are settled enough to show the booker a receipt and the
-  # host a payout summary. A refunded payment still gets both: the money did
-  # change hands, and the refund is announced by its own email.
+  # Payment states that are settled enough to show the host a payout summary.
+  # A refunded payment still gets one: the money did change hands, and the
+  # refund is announced by its own email.
   @paid_like [:paid, :partially_refunded, :refunded]
+
+  # The booker's receipt also covers a disputed payment: they did pay, and the
+  # dispute is between them and their bank. The host's payout summary leaves it
+  # out, since Stripe holds the funds until the dispute closes.
+  @receipt_statuses [:disputed | @paid_like]
 
   @typedoc "Attendee-facing receipt, or `nil` when there is nothing to show."
   @type receipt ::
@@ -65,15 +70,15 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
   Builds the attendee-facing payment receipt from the `:booking_payment`
   snapshot in `appointment_details`.
 
-  Returns `nil` when the booking is free or the payment is not in a paid-like
-  state. Resolves the Stripe-hosted receipt URL, so this performs a network
+  Returns `nil` when the booking is free or the payment was never taken.
+  Resolves the Stripe-hosted receipt URL, so this performs a network
   call for payments that carry a charge and a connected account.
   """
   @spec attendee_receipt(map()) :: receipt()
   def attendee_receipt(appointment_details) do
     case Map.get(appointment_details, :booking_payment) do
       %{status: status, amount_cents: amount, currency: currency} = bp
-      when status in @paid_like and is_integer(amount) ->
+      when status in @receipt_statuses and is_integer(amount) ->
         Map.merge(
           %{
             amount: Formatting.format_currency(amount, currency),

@@ -14,9 +14,9 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
 msgid "1 of them repeats."
-msgid_plural "%{count} of them repeat."
+msgid_plural "%{number} of them repeat."
 msgstr[0] "1 d’entre eux se répète."
-msgstr[1] "%{count} d’entre eux se répètent."
+msgstr[1] "%{number} d’entre eux se répètent."
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
@@ -51,9 +51,9 @@ msgstr "Exporté depuis Google Calendar, Outlook, Apple Calendar ou toute autre 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Found 1 event."
-msgid_plural "Found %{count} events."
+msgid_plural "Found %{number} events."
 msgstr[0] "1 événement trouvé."
-msgstr[1] "%{count} événements trouvés."
+msgstr[1] "%{number} événements trouvés."
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
@@ -77,11 +77,6 @@ msgstr "Importer dans"
 
 #: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Importing %{done} of %{total} events..."
-msgstr "Importation de %{done} événements sur %{total}..."
-
-#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
-#, elixir-autogen, elixir-format
 msgid "Reading the file..."
 msgstr "Lecture du fichier..."
 
@@ -93,25 +88,25 @@ msgstr "Vous pouvez fermer cette fenêtre ; l’importation se poursuit."
 #: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
 #, elixir-autogen, elixir-format
 msgid "1 event could not be imported."
-msgid_plural "%{count} events could not be imported."
+msgid_plural "%{number} events could not be imported."
 msgstr[0] "1 événement n’a pas pu être importé."
-msgstr[1] "%{count} événements n’ont pas pu être importés."
+msgstr[1] "%{number} événements n’ont pas pu être importés."
 
 #: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
 #, elixir-autogen, elixir-format
 msgid "1 event repeats in a way Outlook can't store, so it was not imported."
-msgid_plural "%{count} events repeat in a way Outlook can't store, so they were not imported."
+msgid_plural "%{number} events repeat in a way Outlook can't store, so they were not imported."
 msgstr[0] "1 événement se répète d’une manière qu’Outlook ne peut pas enregistrer ; il n’a donc pas été importé."
-msgstr[1] "%{count} événements se répètent d’une manière qu’Outlook ne peut pas enregistrer ; ils n’ont donc pas été importés."
+msgstr[1] "%{number} événements se répètent d’une manière qu’Outlook ne peut pas enregistrer ; ils n’ont donc pas été importés."
 
 #: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
 #, elixir-autogen, elixir-format
 msgid "1 of them repeats on a day some months don't have, which Outlook would move to the month's last day."
-msgid_plural "%{count} of them repeat on a day some months don't have, which Outlook would move to the month's last day."
+msgid_plural "%{number} of them repeat on a day some months don't have, which Outlook would move to the month's last day."
 msgstr[0] ""
 "1 d’entre eux se répète un jour que certains mois n’ont pas, et Outlook le déplacerait au dernier jour du mois."
 msgstr[1] ""
-"%{count} d’entre eux se répètent un jour que certains mois n’ont pas, et Outlook les déplacerait au dernier jour du mois."
+"%{number} d’entre eux se répètent un jour que certains mois n’ont pas, et Outlook les déplacerait au dernier jour du mois."
 
 #: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
 #, elixir-autogen, elixir-format
@@ -121,9 +116,9 @@ msgstr "Une importation est toujours en cours. Veuillez attendre qu’elle se te
 #: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
 #, elixir-autogen, elixir-format
 msgid "Imported 1 event."
-msgid_plural "Imported %{count} events."
+msgid_plural "Imported %{number} events."
 msgstr[0] "1 événement importé."
-msgstr[1] "%{count} événements importés."
+msgstr[1] "%{number} événements importés."
 
 #: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
 #, elixir-autogen, elixir-format
@@ -138,19 +133,14 @@ msgstr "Seuls les fichiers de calendrier .ics peuvent être importés."
 #: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
 #, elixir-autogen, elixir-format
 msgid "Outlook could not take the skipped dates of 1 recurring event, so it may show extra occurrences."
-msgid_plural "Outlook could not take the skipped dates of %{count} recurring events, so they may show extra occurrences."
+msgid_plural "Outlook could not take the skipped dates of %{number} recurring events, so they may show extra occurrences."
 msgstr[0] "Outlook n’a pas pu prendre en compte les dates ignorées de 1 événement récurrent ; des occurrences supplémentaires peuvent donc apparaître."
-msgstr[1] "Outlook n’a pas pu prendre en compte les dates ignorées de %{count} événements récurrents ; des occurrences supplémentaires peuvent donc apparaître."
+msgstr[1] "Outlook n’a pas pu prendre en compte les dates ignorées de %{number} événements récurrents ; des occurrences supplémentaires peuvent donc apparaître."
 
 #: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
 #, elixir-autogen, elixir-format
 msgid "The file could not be uploaded. Please try again."
 msgstr "Le fichier n’a pas pu être téléversé. Veuillez réessayer."
-
-#: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
-#, elixir-autogen, elixir-format
-msgid "The file is too large. Files up to %{size} MB can be imported."
-msgstr "Le fichier est trop volumineux. Les fichiers jusqu’à %{size} Mo peuvent être importés."
 
 #: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
 #, elixir-autogen, elixir-format
@@ -174,11 +164,6 @@ msgstr "L’importation s’est arrêtée, car votre calendrier doit être recon
 
 #: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
 #, elixir-autogen, elixir-format
-msgid "This file contains more than %{count} events. Please split it into smaller files."
-msgstr "Ce fichier contient plus de %{count} événements. Veuillez le diviser en fichiers plus petits."
-
-#: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
-#, elixir-autogen, elixir-format
 msgid "This file contains no events to import."
 msgstr "Ce fichier ne contient aucun événement à importer."
 
@@ -191,3 +176,100 @@ msgstr "Ce fichier n’a pas pu être lu comme un calendrier. Veuillez choisir u
 #, elixir-autogen, elixir-format
 msgid "Too many imports. Please wait a while before importing another file."
 msgstr "Trop d’importations. Veuillez patienter un moment avant d’importer un autre fichier."
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{from_date} onwards"
+msgstr "À partir du %{from_date}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "1 event"
+msgid_plural "%{number} events"
+msgstr[0] "1 événement"
+msgstr[1] "%{number} événements"
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "1 event before %{before_date} is left out."
+msgid_plural "%{number} events before %{before_date} are left out."
+msgstr[0] "1 événement antérieur au %{before_date} est laissé de côté."
+msgstr[1] "%{number} événements antérieurs au %{before_date} sont laissés de côté."
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "1 event, more than %{max}"
+msgid_plural "%{number} events, more than %{max}"
+msgstr[0] "1 événement, soit plus de %{max}"
+msgstr[1] "%{number} événements, soit plus de %{max}"
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Add a calendar subscription"
+msgstr "Ajouter un abonnement à un calendrier"
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Continue"
+msgstr "Continuer"
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Even the events from today onwards are more than one import can copy. Export a shorter date range from your calendar app and import it in parts."
+msgstr "Même à partir d’aujourd’hui, il y a plus d’événements qu’une seule importation ne peut en copier. Exportez une période plus courte depuis votre application de calendrier et importez votre calendrier en plusieurs fois."
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Import events from"
+msgstr "Importer les événements"
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "No events from this date on"
+msgstr "Aucun événement à partir de cette date"
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Past events are rarely needed for scheduling, so you can leave them out. A repeating event counts once, however often it repeats."
+msgstr "Les événements passés sont rarement utiles à la planification ; vous pouvez donc les laisser de côté. Un événement récurrent ne compte qu’une fois, quel que soit son nombre d’occurrences."
+
+#: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
+#, elixir-autogen, elixir-format
+msgid "The file is too large. Files up to %{size} MB can be imported. Export a shorter date range from your calendar app and try again."
+msgstr "Le fichier est trop volumineux. Vous pouvez importer des fichiers de %{size} Mo au maximum. Exportez une période plus courte depuis votre application de calendrier, puis réessayez."
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "To keep a whole calendar, with no limit and in step with its changes, subscribe to it by URL instead."
+msgstr "Pour garder un calendrier entier, sans limite et tenu à jour au fil de ses modifications, abonnez-vous plutôt à ce calendrier par son URL."
+
+#: lib/tymeslot_web/live/dashboard/ics_import_flow.ex
+#, elixir-autogen, elixir-format
+msgid "This file contains more than 1 event, too many to read. Export a shorter date range from your calendar app, or subscribe to the calendar by URL instead."
+msgid_plural "This file contains more than %{number} events, too many to read. Export a shorter date range from your calendar app, or subscribe to the calendar by URL instead."
+msgstr[0] "Ce fichier contient plus d’un événement : il y en a trop pour qu’il puisse être lu. Exportez une période plus courte depuis votre application de calendrier, ou abonnez-vous plutôt au calendrier par son URL."
+msgstr[1] "Ce fichier contient plus de %{number} événements : il y en a trop pour qu’il puisse être lu. Exportez une période plus courte depuis votre application de calendrier, ou abonnez-vous plutôt au calendrier par son URL."
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This file holds 1 event, from %{from_date} to %{to_date}. One import can copy up to %{max}."
+msgid_plural "This file holds %{number} events, from %{from_date} to %{to_date}. One import can copy up to %{max}."
+msgstr[0] "Ce fichier contient %{number} événement, du %{from_date} au %{to_date}. Une importation peut en copier %{max} au maximum."
+msgstr[1] "Ce fichier contient %{number} événements, du %{from_date} au %{to_date}. Une importation peut en copier %{max} au maximum."
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Importing %{done} of 1 event..."
+msgid_plural "Importing %{done} of %{number} events..."
+msgstr[0] "Importation de %{done} sur %{number} événement..."
+msgstr[1] "Importation de %{done} sur %{number} événements..."
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "From each of these dates, this file holds either more events than one import can copy or none at all. Export a shorter date range from your calendar app and import it in parts."
+msgstr "À partir de chacune de ces dates, ce fichier contient soit plus d’événements qu’une seule importation ne peut en copier, soit aucun. Exportez une période plus courte depuis votre application de calendrier et importez votre calendrier en plusieurs fois."
+
+#: lib/tymeslot_web/live/dashboard/calendar/import_modal.ex
+#, elixir-autogen, elixir-format
+msgid "None of the events in this file fall within these dates: they all ended before the earliest one. Export a shorter date range from your calendar app and import it in parts."
+msgstr "Aucun événement de ce fichier ne correspond à ces dates : tous se sont terminés avant la plus ancienne d’entre elles. Exportez une période plus courte depuis votre application de calendrier et importez votre calendrier en plusieurs fois."

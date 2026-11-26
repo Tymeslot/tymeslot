@@ -26,7 +26,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.VerificationNotice do
   alias Tymeslot.Meetings.EmailVerification
 
   # The states after which there is nothing left to resend.
-  @final_states [:limit_reached, :expired, :used]
+  @final_states [:limit_reached, :expired, :place_released, :used]
 
   attr :meeting_type, :any, required: true
   attr :class, :string, default: nil
@@ -48,7 +48,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.VerificationNotice do
 
   attr :state, :atom,
     default: nil,
-    values: [nil, :sent, :retry, :rate_limited | @final_states],
+    values: [nil, :sent, :retry, :rate_limited, :awaiting_new_time | @final_states],
     doc: "the outcome of the last press, nil before any"
 
   attr :class, :string, default: nil
@@ -111,6 +111,24 @@ defmodule TymeslotWeb.Themes.Shared.Components.VerificationNotice do
       dgettext(
         "booking_confirmation",
         "The time was released because the booking was not confirmed in time. Please book again."
+      )
+
+  # A seat on a group meeting: what lapsed is the booker's place, not the
+  # meeting's time.
+  defp status_text(:place_released),
+    do:
+      dgettext(
+        "booking_confirmation",
+        "Your place was released because the booking was not confirmed in time. Please book again."
+      )
+
+  # A seat whose slot a pending reschedule request has voided: it stays held
+  # until its deadline and may be confirmed should the request be cleared.
+  defp status_text(:awaiting_new_time),
+    do:
+      dgettext(
+        "booking_confirmation",
+        "The organiser is changing this meeting's time, so the email cannot be sent again for now. You can try again while your place is held."
       )
 
   defp status_text(:used),

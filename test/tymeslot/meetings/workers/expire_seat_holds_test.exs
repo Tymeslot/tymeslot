@@ -10,12 +10,13 @@ defmodule Tymeslot.Meetings.Workers.ExpireSeatHoldsTest do
   import Tymeslot.Factory
 
   alias Ecto.Changeset
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Meetings.Workers.ExpireSeatHolds
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
   @account "acct_SWEEP"
 
@@ -82,9 +83,10 @@ defmodule Tymeslot.Meetings.Workers.ExpireSeatHoldsTest do
   end
 
   defp stripe_reports(session) do
-    expect(StripeAdapterMock, :retrieve_checkout_session, fn session_id, opts ->
-      assert opts[:connect_account] == @account
-      {:ok, Map.put(session, "id", session_id)}
+    StripeStub.expect(:retrieve_checkout_session, fn %{path: path, headers: headers} ->
+      assert headers["stripe-account"] == @account
+      session_id = path |> String.split("/") |> List.last()
+      "checkout_session_payment" |> StripeFixtures.object(session) |> Map.put("id", session_id)
     end)
   end
 

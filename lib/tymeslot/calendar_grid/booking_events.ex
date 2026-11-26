@@ -116,10 +116,10 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
   end
 
   # The people booked: a booker's guests hold seats too, but a seat still
-  # held for a booker paying is nobody yet (`Seats.seats_booked/1`). A slot
+  # held for a booker paying is nobody yet (`Seats.seats_taken/1`). A slot
   # holding only such seats is hidden from the organiser altogether.
   defp seats_taken(meeting) do
-    if Meetings.group?(meeting), do: Seats.seats_booked(meeting.id), else: 0
+    if Meetings.group?(meeting), do: Seats.seats_taken(meeting.id), else: 0
   end
 
   defp participants(meeting) do

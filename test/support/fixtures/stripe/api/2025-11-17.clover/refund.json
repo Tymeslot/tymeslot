@@ -1,0 +1,29 @@
+{
+  "amount": 300,
+  "application": null,
+  "balance_transaction": "txn_1Nispe2eZvKYlo2CYezqFhEx",
+  "charge": "ch_test1",
+  "created": 1795683221,
+  "currency": "eur",
+  "customer": null,
+  "customer_account": null,
+  "destination_details": {
+    "card": {
+      "reference": "2812180757300138",
+      "reference_status": "available",
+      "reference_type": "acquirer_reference_number",
+      "type": "refund"
+    },
+    "type": "card"
+  },
+  "id": "re_test1",
+  "metadata": {},
+  "object": "refund",
+  "payment_intent": "pi_test1",
+  "payment_method": "pm_test1",
+  "reason": null,
+  "receipt_number": null,
+  "source_transfer_reversal": null,
+  "status": "succeeded",
+  "transfer_reversal": null
+}

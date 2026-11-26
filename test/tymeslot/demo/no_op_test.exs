@@ -31,16 +31,16 @@ defmodule Tymeslot.Demo.NoOpTest do
       assert NoOp.get_profile_by_user_id(user.id).id == profile.id
     end
 
-    test "get_orchestrator/1 always returns core Orchestrator" do
-      assert NoOp.get_orchestrator(%{}) == Tymeslot.Bookings.Orchestrator
+    test "get_orchestrator/1 always answers :default" do
+      assert NoOp.get_orchestrator(%{}) == :default
     end
 
     test "get_available_slots/6 always returns {:ok, []}" do
       assert {:ok, []} == NoOp.get_available_slots("2025-01-01", "30min", "UTC", 1, %{}, %{})
     end
 
-    test "get_calendar_days/4 always returns []" do
-      assert [] == NoOp.get_calendar_days("UTC", 2025, 1, :sunday, %{})
+    test "day_available_fn/2 always answers nil" do
+      assert NoOp.day_available_fn(%{}, "UTC") == nil
     end
   end
 end

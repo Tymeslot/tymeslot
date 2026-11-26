@@ -13,6 +13,9 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
   @callback send_booking_email_verification(struct(), String.t()) ::
               {:ok, any()} | {:error, any()}
 
+  @callback send_seat_email_verification(struct(), struct(), String.t()) ::
+              {:ok, any()} | {:error, any()}
+
   @callback send_booking_approval_request(atom(), struct(), map(), String.t(), keyword()) ::
               {:ok, any()} | {:error, any()}
   @callback send_booking_approval_request(atom(), struct(), map(), String.t()) ::
@@ -29,7 +32,7 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
   @callback send_seat_reschedule_to_participant(String.t(), appointment_details(), map()) ::
               {:ok, any()} | {:error, any()}
   @callback send_seat_update_to_organizer(
-              :booked | :cancelled | :moved,
+              :booked | :revived | :cancelled | :moved,
               String.t(),
               appointment_details()
             ) ::

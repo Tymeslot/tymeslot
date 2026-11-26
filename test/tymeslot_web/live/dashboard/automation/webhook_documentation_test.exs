@@ -19,10 +19,14 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentationTest do
     test "lists every event a webhook can subscribe to" do
       html = render_component(&WebhookDocumentation.webhook_documentation/1, %{})
 
-      for event <- EventTypes.all() do
-        assert html =~
-                 "<code class=\"text-token-sm font-black text-tymeslot-900\">#{event}</code>"
-      end
+      listed =
+        html
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query("code")
+        |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
+
+      assert EventTypes.all() != []
+      assert EventTypes.all() -- listed == []
 
       assert html =~ "Triggers once when you decline a series request"
     end

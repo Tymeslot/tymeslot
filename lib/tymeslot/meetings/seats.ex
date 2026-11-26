@@ -28,20 +28,21 @@ defmodule Tymeslot.Meetings.Seats do
 
   @doc """
   Seats taken on a meeting: live participants plus their guests who hold a
-  seat, plus the seats held for bookers still paying.
+  seat. Visible: excludes seats awaiting email verification, and the seats
+  held for bookers still paying (`Tymeslot.Meetings.SeatHolds`), who are
+  not on the meeting yet: the count to tell the organiser.
   """
   @spec seats_taken(binary()) :: non_neg_integer()
-  def seats_taken(meeting_id),
-    do: ParticipantQueries.count_seats_taken(meeting_id) + SeatHolds.seats_held(meeting_id)
+  def seats_taken(meeting_id), do: ParticipantQueries.count_seats_taken(meeting_id)
 
   @doc """
-  Seats booked on a meeting: live participants plus their guests who hold a
-  seat. Unlike `seats_taken/1` it leaves out the seats held for bookers
-  still paying, who are not on the meeting yet: the count to tell the
-  organiser, whose emails are about the people who have booked.
+  Seats occupied on a meeting, what its capacity is measured against:
+  `seats_taken/1` plus the seats awaiting email verification and the seats
+  held for bookers still paying.
   """
-  @spec seats_booked(binary()) :: non_neg_integer()
-  def seats_booked(meeting_id), do: ParticipantQueries.count_seats_taken(meeting_id)
+  @spec seats_occupied(binary()) :: non_neg_integer()
+  def seats_occupied(meeting_id),
+    do: ParticipantQueries.count_seats_held(meeting_id) + SeatHolds.seats_held(meeting_id)
 
   @doc """
   Seats taken from already-loaded participant and guest lists: the
@@ -64,16 +65,18 @@ defmodule Tymeslot.Meetings.Seats do
   @doc """
   Seats still free on a meeting, never negative. The organiser may lower
   `max_participants` below the seats already booked; existing bookings
-  stand and the slot simply reads as full.
+  stand and the slot simply reads as full. Held: seats awaiting email
+  verification and seats held for bookers still paying count against
+  capacity (`seats_occupied/1`).
   """
   @spec seats_left(MeetingSchema.t(), pos_integer()) :: non_neg_integer()
   def seats_left(%MeetingSchema{id: meeting_id}, max_participants)
       when is_integer(max_participants) do
-    max(max_participants - seats_taken(meeting_id), 0)
+    max(max_participants - seats_occupied(meeting_id), 0)
   end
 
   @doc """
-  Live participants and seats taken (`seats_taken/1`, holds included) on
+  Live participants and seats taken (`seats_taken/1`, plus seat holds) on
   each of `meeting_ids`, in two queries rather than two per meeting. Every
   id is in the result; one nobody is booked on counts zero of each, and one
   with only holds counts zero participants.
@@ -95,19 +98,26 @@ defmodule Tymeslot.Meetings.Seats do
 
   @doc """
   `seats_left/2` for each of `meetings` against its own `capacity`, keyed by
-  meeting id, in one query.
+  meeting id, in two queries. Held, like `seats_left/2`.
   """
   @spec seats_left_by_meeting([MeetingSchema.t()]) :: %{binary() => non_neg_integer()}
   def seats_left_by_meeting(meetings) do
-    counts = meetings |> Enum.map(& &1.id) |> counts_by_meeting()
-    Map.new(meetings, &{&1.id, max(&1.capacity - counts[&1.id].seats_taken, 0)})
+    ids = Enum.map(meetings, & &1.id)
+    counts = ParticipantQueries.held_counts_by_meeting(ids)
+    held = SeatHolds.seats_held_by_meeting(ids)
+
+    Map.new(meetings, fn meeting ->
+      taken = counts |> Map.get(meeting.id, %{seats_taken: 0}) |> Map.fetch!(:seats_taken)
+      {meeting.id, max(meeting.capacity - taken - Map.get(held, meeting.id, 0), 0)}
+    end)
   end
 
   @doc """
-  Map of meeting `start_time` to seats taken (holds included) for live
-  meetings of the given meeting type whose start falls in
-  `[from_utc, to_utc)`. Slots with neither participants nor holds are absent
-  from the map.
+  Map of meeting `start_time` to seats taken for live meetings of the given
+  meeting type whose start falls in `[from_utc, to_utc)`. Slots with
+  neither participants nor seat holds are absent from the map. Held:
+  includes seats awaiting email verification and the seats held for
+  bookers still paying (the public capacity).
   """
   @spec seat_counts_for_range(integer(), DateTime.t(), DateTime.t()) ::
           %{DateTime.t() => non_neg_integer()}

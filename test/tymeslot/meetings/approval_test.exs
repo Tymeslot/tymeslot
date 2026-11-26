@@ -21,11 +21,14 @@ defmodule Tymeslot.Meetings.ApprovalTest do
   alias Ecto.UUID
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.MeetingPayments.RefundQueries
+  alias Tymeslot.MeetingPayments.Workers.ExecuteRefund
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.Validation.Constraints
   alias Tymeslot.Workers.SendBookingPaymentRefunded
 
@@ -457,17 +460,36 @@ defmodule Tymeslot.Meetings.ApprovalTest do
   end
 
   describe "release/3 — refunding a paid request" do
+    # Whatever ran the release (a LiveView task, a job that is not
+    # retried), the refund is made, retried and reported by its own job.
+    test "an approval release records a refund and its job" do
+      meeting = paid_held_meeting()
+      payment = BookingPaymentQueries.by_meeting_id(meeting.id)
+
+      assert {:ok, _declined} = Approval.decline(meeting, "Double-booked")
+
+      assert StripeStub.requests() == []
+      assert [refund] = RefundQueries.list_for_payment(payment.id)
+      assert %{source: :approval_release, amount_cents: 5000, status: :pending} = refund
+      assert_enqueued(worker: ExecuteRefund, args: %{refund_id: refund.id})
+
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_released"))
+      assert %{success: 1} = drain_refunds()
+      assert BookingPaymentQueries.by_meeting_id(meeting.id).status == :refunded
+    end
+
     test "declining a paid request refunds the full remaining balance" do
       meeting = paid_held_meeting()
       payment = BookingPaymentQueries.by_meeting_id(meeting.id)
 
-      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
-        assert params.charge == payment.stripe_charge_id
-        assert params.amount == 5000
-        {:ok, %{id: "re_declined"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["charge"] == payment.stripe_charge_id
+        assert request.form["amount"] == "5000"
+        StripeStubResponses.refund(request, "re_declined")
       end)
 
       assert {:ok, _declined} = Approval.decline(meeting, "Double-booked")
+      assert %{success: 1} = drain_refunds()
 
       reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
       assert reloaded.status == :refunded
@@ -484,15 +506,16 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       payment = BookingPaymentQueries.by_meeting_id(meeting.id)
 
       # Exactly one call expected: if the guard let a second decline reach
-      # `release/3`, this would raise `Mox.UnexpectedCallError` instead of
+      # `release/3`, this would fail on a second Stripe request instead of
       # quietly double-refunding the invitee.
-      expect(StripeAdapterMock, :create_refund, 1, fn params, _opts ->
-        assert params.charge == payment.stripe_charge_id
-        {:ok, %{id: "re_declined_once"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["charge"] == payment.stripe_charge_id
+        StripeStubResponses.refund(request, "re_declined_once")
       end)
 
       assert {:ok, _declined} = Approval.decline(meeting, "Double-booked")
       assert {:error, :not_awaiting_approval} = Approval.decline(meeting, "changed my mind too")
+      assert %{success: 1} = drain_refunds()
 
       assert [_job] =
                all_enqueued(
@@ -504,12 +527,13 @@ defmodule Tymeslot.Meetings.ApprovalTest do
     test "an expiry refunds the full remaining balance too" do
       meeting = paid_held_meeting()
 
-      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
-        assert params.amount == 5000
-        {:ok, %{id: "re_expired"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["amount"] == "5000"
+        StripeStubResponses.refund(request, "re_expired")
       end)
 
       assert {:ok, _expired} = Approval.expire(meeting)
+      assert %{success: 1} = drain_refunds()
 
       reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
       assert reloaded.status == :refunded
@@ -521,10 +545,10 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       test_pid = self()
 
       # A stub rather than a missing expectation: the release runs its refund
-      # step inside a rescue, so an unexpected Mox call would be swallowed.
-      stub(StripeAdapterMock, :create_refund, fn _params, _opts ->
+      # step inside a rescue, so an unexpected Stripe call would be swallowed.
+      StripeStub.stub(:create_refund, fn request ->
         send(test_pid, :refund_attempted)
-        {:ok, %{id: "re_unexpected"}}
+        StripeStubResponses.refund(request, "re_unexpected")
       end)
 
       assert {:ok, _declined} = Approval.decline(meeting, "No payment on this one")
@@ -570,11 +594,10 @@ defmodule Tymeslot.Meetings.ApprovalTest do
     test "a refund failure leaves the meeting released rather than raising" do
       meeting = paid_held_meeting()
 
-      expect(StripeAdapterMock, :create_refund, fn _params, _opts ->
-        {:error, :outside_refund_window}
-      end)
+      StripeStub.expect(:create_refund, 1, {:error_fixture, "invalid_request_error"})
 
       assert {:ok, expired} = Approval.expire(meeting)
+      assert %{cancelled: 1} = drain_refunds()
       assert expired.status == :expired
       assert reload(meeting).status == :expired
 
@@ -605,4 +628,7 @@ defmodule Tymeslot.Meetings.ApprovalTest do
       refute already_answered.id in ids
     end
   end
+
+  # A released request's refund job is due at once.
+  defp drain_refunds, do: Oban.drain_queue(queue: :payments, with_scheduled: true)
 end

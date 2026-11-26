@@ -328,11 +328,14 @@ defmodule TymeslotWeb.Dashboard.Polls.PollResults do
   end
 
   defp deadline_line(poll, voting_open?) do
-    deadline = LocalizationHelpers.format_meeting_datetime(poll.deadline_at, poll.timezone)
+    on_deadline =
+      poll.deadline_at
+      |> LocalizationHelpers.format_meeting_datetime(poll.timezone)
+      |> LocaleFormat.with_article(:none, Gettext.get_locale(TymeslotWeb.Gettext))
 
     if voting_open?,
-      do: dgettext("dashboard_polls", "Voting closes %{deadline}", deadline: deadline),
-      else: dgettext("dashboard_polls", "Voting closed %{deadline}", deadline: deadline)
+      do: dgettext("dashboard_polls", "Voting closes %{on_deadline}", on_deadline: on_deadline),
+      else: dgettext("dashboard_polls", "Voting closed %{on_deadline}", on_deadline: on_deadline)
   end
 
   # --- Slot summary card ---

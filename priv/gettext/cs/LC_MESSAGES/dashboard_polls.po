@@ -746,13 +746,13 @@ msgstr "Hlasování ukončeno"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closed %{deadline}"
-msgstr "Hlasování skončilo: %{deadline}"
+msgid "Voting closed %{on_deadline}"
+msgstr "Hlasování skončilo: %{on_deadline}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closes %{deadline}"
-msgstr "Hlasování končí: %{deadline}"
+msgid "Voting closes %{on_deadline}"
+msgstr "Hlasování končí: %{on_deadline}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
@@ -1025,3 +1025,23 @@ msgstr "Toto místo nebo poskytovatel videa už není k dispozici. Vyberte pros�
 #, elixir-autogen, elixir-format
 msgid "Video call"
 msgstr "Videohovor"
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Keep editing"
+msgstr "Pokračovat v úpravách"
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Leave without saving"
+msgstr "Odejít bez uložení"
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Leave without saving?"
+msgstr "Odejít bez uložení?"
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Your changes to this poll are not saved yet. Leaving now discards them."
+msgstr "Změny v této anketě zatím nejsou uložené. Pokud teď odejdete, budou zahozeny."

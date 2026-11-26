@@ -23,6 +23,10 @@ defmodule TymeslotWeb.Themes.Shared.Components.MeetingPageBodies do
   attr :loading, :boolean, default: false
   attr :meeting_kept, :boolean, default: false
 
+  attr :booking_path, :string,
+    required: true,
+    doc: "the booking page to send the guest back to (`PathHandlers.meeting_booking_path/2`)"
+
   @spec cancel(map()) :: Phoenix.LiveView.Rendered.t()
   def cancel(%{meeting_kept: true} = assigns) do
     ~H"""
@@ -40,7 +44,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.MeetingPageBodies do
       <button
         type="button"
         class="manage-page__button manage-page__button--primary"
-        phx-click={JS.navigate("/")}
+        phx-click={JS.navigate(@booking_path)}
       >
         {dgettext("booking_manage", "Done")}
       </button>
@@ -125,6 +129,10 @@ defmodule TymeslotWeb.Themes.Shared.Components.MeetingPageBodies do
   attr :organizer_profile, :map, default: nil
   attr :locale, :string, required: true
 
+  attr :booking_path, :string,
+    required: true,
+    doc: "the booking page to send the guest back to (`PathHandlers.meeting_booking_path/2`)"
+
   @spec cancel_confirmed(map()) :: Phoenix.LiveView.Rendered.t()
   def cancel_confirmed(assigns) do
     ~H"""
@@ -142,7 +150,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.MeetingPageBodies do
       <button
         type="button"
         class="manage-page__button manage-page__button--primary"
-        phx-click={JS.navigate("/")}
+        phx-click={JS.navigate(@booking_path)}
       >
         {dgettext("booking_manage", "Schedule a New Meeting")}
       </button>

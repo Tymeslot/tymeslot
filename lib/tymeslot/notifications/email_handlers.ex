@@ -10,6 +10,7 @@ defmodule Tymeslot.Notifications.EmailHandlers do
 
   alias Tymeslot.Emails.EmailActions
   alias Tymeslot.Notifications.Email.AuthEmails
+  alias Tymeslot.Notifications.Email.BookingVerificationEmails
   alias Tymeslot.Notifications.Email.CancellationEmails
   alias Tymeslot.Notifications.Email.EndChangeEmails
   alias Tymeslot.Notifications.Email.GroupMeetingEmails
@@ -28,6 +29,7 @@ defmodule Tymeslot.Notifications.EmailHandlers do
   # job. `AdminEmails` discards nothing of its own.
   @declaring_handlers [
     AuthEmails,
+    BookingVerificationEmails,
     CancellationEmails,
     EndChangeEmails,
     GroupMeetingEmails,

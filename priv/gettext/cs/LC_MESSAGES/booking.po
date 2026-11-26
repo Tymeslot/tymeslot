@@ -661,8 +661,8 @@ msgstr[2] "Skupinové setkání: máte jedno z %{count} míst."
 
 #: lib/tymeslot_web/themes/shared/components/group_session.ex
 #, elixir-autogen, elixir-format
-msgid "Moving your spot on %{datetime}. Pick a new time below."
-msgstr "Přesouváte své místo z termínu %{datetime}. Níže vyberte nový čas."
+msgid "Moving your spot on %{on_datetime}. Pick a new time below."
+msgstr "Přesouváte své místo z termínu %{on_datetime}. Níže vyberte nový čas."
 
 #: lib/tymeslot_web/themes/shared/seat_move_link.ex
 #, elixir-autogen, elixir-format

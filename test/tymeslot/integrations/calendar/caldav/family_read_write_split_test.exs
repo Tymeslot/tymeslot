@@ -118,4 +118,44 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.FamilyReadWriteSplitTest do
              |> Enum.sort() == ["/cal/bookings/", "/cal/rota/"]
     end
   end
+
+  # A calendar shared as busy times only answers a calendar query with 403,
+  # so its read client must know to send a free-busy query instead.
+  describe "a free/busy-only calendar selected on a CalDAV-family integration" do
+    for provider <- Enum.map(Family.members(), &Atom.to_string/1) do
+      test "gets a #{provider} read client that reads it by free-busy query", %{user: user} do
+        inserted =
+          insert(:calendar_integration,
+            user: user,
+            provider: unquote(provider),
+            base_url: "https://cal.example.com",
+            calendar_paths: ["/cal/bookings/", "/cal/busy/"],
+            default_booking_calendar_id: "/cal/bookings/",
+            calendar_list: [
+              %{id: "/cal/bookings/", path: "/cal/bookings/", name: "Bookings", selected: true},
+              %{
+                id: "/cal/busy/",
+                path: "/cal/busy/",
+                name: "Colleague",
+                selected: true,
+                read_only: true,
+                free_busy_only: true
+              }
+            ]
+          )
+
+        {:ok, integration} = Management.fetch_integration_for_user(inserted.id, user.id)
+
+        free_busy_by_path =
+          integration
+          |> ClientManager.clients_for_integration()
+          |> Map.new(fn %{client: client} -> {client.calendar_paths, client.free_busy_paths} end)
+
+        assert free_busy_by_path == %{
+                 ["/cal/bookings/"] => [],
+                 ["/cal/busy/"] => ["/cal/busy/"]
+               }
+      end
+    end
+  end
 end

@@ -157,8 +157,9 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   says how it went as `{outcome, flash_type, message}`, so the Meetings page
   and the calendar's preview (`Calendar.BookingActions`) act and speak alike:
 
-    * `:closed`: the booking is cancelled (the refund may still have failed,
-      or someone else cancelled it first; the message says which), so the
+    * `:closed`: the booking is cancelled (the refund may still be pending
+      or have been declined, or someone else cancelled it first; the message
+      says which), so the
       dialog closes and the list reloads.
     * `:refused`: the meeting started or ended meanwhile; nothing changed and
       the dialog closes.
@@ -238,14 +239,29 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
       {{:changed, %{no_payments() | cancel_seat_payments: seats}}, :error,
        payments_changed_message()}
 
-  # The meeting is cancelled; only the money is outstanding.
-  defp outcome(_meeting, _refund_action, {:error, {:refund_failed, _reason}}),
+  # Stripe has not confirmed the refund yet; Tymeslot finishes it, so the
+  # host is not sent to Stripe, where a second refund would double it.
+  defp outcome(_meeting, _refund_action, {:ok, _cancelled, :refund_pending}),
+    do:
+      {:closed, :info,
+       dgettext(
+         "dashboard_bookings_cancel",
+         "Meeting cancelled. The refund is being processed and the attendee will be emailed when it goes through."
+       )}
+
+  # The meeting is cancelled; Stripe declined the refund.
+  defp outcome(_meeting, _refund_action, {:error, {:refund_failed, :refund_failed}}),
     do:
       {:closed, :error,
        dgettext(
-         "dashboard_bookings",
-         "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
+         "dashboard_bookings_cancel",
+         "Meeting cancelled, but Stripe declined the refund. Check the payment in your Stripe dashboard."
        )}
+
+  # The meeting is cancelled; the payment changed meanwhile, so the refund
+  # was refused before Stripe was asked.
+  defp outcome(_meeting, _refund_action, {:error, {:refund_failed, reason}}),
+    do: {:closed, :error, refund_refused_message(reason)}
 
   # The attendee (or a calendar sync) cancelled it while the dialog was open,
   # before the refund step, so no refund came from this action.
@@ -262,7 +278,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
     )
 
     {:failed, :error,
-     dgettext("dashboard_bookings", "Failed to cancel meeting. Please try again.")}
+     dgettext("dashboard_bookings_cancel", "Failed to cancel meeting. Please try again.")}
   end
 
   # Cancelled: close and reload, because the cancellation did happen even if
@@ -314,6 +330,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
     metadata =
       case result do
         {:ok, _cancelled} -> Map.put(measurements, :result, :ok)
+        {:ok, _cancelled, :refund_pending} -> Map.put(measurements, :result, :ok)
         {:error, reason} -> Map.merge(measurements, %{result: :error, reason: inspect(reason)})
       end
 
@@ -342,7 +359,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   defp payments_changed_message,
     do:
       dgettext(
-        "dashboard_bookings",
+        "dashboard_bookings_cancel",
         "Someone paid for a seat while this was open. Check the refund choice and confirm again."
       )
 
@@ -351,66 +368,86 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
     if Meetings.group?(meeting),
       do:
         dgettext(
-          "dashboard_bookings",
+          "dashboard_bookings_cancel",
           "Tick the acknowledgement to cancel without refunding the participants."
         ),
       else:
         dgettext(
-          "dashboard_bookings",
+          "dashboard_bookings_cancel",
           "Tick the acknowledgement to cancel without refunding the attendee."
         )
   end
 
   defp refund_error_message(:exceeds_remaining, _meeting),
-    do: dgettext("dashboard_bookings", "Refund amount exceeds the remaining refundable balance.")
+    do:
+      dgettext(
+        "dashboard_bookings_cancel",
+        "Refund amount exceeds the remaining refundable balance."
+      )
 
   defp refund_error_message(:outside_refund_window, _meeting),
     do:
       dgettext(
-        "dashboard_bookings",
+        "dashboard_bookings_cancel",
         "No refund can be made: the payment is older than the 60-day refund window. You can refund it from Stripe."
       )
 
   defp refund_error_message(:under_dispute, _meeting),
     do:
       dgettext(
-        "dashboard_bookings",
+        "dashboard_bookings_cancel",
         "No refund can be made: the payment is under dispute. Settle the dispute in Stripe first."
       )
 
   defp refund_error_message(:not_paid, _meeting),
-    do: dgettext("dashboard_bookings", "No refund can be made: the booking was not paid.")
+    do: dgettext("dashboard_bookings_cancel", "No refund can be made: the booking was not paid.")
 
   defp refund_error_message(_reason, _meeting),
-    do: dgettext("dashboard_bookings", "Enter a valid partial refund amount.")
+    do: dgettext("dashboard_bookings_cancel", "Enter a valid partial refund amount.")
 
   # The message shown once the cancellation has gone through.
   defp success_message({:refund, _cents}),
-    do: dgettext("dashboard_bookings", "Meeting cancelled and refund issued.")
+    do: dgettext("dashboard_bookings_cancel", "Meeting cancelled and refund issued.")
 
   # Each paid seat's refund is its own job, so the refunds follow.
   defp success_message(:refund_seats),
-    do: dgettext("dashboard_bookings", "Session cancelled. Refunds are on their way.")
+    do: dgettext("dashboard_bookings_cancel", "Session cancelled. Refunds are on their way.")
 
   defp success_message(:none),
-    do: dgettext("dashboard_bookings", "Meeting cancelled successfully")
+    do: dgettext("dashboard_bookings_cancel", "Meeting cancelled successfully")
 
   defp success_message({:not_refunded, :outside_refund_window}),
     do:
       dgettext(
-        "dashboard_bookings",
+        "dashboard_bookings_cancel",
         "Cancelled without a refund: the payment is older than the 60-day refund window. You can refund it from Stripe."
       )
 
   defp success_message({:not_refunded, :under_dispute}),
     do:
       dgettext(
-        "dashboard_bookings",
+        "dashboard_bookings_cancel",
         "Cancelled without a refund: the payment is under dispute. Settle the dispute in Stripe first."
       )
 
   defp success_message({:not_refunded, :not_paid}),
-    do: dgettext("dashboard_bookings", "Cancelled without a refund: the booking was not paid.")
+    do:
+      dgettext(
+        "dashboard_bookings_cancel",
+        "Cancelled without a refund: the booking was not paid."
+      )
+
+  # A refund the payment no longer allowed once the meeting was cancelled.
+  defp refund_refused_message(reason)
+       when reason in [:outside_refund_window, :under_dispute, :not_paid],
+       do: success_message({:not_refunded, reason})
+
+  defp refund_refused_message(_balance_changed),
+    do:
+      dgettext(
+        "dashboard_bookings_cancel",
+        "Cancelled without a refund: the payment's refundable balance changed meanwhile. Check it on the payments page."
+      )
 
   # The message shown when the meeting had been cancelled elsewhere before the
   # host confirmed. A refund the host chose was not issued, so it says so.
@@ -418,10 +455,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
     if refunding?(refund_action),
       do:
         dgettext(
-          "dashboard_bookings",
+          "dashboard_bookings_cancel",
           "This booking was already cancelled, so no refund was issued."
         ),
-      else: dgettext("dashboard_bookings", "This booking was already cancelled.")
+      else: dgettext("dashboard_bookings_cancel", "This booking was already cancelled.")
   end
 
   defp refunding?({:refund, _cents}), do: true

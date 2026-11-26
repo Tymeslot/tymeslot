@@ -780,8 +780,8 @@ msgstr "Sua conta está sendo excluída e não pode mais ser restaurada."
 
 #: lib/tymeslot_web/controllers/auth/account_restore_html.ex
 #, elixir-autogen, elixir-format
-msgid "Your account is in the process of being deleted (scheduled for %{date}). If you want to keep it, restore it here."
-msgstr "Sua conta está em processo de exclusão (agendada para %{date}). Se quiser mantê-la, restaure-a aqui."
+msgid "Your account is in the process of being deleted (scheduled for %{for_date}). If you want to keep it, restore it here."
+msgstr "Sua conta está em processo de exclusão (agendada para %{for_date}). Se quiser mantê-la, restaure-a aqui."
 
 #: lib/tymeslot/auth/email_change.ex
 #, elixir-autogen, elixir-format

@@ -29,8 +29,8 @@ defmodule TymeslotWeb.Live.Themes.RhythmMeetingTest do
     # The assertions live in the shared ThemeMeetingTestCases helper, which the
     # check cannot see because the helper name does not start with `assert_`.
     # credo:disable-for-next-line Jump.CredoChecks.TestHasNoAssertions
-    test "renders and handles navigation", %{view: view} do
-      ThemeMeetingTestCases.test_cancel_confirmed_page(view)
+    test "renders and handles navigation", %{view: view, profile: profile} do
+      ThemeMeetingTestCases.test_cancel_confirmed_page(view, profile.username)
     end
   end
 

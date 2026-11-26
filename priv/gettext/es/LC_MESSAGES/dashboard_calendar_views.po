@@ -45,8 +45,8 @@ msgstr "Eventos: %{count}"
 
 #: lib/tymeslot_web/live/dashboard/calendar/period_labels.ex
 #, elixir-autogen, elixir-format
-msgid "From %{date}"
-msgstr "Desde el %{date}"
+msgid "From %{from_date}"
+msgstr "Desde el %{from_date}"
 
 #: lib/tymeslot_web/live/dashboard/calendar/view_strings.ex
 #, elixir-autogen, elixir-format

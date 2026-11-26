@@ -17,6 +17,7 @@ defmodule Tymeslot.MeetingPayments.OutstandingRefundsQueriesTest do
   @moduletag :payments
   @moduletag :queries
 
+  alias Ecto.Changeset
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPayments
 
@@ -237,6 +238,55 @@ defmodule Tymeslot.MeetingPayments.OutstandingRefundsQueriesTest do
 
       assert %{count: 1, totals: [%{currency: "eur", amount_cents: 2500}]} =
                BookingPayments.outstanding_refunds_summary_for_host(1)
+    end
+  end
+
+  describe "a pending refund" do
+    test "lowers the balance a listed payment shows, read with the list" do
+      meeting = cancelled_meeting()
+      payment = payment_for(1, meeting)
+      insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2000)
+
+      assert [listed] = BookingPayments.list_outstanding_refunds_for_host(1)
+      assert listed.pending_refund_cents == 2000
+      assert MeetingPayments.refundable_remaining_cents(listed) == 3000
+
+      assert [recent] = BookingPayments.list_payments_for_host(1)
+      assert MeetingPayments.refundable_remaining_cents(recent) == 3000
+
+      assert %{pending_refund_cents: 2000} = BookingPayments.payment_for_meeting(meeting.id, 1)
+
+      # Still owed to the attendee until the refund settles.
+      assert %{totals: [%{currency: "eur", amount_cents: 5000}]} =
+               BookingPayments.outstanding_refunds_summary_for_host(1)
+    end
+
+    test "that covers the balance keeps the booking listed until it settles" do
+      payment = payment_for(1, cancelled_meeting())
+      refund = insert(:booking_payment_refund, booking_payment: payment, amount_cents: 5000)
+
+      insert(:booking_payment_refund,
+        booking_payment: payment,
+        amount_cents: 900,
+        status: :failed
+      )
+
+      assert [%{pending_refund_cents: 5000} = listed] =
+               BookingPayments.list_outstanding_refunds_for_host(1)
+
+      assert MeetingPayments.refund_pending?(listed)
+      assert %{count: 1} = BookingPayments.outstanding_refunds_summary_for_host(1)
+
+      refund
+      |> Changeset.change(status: :succeeded, settled_at: DateTime.utc_now(:second))
+      |> Repo.update!()
+
+      payment
+      |> Changeset.change(refunded_amount_cents: 5000, status: :refunded)
+      |> Repo.update!()
+
+      assert BookingPayments.list_outstanding_refunds_for_host(1) == []
+      assert %{count: 0, totals: []} = BookingPayments.outstanding_refunds_summary_for_host(1)
     end
   end
 

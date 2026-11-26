@@ -6,18 +6,15 @@ defmodule Tymeslot.MeetingPayments.Webhooks.AccountDeauthorizedTest do
   @moduletag :payments
   @moduletag :integration
 
-  import Mox
-
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.HeldMeetings
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.AccountDeauthorized
   alias Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Profiles
-
-  setup :verify_on_exit!
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
   @connected_at ~U[2026-11-01 10:00:00Z]
 
@@ -69,13 +66,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.AccountDeauthorizedTest do
         status: :pending
       )
 
-    # `expire_stripe_session` rescues a Mox error, so only a message to the
+    # `expire_stripe_session` rescues a failed call, so only a message to the
     # test process can show that the call was never made.
     test_pid = self()
 
-    stub(StripeAdapterMock, :expire_checkout_session, fn id, _opts ->
-      send(test_pid, {:expired_at_stripe, id})
-      {:ok, %{}}
+    StripeStub.stub(:expire_checkout_session, fn request ->
+      send(test_pid, {:expired_at_stripe, request.path})
+      StripeFixtures.object("checkout_session_expired")
     end)
 
     Phoenix.PubSub.subscribe(Tymeslot.PubSub, HeldMeetings.topic(meeting.id))

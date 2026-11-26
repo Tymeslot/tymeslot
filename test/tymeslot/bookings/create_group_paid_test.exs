@@ -18,12 +18,13 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
   alias Tymeslot.Bookings.CreateGroup
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.Checkout
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Meetings.SeatHoldSchema
   alias Tymeslot.Meetings.Seats
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.Test.EnqueuedJobs
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.CalendarEventWorker
@@ -88,22 +89,25 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
   end
 
   defp expect_checkout(:ok) do
-    expect(StripeAdapterMock, :create_checkout_session, fn params, _opts ->
-      {:ok, %{id: "cs_" <> params.client_reference_id, url: "https://checkout.stripe.com/x"}}
+    StripeStub.expect(:create_checkout_session, fn %{form: form} ->
+      StripeFixtures.object("checkout_session_payment", %{
+        "id" => "cs_" <> form["client_reference_id"],
+        "url" => "https://checkout.stripe.com/x"
+      })
     end)
   end
 
   # The meeting is only known once the seat transaction has run, so the test
   # subscribes to its payment topic as the checkout is opened for it.
   defp expect_checkout(:error) do
-    expect(StripeAdapterMock, :create_checkout_session, fn params, _opts ->
+    StripeStub.expect(:create_checkout_session, fn %{form: form} ->
       :ok =
         Phoenix.PubSub.subscribe(
           Tymeslot.PubSub,
-          Checkout.payment_topic(params.payment_intent_data.metadata.meeting_id)
+          Checkout.payment_topic(form["payment_intent_data"]["metadata"]["meeting_id"])
         )
 
-      {:error, %{message: "Stripe is down"}}
+      {:error_fixture, "api_error"}
     end)
   end
 

@@ -31,7 +31,13 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Themes.Shared.Components.MeetingPageBodies
   alias TymeslotWeb.Themes.Shared.Components.SeriesPage
-  alias TymeslotWeb.Themes.Shared.{PaymentReturn, PaymentReturnComponents, PollVotingComponents}
+
+  alias TymeslotWeb.Themes.Shared.{
+    PathHandlers,
+    PaymentReturn,
+    PaymentReturnComponents,
+    PollVotingComponents
+  }
 
   @type shell :: (map() -> Phoenix.LiveView.Rendered.t())
 
@@ -67,6 +73,7 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
         loading: assigns[:loading] || false,
         meeting_kept: assigns[:meeting_kept] || false,
         meeting_uid: assigns[:meeting_uid],
+        booking_path: PathHandlers.booking_path(assigns),
         organizer_profile: assigns[:organizer_profile],
         participant: assigns[:participant],
         link_request: assigns[:link_request],

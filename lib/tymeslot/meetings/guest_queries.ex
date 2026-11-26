@@ -10,6 +10,7 @@ defmodule Tymeslot.Meetings.GuestQueries do
 
   alias Ecto.Changeset
   alias Tymeslot.Meetings.GuestSchema, as: Guest
+  alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
   alias Tymeslot.Repo
   alias Tymeslot.Security.Token
@@ -76,10 +77,7 @@ defmodule Tymeslot.Meetings.GuestQueries do
       |> where([g], g.meeting_id == ^meeting_id)
       |> where(
         [g],
-        is_nil(g.participant_id) or
-          g.participant_id in subquery(
-            from(p in Participant, where: is_nil(p.cancelled_at), select: p.id)
-          )
+        is_nil(g.participant_id) or g.participant_id in subquery(live_visible_seat_ids())
       )
       |> update([g],
         set: [notified_end_time: fragment("COALESCE(?, ?)", g.notified_end_time, ^previous_end)]
@@ -310,12 +308,25 @@ defmodule Tymeslot.Meetings.GuestQueries do
   end
 
   # Keeps guests with no participant, or whose participant still holds their
-  # seat, and preloads that participant so a caller can name the booker.
+  # seat and may be seen (not awaiting email verification), and preloads that
+  # participant so a caller can name the booker.
   defp live_owner(query) do
     query
     |> join(:left, [g], p in assoc(g, :participant), as: :owner)
-    |> where([g, owner: p], is_nil(g.participant_id) or is_nil(p.cancelled_at))
+    |> where(
+      [g],
+      is_nil(g.participant_id) or g.participant_id in subquery(live_visible_seat_ids())
+    )
     |> preload([owner: p], participant: p)
+  end
+
+  # The seats whose guests count as invited: live, and not held for their
+  # booker's email verification (`ParticipantQueries.where_visible/1`). A held
+  # seat's guests are nobody's business but the booker's until they verify.
+  defp live_visible_seat_ids do
+    ParticipantQueries.where_visible(
+      from(p in Participant, where: is_nil(p.cancelled_at), select: p.id)
+    )
   end
 
   # Entries are written as string-keyed maps and read back from jsonb the same

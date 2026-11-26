@@ -347,7 +347,7 @@ defmodule Tymeslot.Payments.Webhooks.IngressTest do
     end
 
     test "a test-mode account update on live keys leaves a live connection alone" do
-      with_config(:stripity_stripe, api_key: "sk_live_platform")
+      with_config(:tymeslot, stripe_secret_key: "sk_live_platform")
       account = live_connection()
 
       assert {:ok, :processed} = deliver(:connect, restricting_update(account, false))
@@ -359,7 +359,7 @@ defmodule Tymeslot.Payments.Webhooks.IngressTest do
     end
 
     test "a live-mode account update on live keys applies" do
-      with_config(:stripity_stripe, api_key: "sk_live_platform")
+      with_config(:tymeslot, stripe_secret_key: "sk_live_platform")
       account = live_connection()
 
       assert {:ok, :processed} = deliver(:connect, restricting_update(account, true))
@@ -368,7 +368,7 @@ defmodule Tymeslot.Payments.Webhooks.IngressTest do
     end
 
     test "a live-mode account update on test keys leaves the connection alone" do
-      with_config(:stripity_stripe, api_key: "sk_test_platform")
+      with_config(:tymeslot, stripe_secret_key: "sk_test_platform")
       account = live_connection()
 
       assert {:ok, :processed} = deliver(:connect, restricting_update(account, true))
@@ -377,7 +377,7 @@ defmodule Tymeslot.Payments.Webhooks.IngressTest do
     end
 
     test "an event without a boolean livemode is handled as any other" do
-      with_config(:stripity_stripe, api_key: "sk_live_platform")
+      with_config(:tymeslot, stripe_secret_key: "sk_live_platform")
       account = live_connection()
       event = account |> restricting_update(false) |> Map.delete("livemode")
 
@@ -387,7 +387,7 @@ defmodule Tymeslot.Payments.Webhooks.IngressTest do
     end
 
     test "a test-mode deauthorisation on live keys leaves a live connection alone" do
-      with_config(:stripity_stripe, api_key: "sk_live_platform")
+      with_config(:tymeslot, stripe_secret_key: "sk_live_platform")
       account = live_connection()
 
       event =
@@ -407,7 +407,7 @@ defmodule Tymeslot.Payments.Webhooks.IngressTest do
     end
 
     test "a test-mode deauthorisation on test keys still disconnects" do
-      with_config(:stripity_stripe, api_key: "sk_test_platform")
+      with_config(:tymeslot, stripe_secret_key: "sk_test_platform")
       account = live_connection()
 
       event =
@@ -427,7 +427,7 @@ defmodule Tymeslot.Payments.Webhooks.IngressTest do
     end
 
     test "the platform endpoint does not filter by mode" do
-      with_config(:stripity_stripe, api_key: "sk_live_platform")
+      with_config(:tymeslot, stripe_secret_key: "sk_live_platform")
 
       assert {:ok, :processed} = deliver(:platform, checkout_completed())
 

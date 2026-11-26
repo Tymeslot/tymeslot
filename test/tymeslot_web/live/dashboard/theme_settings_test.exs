@@ -278,10 +278,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
         type: "image/png"
       }
 
-      # Submitting with no file should not crash
+      # A change with no file should not crash
       view
       |> element("#theme-background-image-form")
-      |> render_submit()
+      |> render_change(%{})
 
       view
       |> file_input("#theme-background-image-form", :background_image_path, [image])
@@ -292,16 +292,13 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       end)
     end
 
-    test "background image upload is idempotent — re-submitting does not duplicate the row", %{
-      conn: conn,
-      profile: profile
-    } do
-      # Pins the user-observable guarantee that a second "save" tap after
-      # auto-upload already consumed the entry (or after a sticky frontend
-      # submit) does not double-write a ThemeCustomization row. The guard
-      # is `upload_ready?/2` returning false once entries are drained plus
-      # `upsert_theme_customization/3` keying on (profile_id, theme_id).
-      # If either is removed a duplicate row would surface here.
+    test "background image upload is idempotent: a later form event does not duplicate the row",
+         %{
+           conn: conn,
+           profile: profile
+         } do
+      # Pins the user-observable guarantee that a form event after the
+      # upload was saved does not write a second ThemeCustomization row.
       {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
 
       view
@@ -329,11 +326,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
 
       first_row = Repo.get_by!(ThemeCustomizationSchema, profile_id: profile.id, theme_id: "1")
 
-      # User submits the save form again after consumption drained the
-      # upload entries. No new row, same stored path.
+      # The form changes again after the upload was saved. No new row, same
+      # stored path.
       view
       |> element("#theme-background-image-form")
-      |> render_submit()
+      |> render_change(%{})
 
       matching_rows =
         ThemeCustomizationSchema

@@ -597,8 +597,8 @@ msgstr "Comme vous l’avez demandé, votre compte Tymeslot a été supprimé, a
 
 #: lib/tymeslot/emails/templates/account_deletion_notice.ex
 #, elixir-autogen, elixir-format
-msgid "As you asked, your Tymeslot account is scheduled for deletion on %{date}. Until then it is frozen: your booking page is offline and nobody can book you. If you change your mind, sign in before that date and you can restore your account."
-msgstr "Comme vous l’avez demandé, votre compte Tymeslot sera supprimé le %{date}. D’ici là, il est gelé : votre page de réservation est hors ligne et personne ne peut réserver avec vous. Si vous changez d’avis, connectez-vous avant cette date pour restaurer votre compte."
+msgid "As you asked, your Tymeslot account is scheduled for deletion on %{on_date}. Until then it is frozen: your booking page is offline and nobody can book you. If you change your mind, sign in before that date and you can restore your account."
+msgstr "Comme vous l’avez demandé, votre compte Tymeslot sera supprimé le %{on_date}. D’ici là, il est gelé : votre page de réservation est hors ligne et personne ne peut réserver avec vous. Si vous changez d’avis, connectez-vous avant cette date pour restaurer votre compte."
 
 #: lib/tymeslot/emails/templates/account_deletion_notice.ex
 #, elixir-autogen, elixir-format
@@ -617,8 +617,8 @@ msgstr "Si vous n’êtes pas à l’origine de cette demande, connectez-vous d�
 
 #: lib/tymeslot/emails/templates/account_deletion_notice.ex
 #, elixir-autogen, elixir-format
-msgid "On %{date}."
-msgstr "Le %{date}."
+msgid "On %{on_date}."
+msgstr "Le %{on_date}."
 
 #: lib/tymeslot/emails/templates/account_deletion_notice.ex
 #, elixir-autogen, elixir-format
@@ -652,8 +652,8 @@ msgstr "Vos réservations à venir seront supprimées de Tymeslot avec votre com
 
 #: lib/tymeslot/emails/templates/signup_attempt_notice.ex
 #, elixir-autogen, elixir-format
-msgid "Someone just tried to create a new Tymeslot account with this email address. It belongs to an account that is scheduled for deletion on %{date}. If it was you, sign in before then to restore that account, or sign up again after that date."
-msgstr "Quelqu’un vient d’essayer de créer un nouveau compte Tymeslot avec cette adresse e-mail. Elle appartient à un compte dont la suppression est prévue le %{date}. Si c’était vous, connectez-vous avant cette date pour restaurer ce compte, ou inscrivez-vous de nouveau après cette date."
+msgid "Someone just tried to create a new Tymeslot account with this email address. It belongs to an account that is scheduled for deletion on %{on_date}. If it was you, sign in before then to restore that account, or sign up again after that date."
+msgstr "Quelqu’un vient d’essayer de créer un nouveau compte Tymeslot avec cette adresse e-mail. Elle appartient à un compte dont la suppression est prévue le %{on_date}. Si c’était vous, connectez-vous avant cette date pour restaurer ce compte, ou inscrivez-vous de nouveau après cette date."
 
 #: lib/tymeslot/emails/templates/social_signup_confirmation.ex
 #, elixir-autogen, elixir-format

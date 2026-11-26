@@ -10,6 +10,10 @@ defmodule TymeslotWeb.StripeConnectWebhookTest do
   alias Tymeslot.Payments.Webhooks.IdempotencyCache
   alias Tymeslot.Payments.Webhooks.StripeEventQueries
   alias Tymeslot.PaymentTestHelpers
+  alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeWebhookFixtures
 
   @secret "whsec_test_connect"
 
@@ -154,6 +158,55 @@ defmodule TymeslotWeb.StripeConnectWebhookTest do
       payload = ~s({"id":"evt_X","type":"account.updated"})
 
       assert conn |> post_connect(payload, "t=1,v1=X") |> response(503) == ""
+    end
+  end
+
+  describe "charge.refunded found only through Stripe" do
+    test "a Stripe blip answers 503, and the redelivery records the refund" do
+      meeting = insert(:meeting)
+
+      bp =
+        insert(:booking_payment,
+          meeting: meeting,
+          stripe_account_id: "acct_BLIP_HOST",
+          status: :paid,
+          amount_cents: 5000,
+          refunded_amount_cents: 0,
+          stripe_charge_id: nil,
+          stripe_payment_intent_id: nil
+        )
+
+      payload =
+        StripeWebhookFixtures.connect_event(
+          "charge.refunded",
+          %{
+            "id" => "ch_BLIP",
+            "object" => "charge",
+            "payment_intent" => "pi_BLIP",
+            "amount_refunded" => 5000
+          },
+          "acct_BLIP_HOST"
+        )
+
+      StripeStub.stub(:retrieve_payment_intent, {:transport_error, :timeout})
+      StripeStub.stub(:list_refunds, StripeFixtures.list([]))
+
+      assert build_conn() |> post_connect(payload) |> response(503) == ""
+      assert Repo.reload!(bp).refunded_amount_cents == 0
+
+      StripeStub.stub(
+        :retrieve_payment_intent,
+        StripeFixtures.object("payment_intent_with_latest_charge", %{
+          "id" => "pi_BLIP",
+          "metadata" => %{"meeting_id" => meeting.id}
+        })
+      )
+
+      assert build_conn() |> post_connect(payload) |> response(200) == ""
+
+      reloaded = Repo.reload!(bp)
+      assert reloaded.refunded_amount_cents == 5000
+      assert reloaded.status == :refunded
     end
   end
 

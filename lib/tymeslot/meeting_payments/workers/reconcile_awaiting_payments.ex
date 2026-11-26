@@ -3,7 +3,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments do
   Cron sweeper that reconciles `booking_payments` stuck in `pending` past a
   one-hour grace period. Acts as a safety net for missed Stripe webhooks:
   for every stale row that still has a `stripe_checkout_session_id`, the
-  worker polls `Stripe.Checkout.Session` and replays the appropriate
+  worker reads its Checkout Session from Stripe and replays the appropriate
   state transition through the existing webhook handlers so the calendar
   push, email pipeline, and meeting status update all share a single
   code path.
@@ -22,9 +22,9 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments do
   require Logger
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Stripe.CheckoutSessions, as: StripeCheckoutSessions
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
-  alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired
 
@@ -73,7 +73,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments do
   @spec reconcile(BookingPaymentSchema.t()) :: :reconciled | :skipped | :error
   def reconcile(%BookingPaymentSchema{stripe_checkout_session_id: session_id} = payment)
       when is_binary(session_id) do
-    case StripeAdapter.retrieve_checkout_session(session_id,
+    case StripeCheckoutSessions.retrieve(session_id,
            connect_account: payment.stripe_account_id
          ) do
       {:ok, session} -> dispatch(payment, session)

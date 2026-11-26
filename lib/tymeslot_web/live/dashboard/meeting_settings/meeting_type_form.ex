@@ -317,14 +317,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   @impl Phoenix.LiveComponent
   def handle_event("toggle_requires_email_verification", _params, socket) do
-    # Guard: verification excludes group bookings, payments and series. The
-    # control renders disabled while any is on, so a stale or forged event
-    # must not turn it on; turning it off is always allowed.
+    # Guard: verification excludes payments and series. The control renders
+    # disabled while either is on, so a stale or forged event must not turn
+    # it on; turning it off is always allowed.
     %{requires_email_verification: on?, series: series} = socket.assigns
 
-    if not on? and
-         (socket.assigns.group_bookings_enabled or socket.assigns.payment_required or
-            series.series_mode != nil) do
+    if not on? and (socket.assigns.payment_required or series.series_mode != nil) do
       {:noreply, socket}
     else
       {:noreply,

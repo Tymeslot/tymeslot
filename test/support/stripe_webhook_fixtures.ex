@@ -11,6 +11,10 @@ defmodule Tymeslot.StripeWebhookFixtures do
   top-level `current_period_start`/`current_period_end`). Feed them through
   the real signature check so a test exercises the same decoding production
   does, rather than handing a pre-built map to a handler.
+
+  Connect endpoints render events at the platform's API version instead, so
+  `connect_event/3` builds those at `2025-11-17.clover` from an object such as
+  one from `Tymeslot.StripeFixtures`.
   """
 
   alias Tymeslot.PaymentTestHelpers
@@ -40,6 +44,24 @@ defmodule Tymeslot.StripeWebhookFixtures do
     |> Path.join(name <> ".json")
     |> File.read!()
     |> Jason.decode!()
+  end
+
+  @doc """
+  Returns the JSON body of a Connect event of `type` from `account_id`,
+  carrying `object` as `data.object`.
+  """
+  @spec connect_event(String.t(), map(), String.t()) :: String.t()
+  def connect_event(type, object, account_id) do
+    Jason.encode!(%{
+      "id" => "evt_test_" <> Base.encode16(:crypto.strong_rand_bytes(8), case: :lower),
+      "object" => "event",
+      "type" => type,
+      "account" => account_id,
+      "api_version" => "2025-11-17.clover",
+      "created" => System.system_time(:second),
+      "data" => %{"object" => object},
+      "livemode" => false
+    })
   end
 
   @doc """

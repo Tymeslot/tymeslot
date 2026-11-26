@@ -181,12 +181,13 @@ defmodule Tymeslot.Meetings.SeatsTest do
       )
     end
 
-    test "seats_taken counts held seats" do
+    test "seats_occupied counts held seats, seats_taken does not" do
       meeting = held_meeting(capacity: 5)
       insert(:participant, meeting: meeting)
       insert(:seat_hold, meeting: meeting, seats: 2, email: "ann@example.com")
 
-      assert Seats.seats_taken(meeting.id) == 3
+      assert Seats.seats_occupied(meeting.id) == 3
+      assert Seats.seats_taken(meeting.id) == 1
       assert Seats.seats_left(meeting, 5) == 2
     end
 
@@ -233,7 +234,7 @@ defmodule Tymeslot.Meetings.SeatsTest do
       hold = insert(:seat_hold, meeting: meeting, seats: 2, email: "ann@example.com")
       {:ok, _released} = SeatHolds.release(hold, :expired)
 
-      assert Seats.seats_taken(meeting.id) == 0
+      assert Seats.seats_occupied(meeting.id) == 0
 
       assert Seats.counts_by_meeting([meeting.id]) == %{
                meeting.id => %{participants: 0, seats_taken: 0}

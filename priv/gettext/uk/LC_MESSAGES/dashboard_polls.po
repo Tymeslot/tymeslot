@@ -746,13 +746,13 @@ msgstr "Голосування завершено"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closed %{deadline}"
-msgstr "Голосування завершилося: %{deadline}"
+msgid "Voting closed %{on_deadline}"
+msgstr "Голосування завершилося: %{on_deadline}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closes %{deadline}"
-msgstr "Голосування завершується: %{deadline}"
+msgid "Voting closes %{on_deadline}"
+msgstr "Голосування завершується: %{on_deadline}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
@@ -1025,3 +1025,23 @@ msgstr "Це місце або відеопровайдер більше нед�
 #, elixir-autogen, elixir-format
 msgid "Video call"
 msgstr "Відеозустріч"
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Keep editing"
+msgstr "Продовжити редагування"
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Leave without saving"
+msgstr "Вийти без збереження"
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Leave without saving?"
+msgstr "Вийти без збереження?"
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Your changes to this poll are not saved yet. Leaving now discards them."
+msgstr "Ваші зміни в цьому опитуванні ще не збережено. Якщо ви вийдете зараз, їх буде втрачено."

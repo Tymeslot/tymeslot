@@ -27,7 +27,6 @@ defmodule TymeslotWeb.BookingSeries.ManageLiveTest do
   alias Tymeslot.BookingSeries
   alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.CalendarMock
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
@@ -370,9 +369,7 @@ defmodule TymeslotWeb.BookingSeries.ManageLiveTest do
         meeting_payments_enabled: true
       )
 
-      stub(StripeAdapterMock, :retrieve_payment_intent, fn "pi_SERIES", _opts ->
-        {:ok, %{"latest_charge" => "ch_SERIES"}}
-      end)
+      Paid.stub_charge_backfill()
 
       host = Paid.paid_host()
       Paid.expect_checkout()
@@ -515,7 +512,7 @@ defmodule TymeslotWeb.BookingSeries.ManageLiveTest do
       host()
 
       for uid <- [UUID.generate(), "not-a-uuid"] do
-        assert {:error, {:redirect, %{to: "/", flash: %{"error" => message}}}} =
+        assert {:error, {:redirect, %{to: "/grace-host", flash: %{"error" => message}}}} =
                  live(conn, "/grace-host/series/#{uid}")
 
         assert message =~ "This series could not be found"

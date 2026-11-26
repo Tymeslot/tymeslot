@@ -8,11 +8,11 @@ defmodule Tymeslot.MeetingPayments.BookingPayments do
   context is.
   """
 
+  alias Tymeslot.Integrations.Stripe.Charges
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.HeldMeetings
   alias Tymeslot.MeetingPayments.Refunds
-  alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.MeetingState
 
@@ -260,10 +260,7 @@ defmodule Tymeslot.MeetingPayments.BookingPayments do
   @spec retrieve_charge_receipt_url(charge_id :: String.t(), account_id :: String.t()) ::
           {:ok, String.t() | nil} | {:error, term()}
   def retrieve_charge_receipt_url(charge_id, account_id) do
-    # The adapter normalises every read response to a string-keyed map, so the
-    # receipt URL lives under the "receipt_url" string key regardless of whether
-    # the production stripity struct or a Mox stub produced it.
-    case StripeAdapter.retrieve_charge(charge_id, connect_account: account_id) do
+    case Charges.retrieve(charge_id, connect_account: account_id) do
       {:ok, %{"receipt_url" => url}} when is_binary(url) and url != "" -> {:ok, url}
       {:ok, _other} -> {:ok, nil}
       {:error, reason} -> {:error, reason}

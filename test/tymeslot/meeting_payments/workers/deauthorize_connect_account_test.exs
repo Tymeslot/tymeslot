@@ -4,16 +4,14 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccountTest do
 
   @moduletag :payments
 
-  import Mox
   import Tymeslot.AdminAlertsCaptureHelpers
+  import Tymeslot.StripeConnectTestHelpers, only: [expect_deauthorize: 2]
 
   alias Ecto.Changeset
   alias Oban.Job
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount
   alias Tymeslot.Repo
 
-  setup :verify_on_exit!
   setup :capture_admin_alerts
 
   test "revokes an account with no live row" do
@@ -24,29 +22,28 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccountTest do
       deleted_at: DateTime.utc_now(:second)
     )
 
-    expect(StripeAdapterMock, :deauthorize_account, fn "acct_GONE" -> :ok end)
+    expect_deauthorize("acct_GONE", :ok)
 
     assert :ok = perform_job(DeauthorizeConnectAccount, %{"stripe_account_id" => "acct_GONE"})
+    assert_received {:oauth_deauthorize, "acct_GONE"}
   end
 
   test "leaves an account that has been reconnected" do
     insert(:connect_account, stripe_account_id: "acct_BACK")
 
-    # No expectation: verify_on_exit! and Mox fail the test on any call.
+    # No OAuth stub: a request fails the job.
     assert :ok = perform_job(DeauthorizeConnectAccount, %{"stripe_account_id" => "acct_BACK"})
   end
 
   test "treats not_connected as done" do
-    expect(StripeAdapterMock, :deauthorize_account, fn "acct_NC" -> {:error, :not_connected} end)
+    expect_deauthorize("acct_NC", {:error, :not_connected})
 
     assert :ok = perform_job(DeauthorizeConnectAccount, %{"stripe_account_id" => "acct_NC"})
   end
 
   @tag :capture_log
   test "cancels without alerting when Stripe refuses a platform-controlled account" do
-    expect(StripeAdapterMock, :deauthorize_account, fn "acct_CTL" ->
-      {:error, :controlled_account}
-    end)
+    expect_deauthorize("acct_CTL", {:error, :controlled_account})
 
     assert {:cancel, :controlled_account} =
              perform_job(DeauthorizeConnectAccount, %{"stripe_account_id" => "acct_CTL"},
@@ -62,14 +59,14 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccountTest do
   end
 
   test "retries other failures" do
-    expect(StripeAdapterMock, :deauthorize_account, fn "acct_ERR" -> {:error, :oauth_failed} end)
+    expect_deauthorize("acct_ERR", {:error, :oauth_failed})
 
     assert {:error, :oauth_failed} =
              perform_job(DeauthorizeConnectAccount, %{"stripe_account_id" => "acct_ERR"})
   end
 
   test "a failure before the last attempt does not alert" do
-    expect(StripeAdapterMock, :deauthorize_account, fn "acct_ERR" -> {:error, :oauth_failed} end)
+    expect_deauthorize("acct_ERR", {:error, :oauth_failed})
 
     assert {:error, :oauth_failed} =
              perform_job(DeauthorizeConnectAccount, %{"stripe_account_id" => "acct_ERR"},
@@ -81,7 +78,7 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccountTest do
 
   @tag :capture_log
   test "a failure on the last attempt alerts an admin with the account and a reason" do
-    expect(StripeAdapterMock, :deauthorize_account, fn "acct_ERR" -> {:error, :oauth_failed} end)
+    expect_deauthorize("acct_ERR", {:error, :oauth_failed})
 
     assert {:error, :oauth_failed} =
              perform_job(DeauthorizeConnectAccount, %{"stripe_account_id" => "acct_ERR"},
@@ -102,8 +99,8 @@ defmodule Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccountTest do
       on_exit(fn -> Application.put_env(:tymeslot, :stripe_connect_client_id, previous) end)
     end
 
-    # No expectation: verify_on_exit! and Mox fail the test on any call, so
-    # nothing is sent to Stripe with an empty client ID.
+    # No OAuth stub: a request fails the job, so nothing is sent to Stripe
+    # with an empty client ID.
     test "fails without calling Stripe, so the job retries" do
       assert {:error, :oauth_not_configured} =
                perform_job(DeauthorizeConnectAccount, %{"stripe_account_id" => "acct_NOID"},

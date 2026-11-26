@@ -26,7 +26,6 @@ defmodule Tymeslot.Webhooks.SeriesPayloadTest do
   alias Tymeslot.BookingSeries
   alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.CalendarMock
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired
   alias Tymeslot.Meetings.MeetingSchema
@@ -128,6 +127,16 @@ defmodule Tymeslot.Webhooks.SeriesPayloadTest do
     Repo.all(
       from(m in MeetingSchema, where: not is_nil(m.series_id), order_by: m.series_position)
     )
+  end
+
+  defp set_sessions(fields) do
+    Repo.update_all(from(m in MeetingSchema, where: not is_nil(m.series_id)), set: fields)
+  end
+
+  defp ago(seconds), do: DateTime.add(DateTime.utc_now(:second), -seconds, :second)
+
+  defp clear_automation_jobs do
+    Repo.delete_all(from(j in Job, where: j.worker == "Tymeslot.Workers.SeriesAutomationWorker"))
   end
 
   defp statuses_of_series, do: Enum.map(sessions(), & &1.status)
@@ -309,6 +318,55 @@ defmodule Tymeslot.Webhooks.SeriesPayloadTest do
       assert %{"event_type" => "meeting.series_cancelled"} = run_automation()
       assert deliveries("meeting.cancelled") == []
       assert [_one] = deliveries("meeting.series_cancelled")
+    end
+
+    # A late automation job still reaches the host's webhooks, but Slack and
+    # Telegram are told only while the news is worth reading
+    # (`Tymeslot.Notifications.Relevance`): the request until its approval
+    # deadline, its expiry until its last session starts or a week past that
+    # deadline, whichever is later.
+    test "Slack hears of a request still open", %{host: host} do
+      insert(:slack_integration, user: host.user, events: ["meeting.series_requested"])
+
+      run_automation()
+
+      assert [_one] = all_enqueued(worker: SlackWorker)
+    end
+
+    test "Slack does not hear of a request past its deadline", %{host: host} do
+      insert(:slack_integration, user: host.user, events: ["meeting.series_requested"])
+      set_sessions(approval_deadline_at: ago(60))
+
+      run_automation()
+
+      assert all_enqueued(worker: SlackWorker) == []
+      assert [_still_posted] = deliveries("meeting.series_requested")
+    end
+
+    test "Slack hears of an expiry at its deadline", %{host: host, series: series} do
+      clear_automation_jobs()
+      insert(:slack_integration, user: host.user, events: ["meeting.series_request_expired"])
+      set_sessions(approval_deadline_at: ago(60))
+
+      assert {:ok, _released} = SeriesApproval.expire(series)
+      run_automation()
+
+      assert [_one] = all_enqueued(worker: SlackWorker)
+    end
+
+    test "Slack does not hear of an expiry long past", %{host: host, series: series} do
+      clear_automation_jobs()
+      insert(:slack_integration, user: host.user, events: ["meeting.series_request_expired"])
+
+      assert {:ok, _released} = SeriesApproval.expire(series)
+
+      # The sessions started a month ago, and their deadline passed well over
+      # a week before that.
+      set_sessions(approval_deadline_at: ago(45 * 86_400), start_time: ago(30 * 86_400))
+      run_automation()
+
+      assert all_enqueued(worker: SlackWorker) == []
+      assert [_still_posted] = deliveries("meeting.series_request_expired")
     end
 
     test "Slack and Telegram word the request for the series", %{series: series} do
@@ -495,9 +553,7 @@ defmodule Tymeslot.Webhooks.SeriesPayloadTest do
     subscribe(host)
     Paid.expect_checkout()
 
-    stub(StripeAdapterMock, :retrieve_payment_intent, fn _intent, _opts ->
-      {:ok, %{"latest_charge" => "ch_SERIES"}}
-    end)
+    Paid.stub_charge_backfill()
 
     assert {:ok, :payment_required, %{series: series}} =
              Paid.book(host, Paid.paid_series_type(host), 2)

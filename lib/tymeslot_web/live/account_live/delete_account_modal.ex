@@ -19,6 +19,7 @@ defmodule TymeslotWeb.AccountLive.DeleteAccountModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   attr :confirmation, :atom, required: true, values: [:password, :email]
   attr :grace_days, :integer, required: true
@@ -64,7 +65,14 @@ defmodule TymeslotWeb.AccountLive.DeleteAccountModal do
         </p>
         <div :if={@grace_days > 0} class="space-y-3 text-tymeslot-700">
           <p>
-            {dgettext("account", "Your account will be deleted on %{date}.", date: @deletion_date)}
+            {dgettext("account", "Your account will be deleted on %{on_date}.",
+              on_date:
+                LocaleFormat.with_article(
+                  @deletion_date,
+                  :none,
+                  Gettext.get_locale(TymeslotWeb.Gettext)
+                )
+            )}
           </p>
           <p>
             {dgettext(

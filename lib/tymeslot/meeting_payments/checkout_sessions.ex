@@ -4,9 +4,9 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
 
   Snapshots every retention-relevant field onto `booking_payments` at the
   moment of creation so the row survives meeting deletion or host
-  anonymisation later. The Checkout Session itself is created via
-  `StripeAdapter.create_checkout_session/2` so tests can replace it with
-  a Mox.
+  anonymisation later. The Checkout Session itself is created on the host's
+  connected account through `Tymeslot.Integrations.Stripe.CheckoutSessions`;
+  tests answer it with `Tymeslot.StripeStub`.
 
   Call sites should pass a freshly created `MeetingSchema` (status
   `awaiting_payment`), a paid series whose sessions all are
@@ -26,19 +26,21 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   alias Tymeslot.Clock
   alias Tymeslot.Features
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Stripe.CheckoutSessions, as: StripeCheckoutSessions
+  alias Tymeslot.Integrations.Stripe.IdempotencyKey
 
   alias Tymeslot.MeetingPayments.{
     ApplicationFee,
     BookingPaymentQueries,
     BookingPaymentSchema,
     ConnectAccountQueries,
-    Currency,
-    StripeAdapter
+    Currency
   }
 
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Meetings.SeatHoldSchema
+  alias Tymeslot.MeetingPayments.Workers.ExpireCheckoutSession
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
@@ -134,7 +136,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
       owner: %{meeting_id: meeting.id},
       reference: meeting.id,
       metadata: %{meeting_id: meeting.id},
-      idempotency_key: "checkout:#{meeting.id}",
+      idempotency_key: IdempotencyKey.for_intent(:checkout, meeting.id),
       unit_price_cents: nil,
       quantity: 1,
       sessions: 1,
@@ -149,7 +151,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
       | owner: %{series_id: series.id, meeting_id: nil},
         reference: "series:#{series.id}",
         metadata: %{series_id: series.id},
-        idempotency_key: "checkout:series:#{series.id}",
+        idempotency_key: IdempotencyKey.for_intent(:series_checkout, series.id),
         unit_price_cents: series.unit_price_cents,
         quantity: length(meetings),
         sessions: length(meetings)
@@ -164,7 +166,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
       owner: %{meeting_id: meeting.id, seat_hold_id: hold.id, seats: hold.seats},
       reference: "seat_hold:" <> hold.id,
       metadata: %{seat_hold_id: hold.id, meeting_id: meeting.id},
-      idempotency_key: "checkout:seat_hold:#{hold.id}",
+      idempotency_key: IdempotencyKey.for_intent(:seat_checkout, hold.id),
       unit_price_cents: nil,
       quantity: hold.seats,
       sessions: 1,
@@ -198,16 +200,15 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     # by session id. The caller releases what the row was for instead: a
     # one-to-one booking's meeting or a series' sessions are expired, and a
     # seat hold is released with its row failed (`Tymeslot.Bookings.CreateGroup`).
-    # Idempotency on the Stripe side is preserved by the
-    # `checkout:<meeting_id>` idempotency key (or the series' or seat hold's),
-    # so a retried booking for the same meeting collapses to a single Stripe
-    # session.
+    # Idempotency on the Stripe side is preserved by the intent key for the
+    # meeting (or the series' or seat hold's), so a retried booking for the
+    # same meeting collapses to a single Stripe session.
     with {:ok, host} <- fetch_host(meeting.organizer_user_id),
          :ok <- check_payments_access(host.id),
          {:ok, %{booking_payment: booking_payment} = context} <- record_payment(checkout, host),
          {:ok, session} <- create_stripe_session(checkout, context),
          {:ok, booking_payment} <- attach_session_details(booking_payment, session) do
-      {:ok, %{checkout_url: session.url, booking_payment: booking_payment}}
+      {:ok, %{checkout_url: session["url"], booking_payment: booking_payment}}
     end
   end
 
@@ -234,8 +235,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     theme_id = resolve_theme_id(host.id, checkout.meeting)
     unit_price_cents = checkout.unit_price_cents || meeting_type.price_cents
     amount_cents = unit_price_cents * checkout.quantity
-    bp_config = Application.get_env(:tymeslot, :payment_application_fee_bp, 0)
-    fee_cents = ApplicationFee.calculate(amount_cents, bp_config)
+    fee_cents = ApplicationFee.calculate(amount_cents, ApplicationFee.configured_bp())
 
     %{
       host: host,
@@ -266,7 +266,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   defp create_stripe_session(checkout, context) do
     %{account: account, theme_slug: slug} = context
 
-    StripeAdapter.create_checkout_session(
+    StripeCheckoutSessions.create(
       session_params(
         checkout,
         context,
@@ -278,18 +278,18 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     )
   end
 
-  # Persist the PaymentIntent id alongside the session id at creation time.
-  # In `payment` mode Stripe creates the PaymentIntent with the session, so it
-  # is already available here — capturing it now gives charge-based Connect
-  # webhooks (dispute/refund) a join key that exists before the
-  # `checkout.session.completed` handler runs, closing a webhook-ordering race
-  # where a dispute arriving first would otherwise match no row and be dropped.
+  # An open payment-mode session carries `payment_intent: null`: Stripe
+  # creates the PaymentIntent only when the attendee pays, and the completed
+  # handler (`Webhooks.PaymentCompletion`) records its id. A charge event that
+  # arrives before that is matched through the PaymentIntent's metadata
+  # (`Webhooks.PaymentLookup`). An id the creation response does carry is
+  # kept.
   defp attach_session_details(booking_payment, session) do
     attrs =
       Map.reject(
         %{
-          stripe_checkout_session_id: session.id,
-          stripe_payment_intent_id: Map.get(session, :payment_intent)
+          stripe_checkout_session_id: session["id"],
+          stripe_payment_intent_id: session["payment_intent"]
         },
         fn {_key, value} -> is_nil(value) end
       )
@@ -313,7 +313,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   defp fetch_host(nil), do: {:error, :host_missing}
 
   defp fetch_host(user_id) do
-    case UserQueries.get_user(user_id) do
+    case UserQueries.get_user_with_profile(user_id) do
       {:ok, user} -> {:ok, user}
       {:error, :not_found} -> {:error, :host_not_found}
     end
@@ -369,7 +369,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
       stripe_account_id: account.stripe_account_id,
       host_user_id: host.id,
       host_email: host.email,
-      host_name: host.name,
+      host_name: Profiles.user_display_name(host),
       attendee_email: attendee.email,
       attendee_name: attendee.name,
       meeting_type_name: meeting_type.name,
@@ -490,8 +490,49 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   open to expire.
   """
   @spec abandon_checkout(String.t()) :: :ok | {:error, term()}
-  def abandon_checkout(meeting_id),
-    do: meeting_id |> BookingPaymentQueries.for_meeting() |> expire_open_session()
+  def abandon_checkout(meeting_id), do: with_open_checkout(meeting_id, &expire_stripe_session/2)
+
+  @doc """
+  Schedules the end of the open Stripe Checkout of `meeting`, a booking
+  being cancelled while it awaits payment, so its attendee cannot pay for it
+  afterwards (`Workers.ExpireCheckoutSession`, which calls
+  `close_checkout/1`).
+
+  Runs inside the cancelling transaction: the job commits with the
+  cancellation, and Stripe is called only once it has. Returns `:ok`, with
+  nothing scheduled for a meeting not awaiting payment, or the enqueue's
+  `{:error, reason}`, on which the caller rolls the cancellation back.
+  """
+  @spec schedule_close(Tymeslot.Meetings.MeetingSchema.t()) :: :ok | {:error, term()}
+  def schedule_close(%{status: :awaiting_payment, id: meeting_id}) do
+    case ExpireCheckoutSession.enqueue(meeting_id) do
+      {:ok, _job} -> :ok
+      {:error, _reason} = error -> error
+    end
+  end
+
+  def schedule_close(_meeting), do: :ok
+
+  @doc """
+  Ends the open Stripe Checkout of a cancelled booking, as
+  `abandon_checkout/1` does, but counts a checkout Stripe will not expire
+  because it is no longer open as closed: one the attendee completed first
+  is refunded by the completion webhook, and one expired already needs
+  nothing. Returns `{:error, reason}` only while the checkout may still be
+  open, for a retry.
+  """
+  @spec close_checkout(String.t()) :: :ok | {:error, term()}
+  def close_checkout(meeting_id), do: with_open_checkout(meeting_id, &expire_unless_closed/2)
+
+  defp with_open_checkout(meeting_id, expire) do
+    case BookingPaymentQueries.for_meeting(meeting_id) do
+      %{status: :pending, stripe_checkout_session_id: "cs_" <> _rest = session_id} = payment ->
+        expire.(session_id, payment.stripe_account_id)
+
+      _nothing_open ->
+        :ok
+    end
+  end
 
   @doc """
   As `abandon_checkout/1`, for the checkout of the seat hold `hold_id`. The
@@ -561,16 +602,29 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   defp expire_open_session(_nothing_open), do: :ok
 
   defp expire_stripe_session(session_id, stripe_account_id) do
-    case StripeAdapter.expire_checkout_session(session_id, connect_account: stripe_account_id) do
+    case StripeCheckoutSessions.expire(session_id, connect_account: stripe_account_id) do
       {:ok, _session} ->
         :ok
 
       {:error, reason} = error ->
-        Logger.info("Could not expire an abandoned checkout session",
+        Logger.info("Could not expire a checkout session",
+          checkout_session_id: session_id,
           reason: LogFormat.reason(reason)
         )
 
         error
+    end
+  end
+
+  # Stripe refuses to expire a session that is no longer open. Rather than
+  # read that from the wording of its error, the session is read back, which
+  # tells a closed one from a failure.
+  defp expire_unless_closed(session_id, stripe_account_id) do
+    with {:error, _reason} = error <- expire_stripe_session(session_id, stripe_account_id) do
+      case StripeCheckoutSessions.retrieve(session_id, connect_account: stripe_account_id) do
+        {:ok, %{"status" => status}} when status in ["complete", "expired"] -> :ok
+        _open_or_unknown -> error
+      end
     end
   end
 

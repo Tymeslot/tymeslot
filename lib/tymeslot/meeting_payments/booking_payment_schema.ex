@@ -47,7 +47,9 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
           status: status(),
           paid_at: DateTime.t() | nil,
           refunded_amount_cents: integer(),
+          stripe_refunded_cents: integer(),
           disputed_lost_cents: integer(),
+          pending_refund_cents: non_neg_integer() | nil,
           last_event_id: String.t() | nil,
           stripe_dispute_id: String.t() | nil,
           dispute_closed_at: DateTime.t() | nil,
@@ -82,11 +84,17 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
 
     field :status, Ecto.Enum, values: @valid_statuses, default: :pending
     field :paid_at, :utc_datetime
-    # Everything given back to the attendee: refunds made at Stripe plus
-    # what a lost dispute took (`disputed_lost_cents`, a part of it). See
+    # Everything given back to the attendee, within the amount paid: the
+    # refunds made at Stripe (`stripe_refunded_cents`) plus what a lost
+    # dispute took (`disputed_lost_cents`). See
     # `Tymeslot.MeetingPayments.RefundedTotal`.
     field :refunded_amount_cents, :integer, default: 0
+    field :stripe_refunded_cents, :integer, default: 0
     field :disputed_lost_cents, :integer, default: 0
+    # What the payment's pending refunds add up to, filled in by the queries
+    # that list payments for a host (`BookingPaymentQueries`); `nil` when the
+    # query that loaded the row did not read it.
+    field :pending_refund_cents, :integer, virtual: true
 
     field :last_event_id, :string
 
@@ -123,7 +131,8 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
               ~w(
                 meeting_id host_name attendee_email attendee_name booking_theme_id
                 stripe_checkout_session_id stripe_payment_intent_id stripe_charge_id
-                status paid_at refunded_amount_cents disputed_lost_cents last_event_id host_deleted_at
+                status paid_at refunded_amount_cents stripe_refunded_cents disputed_lost_cents last_event_id
+                host_deleted_at
                 stripe_dispute_id dispute_closed_at
               )a
 
@@ -146,6 +155,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
     |> unique_constraint(:stripe_payment_intent_id)
     |> unique_constraint(:stripe_charge_id)
     |> check_constraint(:refunded_amount_cents, name: :refunded_amount_within_bounds)
+    |> check_constraint(:stripe_refunded_cents, name: :stripe_refunded_within_amount)
     |> check_constraint(:disputed_lost_cents, name: :disputed_lost_within_refunded)
   end
 
@@ -154,7 +164,9 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
     schema
     |> cast(attrs, @castable -- @required_on_create)
     |> validate_refunded_bounds()
+    |> unique_constraint(:stripe_charge_id)
     |> check_constraint(:refunded_amount_cents, name: :refunded_amount_within_bounds)
+    |> check_constraint(:stripe_refunded_cents, name: :stripe_refunded_within_amount)
     |> check_constraint(:disputed_lost_cents, name: :disputed_lost_within_refunded)
   end
 
@@ -230,6 +242,9 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
 
       (get_field(changeset, :disputed_lost_cents) || 0) not in 0..refunded//1 ->
         add_error(changeset, :disputed_lost_cents, "must be within refunded_amount_cents")
+
+      (get_field(changeset, :stripe_refunded_cents) || 0) not in 0..amount//1 ->
+        add_error(changeset, :stripe_refunded_cents, "must be within amount_cents")
 
       true ->
         changeset

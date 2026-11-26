@@ -35,7 +35,9 @@ defmodule Tymeslot.MeetingPayments do
 
   alias Tymeslot.Features
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Stripe
   alias Tymeslot.MeetingPayments.AccountCurrency
+  alias Tymeslot.MeetingPayments.ApplicationFee
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
@@ -43,9 +45,11 @@ defmodule Tymeslot.MeetingPayments do
   alias Tymeslot.MeetingPayments.ConnectAccounts
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.Currency
+  alias Tymeslot.MeetingPayments.RefundedTotal
+  alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.MeetingPayments.Refunds
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Workers.ResyncConnectAccount
-  alias Tymeslot.Payments.Config, as: PaymentsConfig
 
   @type account :: ConnectAccountSchema.t()
   @type booking_payment :: BookingPaymentSchema.t()
@@ -135,46 +139,12 @@ defmodule Tymeslot.MeetingPayments do
   end
 
   @doc """
-  Maps a Connect account (or `nil`) to its onboarding display state.
-
-  This is the single source of truth for "where is this account in the Stripe
-  Connect lifecycle?" — consumed both by the payments status banner
-  (`TymeslotWeb.Dashboard.PaymentsSettings.StatusCard`) and the integrations
-  hub summary. `nil` (no account) reads as `:not_connected`.
-
-  Two submitted states are distinct on purpose: `:incomplete` is onboarding
-  that was never submitted (Stripe stamps a brand-new account with
-  `requirements.past_due`, so `disabled_reason` must not be read until
-  `details_submitted` is true), while `:pending_review` is a submitted account
-  Stripe is still reviewing.
-
-  An account that is otherwise ready but carries a currency payments cannot
-  charge at all (`Currency.support/1` is `:unsupported`) reads as
-  `:unsupported_currency`, since it takes no payments until its host picks a
-  supported one.
+  Maps a Connect account (or `nil`) to its onboarding display state, the
+  single source of truth for where an account is in the Stripe Connect
+  lifecycle. See `ConnectAccounts.display_state/1`.
   """
-  @spec connect_display_state(map() | nil) ::
-          :not_connected
-          | :incomplete
-          | :pending_review
-          | :ready
-          | :unsupported_currency
-          | :restricted
-          | :deleted
-  def connect_display_state(nil), do: :not_connected
-  def connect_display_state(%{deleted_at: dt}) when is_struct(dt, DateTime), do: :deleted
-  def connect_display_state(%{details_submitted: true} = account), do: submitted_state(account)
-  def connect_display_state(_account), do: :incomplete
-
-  defp submitted_state(%{disabled_reason: reason}) when is_binary(reason), do: :restricted
-
-  defp submitted_state(%{charges_enabled: true, payouts_enabled: true} = account) do
-    if Currency.support(Map.get(account, :default_currency)) == :unsupported,
-      do: :unsupported_currency,
-      else: :ready
-  end
-
-  defp submitted_state(_account), do: :pending_review
+  @spec connect_display_state(map() | nil) :: ConnectAccounts.display_state()
+  defdelegate connect_display_state(account), to: ConnectAccounts, as: :display_state
 
   @doc """
   Returns `true` when the instance has a real Stripe platform API key
@@ -185,12 +155,19 @@ defmodule Tymeslot.MeetingPayments do
   """
   @spec platform_configured?() :: boolean()
   def platform_configured? do
-    case PaymentsConfig.stripe_api_key() do
+    case Stripe.secret_key() do
       nil -> false
       "sk_test_fake" -> false
       _real -> true
     end
   end
+
+  @doc """
+  The platform fee charged on each payment at booking, in basis points
+  (100 bp = 1%). See `Tymeslot.MeetingPayments.ApplicationFee.configured_bp/0`.
+  """
+  @spec application_fee_bp() :: non_neg_integer()
+  defdelegate application_fee_bp(), to: ApplicationFee, as: :configured_bp
 
   @doc """
   Returns `true` if the user's Connect account has charges enabled, in a
@@ -255,10 +232,19 @@ defmodule Tymeslot.MeetingPayments do
   # Refunds
   # ---------------------------------------------------------------------------
 
+  @doc "Fetches a recorded refund by id, or `nil`. Unscoped, as `BookingPayments.get_payment/1` is."
+  @spec get_refund(term()) :: RefundSchema.t() | nil
+  def get_refund(id), do: RefundQueries.get(id)
+
   @doc """
-  Returns the remaining refundable balance in cents for a booking payment; see
-  `Refunds.refundable_remaining_cents/1`.
+  What was refunded at Stripe, in cents, without what a lost dispute took
+  back; see `RefundedTotal.stripe_refunded_cents/1`. The figure to show as
+  "refunded".
   """
+  @spec stripe_refunded_cents(booking_payment()) :: non_neg_integer()
+  defdelegate stripe_refunded_cents(payment), to: RefundedTotal
+
+  @doc "The balance in cents still refundable; see `Refunds.refundable_remaining_cents/1`."
   @spec refundable_remaining_cents(booking_payment()) :: non_neg_integer()
   defdelegate refundable_remaining_cents(payment), to: Refunds
 
@@ -286,6 +272,22 @@ defmodule Tymeslot.MeetingPayments do
   defdelegate refundable?(payment), to: Refunds
 
   @doc """
+  Whether `refundable?/1` would hold were none of the payment's refunds
+  pending: a payment whose pending refunds hold its whole balance is still
+  one Tymeslot can refund, just with nothing left to submit.
+  """
+  @spec refundable_ignoring_pending?(booking_payment() | nil) :: boolean()
+  def refundable_ignoring_pending?(nil), do: false
+  def refundable_ignoring_pending?(payment), do: refundable?(%{payment | pending_refund_cents: 0})
+
+  @doc """
+  What the attendee is still owed, in cents, pending refunds included: the
+  amount paid less what was refunded or a lost dispute took back.
+  """
+  @spec refund_owed_cents(booking_payment()) :: non_neg_integer()
+  def refund_owed_cents(payment), do: RefundedTotal.refundable_cents(payment, 0)
+
+  @doc """
   Returns `true` when the host still holds money the attendee has not been
   given back, whether or not the refund window has passed; see
   `Refunds.refund_outstanding?/1`.
@@ -294,47 +296,35 @@ defmodule Tymeslot.MeetingPayments do
   defdelegate refund_outstanding?(payment), to: Refunds
 
   @doc """
-  Parses raw refund-form params into a validated `{:ok, pos_integer()}` or
-  a tagged `{:error, atom()}`; see `Refunds.parse_refund_amount/2`.
+  Parses raw refund-form params into `{:ok, cents}` or a tagged
+  `{:error, atom()}`; see `Refunds.parse_refund_amount/2`.
   """
   @spec parse_refund_amount(booking_payment(), map()) ::
-          {:ok, pos_integer()} | {:error, :invalid_amount | :exceeds_remaining | :choose_type}
+          {:ok, non_neg_integer()}
+          | {:error, :invalid_amount | :exceeds_remaining | :choose_type | :refund_in_progress}
   defdelegate parse_refund_amount(payment, params), to: Refunds
 
-  @doc """
-  Issues a full or partial refund for a booking payment, whoever took it.
+  @doc "What the payment's pending refunds add up to; see `Refunds.pending_refund_cents/1`."
+  @spec pending_refund_cents(booking_payment()) :: non_neg_integer()
+  defdelegate pending_refund_cents(payment), to: Refunds
 
-  Unscoped; see `Refunds.issue_refund/4`. A refund a signed-in user asks for
-  must go through `refund_payment_for_host/5`.
+  @doc "Whether a refund of the payment is still pending; see `Refunds.refund_pending?/1`."
+  @spec refund_pending?(booking_payment()) :: boolean()
+  defdelegate refund_pending?(payment), to: Refunds
 
-  `key` is the Stripe idempotency key for this one refund, fixed when the
-  refund is decided and carrying the amount, so that a retry gets the same
-  refund back; see `Tymeslot.MeetingPayments.Refunds`.
-  """
-  @spec issue_refund(booking_payment(), integer(), String.t(), String.t() | nil) ::
-          {:ok, booking_payment()} | {:error, Refunds.refund_error()}
-  defdelegate issue_refund(payment, amount_cents, key, reason \\ nil), to: Refunds
+  @doc "Records a refund and the job that makes it; see `Refunds.request_refund/4`."
+  @spec request_refund(booking_payment(), pos_integer(), Refunds.refund_source(), keyword()) ::
+          {:ok, RefundSchema.t()} | {:error, Refunds.refusal()}
+  defdelegate request_refund(payment, amount_cents, source, opts \\ []), to: Refunds
 
-  @doc """
-  Refunds a booking payment on behalf of the host who took it.
+  @doc "Makes one attempt at a recorded refund; see `Refunds.execute/2`."
+  @spec execute_refund(RefundSchema.t(), keyword()) :: Refunds.attempt_result()
+  defdelegate execute_refund(refund, opts \\ []), to: Refunds, as: :execute
 
-  Only that host may refund it. Ownership is decided under the payment's row
-  lock, in the same transaction as the refund itself. Another host's payment,
-  an unknown id and a malformed id all return `{:error, :not_found}`.
-
-  `key` is the Stripe idempotency key, as for `issue_refund/4`.
-  """
-  @spec refund_payment_for_host(term(), integer(), integer(), String.t(), String.t() | nil) ::
-          {:ok, booking_payment()} | {:error, :not_found | Refunds.refund_error()}
-  defdelegate refund_payment_for_host(
-                payment_id,
-                host_user_id,
-                amount_cents,
-                key,
-                reason \\ nil
-              ),
-              to: Refunds,
-              as: :issue_host_refund
+  @doc "Records a refund and makes it at once; see `Refunds.refund_now/4`."
+  @spec refund_now(booking_payment(), pos_integer(), Refunds.refund_source(), keyword()) ::
+          Refunds.attempt_result()
+  defdelegate refund_now(payment, amount_cents, source, opts \\ []), to: Refunds
 
   @doc """
   Moves the payment of the seat `old_participant_id` to the seat it was

@@ -1,0 +1,183 @@
+{
+  "managed_payments": {
+    "enabled": false
+  },
+  "canceled_at": null,
+  "shipping": null,
+  "livemode": false,
+  "customer": null,
+  "statement_descriptor": null,
+  "amount_capturable": 0,
+  "capture_method": "automatic_async",
+  "receipt_email": null,
+  "processing": null,
+  "amount_details": {
+    "tip": {}
+  },
+  "payment_method": "pm_test1",
+  "created": 1795683219,
+  "transfer_data": null,
+  "source": null,
+  "application": null,
+  "latest_charge": {
+    "receipt_url": "redacted",
+    "failure_message": null,
+    "radar_options": {},
+    "shipping": null,
+    "refunded": false,
+    "amount_refunded": 0,
+    "livemode": false,
+    "customer": null,
+    "statement_descriptor": null,
+    "receipt_email": null,
+    "payment_method": "pm_test1",
+    "created": 1795683220,
+    "transfer_data": null,
+    "balance_transaction": null,
+    "payment_intent": "pi_test1",
+    "source": null,
+    "application": null,
+    "dispute": null,
+    "disputed": false,
+    "statement_descriptor_suffix": null,
+    "application_fee": null,
+    "amount_captured": 1000,
+    "status": "succeeded",
+    "paid": true,
+    "description": null,
+    "id": "ch_test1",
+    "destination": null,
+    "payment_method_details": {
+      "card": {
+        "amount_authorized": 1000,
+        "authorization_code": "857888",
+        "brand": "visa",
+        "checks": {
+          "address_line1_check": null,
+          "address_postal_code_check": null,
+          "cvc_check": "pass"
+        },
+        "country": "US",
+        "electronic_commerce_indicator": "07",
+        "exp_month": 11,
+        "exp_year": 2027,
+        "extended_authorization": {
+          "status": "disabled"
+        },
+        "fingerprint": "LRb6deb8hOdHXOdM",
+        "funding": "credit",
+        "incremental_authorization": {
+          "status": "unavailable"
+        },
+        "installments": null,
+        "last4": "4242",
+        "mandate": null,
+        "multicapture": {
+          "status": "unavailable"
+        },
+        "network": "visa",
+        "network_token": {
+          "used": false
+        },
+        "network_transaction_id": "768298541001019",
+        "overcapture": {
+          "maximum_amount_capturable": 1000,
+          "status": "unavailable"
+        },
+        "regulated_status": "unregulated",
+        "three_d_secure": null,
+        "transaction_link_id": null,
+        "wallet": null
+      },
+      "type": "card"
+    },
+    "outcome": {
+      "advice_code": null,
+      "network_advice_code": null,
+      "network_decline_code": null,
+      "network_status": "approved_by_network",
+      "reason": null,
+      "risk_level": "normal",
+      "risk_score": 55,
+      "seller_message": "Payment complete.",
+      "type": "authorized"
+    },
+    "captured": true,
+    "application_fee_amount": null,
+    "currency": "eur",
+    "object": "charge",
+    "on_behalf_of": null,
+    "source_transfer": null,
+    "order": null,
+    "failure_code": null,
+    "calculated_statement_descriptor": "DILETTA LUNA TEST",
+    "billing_details": {
+      "address": {
+        "city": null,
+        "country": null,
+        "line1": null,
+        "line2": null,
+        "postal_code": null,
+        "state": null
+      },
+      "email": null,
+      "name": null,
+      "phone": null,
+      "tax_id": null
+    },
+    "transfer_group": null,
+    "review": null,
+    "failure_balance_transaction": null,
+    "receipt_number": null,
+    "fraud_details": {},
+    "amount": 1000,
+    "metadata": {}
+  },
+  "statement_descriptor_suffix": null,
+  "allowed_payment_method_types": null,
+  "status": "succeeded",
+  "description": null,
+  "id": "pi_test1",
+  "customer_account": null,
+  "application_fee_amount": null,
+  "payment_method_options": {
+    "card": {
+      "installments": null,
+      "mandate_options": null,
+      "network": null,
+      "request_three_d_secure": "automatic"
+    },
+    "link": {
+      "persistent_token": null
+    }
+  },
+  "currency": "eur",
+  "object": "payment_intent",
+  "on_behalf_of": null,
+  "cancellation_reason": null,
+  "client_secret": "redacted",
+  "payment_method_types": [
+    "card",
+    "link"
+  ],
+  "automatic_payment_methods": {
+    "allow_redirects": "never",
+    "enabled": true
+  },
+  "next_action": null,
+  "transfer_group": null,
+  "amount_received": 1000,
+  "review": null,
+  "shared_payment_granted_token": null,
+  "payment_record": null,
+  "amount": 1000,
+  "metadata": {},
+  "excluded_payment_method_types": null,
+  "setup_future_usage": null,
+  "last_payment_error": null,
+  "payment_method_configuration_details": {
+    "id": "pmc_test1",
+    "parent": null
+  },
+  "confirmation_method": "automatic"
+}

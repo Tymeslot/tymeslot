@@ -20,6 +20,7 @@ defmodule Tymeslot.Bookings.SeatEffects do
   that then rolls back.
   """
 
+  alias Ecto.UUID
   alias Tymeslot.Availability
   alias Tymeslot.Bookings.Activation
   alias Tymeslot.Bookings.BuildParams
@@ -29,7 +30,6 @@ defmodule Tymeslot.Bookings.SeatEffects do
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Workers.VideoRoomWorker
-  alias UUID
 
   require Logger
 
@@ -82,7 +82,7 @@ defmodule Tymeslot.Bookings.SeatEffects do
   @spec rebuilt_slot_attrs(map(), map(), map()) :: map()
   def rebuilt_slot_attrs(old_meeting, times, booker) do
     %BuildParams{
-      meeting_uid: UUID.uuid4(),
+      meeting_uid: UUID.generate(),
       form_data: %{
         "name" => booker.name,
         "email" => booker.email,

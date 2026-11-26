@@ -199,8 +199,8 @@ msgstr "%{name} запросив(-ла) вас на подію."
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
-msgid "Calendar Invitation - %{title} on %{date}"
-msgstr "Запрошення до календаря – %{title}, %{date}"
+msgid "Calendar Invitation - %{title} on %{on_date}"
+msgstr "Запрошення до календаря – %{title}, %{on_date}"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
@@ -403,8 +403,8 @@ msgstr "Увесь день"
 
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
-msgid "All day, until %{date}"
-msgstr "Увесь день, до %{date}"
+msgid "All day, until %{until_date}"
+msgstr "Увесь день, до %{until_date}"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
@@ -458,8 +458,8 @@ msgstr "Скасовано – %{title} (усі повторення)"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
-msgid "Cancelled - %{title} on %{date}"
-msgstr "Скасовано – %{title}, %{date}"
+msgid "Cancelled - %{title} on %{on_date}"
+msgstr "Скасовано – %{title}, %{on_date}"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
@@ -590,8 +590,8 @@ msgstr "Вилучено"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
-msgid "Removed from %{title} on %{date}"
-msgstr "Вилучено – %{title}, %{date}"
+msgid "Removed from %{title} on %{on_date}"
+msgstr "Вилучено – %{title}, %{on_date}"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format

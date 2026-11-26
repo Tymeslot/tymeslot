@@ -1,0 +1,131 @@
+{
+  "managed_payments": {
+    "enabled": false
+  },
+  "success_url": "https://example.test/paid?session_id={CHECKOUT_SESSION_ID}",
+  "allow_promotion_codes": null,
+  "consent_collection": null,
+  "mode": "payment",
+  "currency_conversion": null,
+  "ui_mode": "hosted",
+  "origin_context": null,
+  "shipping_cost": null,
+  "marketing_attributions": null,
+  "livemode": false,
+  "customer": null,
+  "billing_address_collection": null,
+  "setup_intent": null,
+  "after_expiration": null,
+  "integration_identifier": null,
+  "created": 1795683215,
+  "consent": null,
+  "payment_intent": null,
+  "expires_at": 1795685075,
+  "customer_creation": "if_required",
+  "customer_details": {
+    "address": null,
+    "business_name": null,
+    "email": "customer@example.test",
+    "individual_name": null,
+    "name": null,
+    "phone": null,
+    "tax_exempt": "none",
+    "tax_ids": null
+  },
+  "invoice": null,
+  "allowed_payment_method_types": null,
+  "wallet_options": null,
+  "status": "open",
+  "payment_link": null,
+  "amount_total": 1000,
+  "id": "cs_test1",
+  "customer_account": null,
+  "cancel_url": "https://example.test/cancel",
+  "automatic_tax": {
+    "address_collection_precision": null,
+    "enabled": false,
+    "liability": null,
+    "provider": null,
+    "status": null
+  },
+  "adaptive_pricing": {
+    "enabled": true
+  },
+  "phone_number_collection": {
+    "enabled": false
+  },
+  "invoice_creation": {
+    "enabled": true,
+    "invoice_data": {
+      "account_tax_ids": null,
+      "custom_fields": null,
+      "description": null,
+      "footer": null,
+      "issuer": {
+        "type": "self"
+      },
+      "metadata": {},
+      "rendering_options": null
+    }
+  },
+  "payment_method_options": {
+    "card": {
+      "request_three_d_secure": "automatic"
+    }
+  },
+  "currency": "gbp",
+  "url": "redacted",
+  "object": "checkout.session",
+  "payment_method_collection": "if_required",
+  "client_secret": null,
+  "discounts": [],
+  "payment_method_types": [
+    "card"
+  ],
+  "permissions": null,
+  "saved_payment_method_options": {
+    "allow_redisplay_filters": [
+      "always"
+    ],
+    "payment_method_remove": "disabled",
+    "payment_method_save": null
+  },
+  "client_reference_id": "live-1795683212",
+  "customer_email": "customer@example.test",
+  "collected_information": {
+    "business_name": null,
+    "individual_name": null,
+    "shipping_details": null
+  },
+  "recovered_from": null,
+  "total_details": {
+    "amount_discount": 0,
+    "amount_shipping": 0,
+    "amount_tax": 0
+  },
+  "locale": "en",
+  "shipping_options": [],
+  "subscription": null,
+  "amount_subtotal": 1000,
+  "payment_status": "unpaid",
+  "custom_fields": [],
+  "metadata": {},
+  "custom_text": {
+    "after_submit": null,
+    "shipping_address": null,
+    "submit": null,
+    "terms_of_service_acceptance": null
+  },
+  "shipping_address_collection": null,
+  "branding_settings": {
+    "background_color": "#ffffff",
+    "border_style": "rounded",
+    "button_color": "#0074d4",
+    "display_name": "Tymeslot live suite",
+    "font_family": "default",
+    "icon": null,
+    "logo": null
+  },
+  "submit_type": null,
+  "payment_method_configuration_details": null
+}

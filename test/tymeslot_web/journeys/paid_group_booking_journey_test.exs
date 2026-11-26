@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Journeys.PaidGroupBookingJourneyTest do
   @moduletag :bookings
   @moduletag :integration
 
-  import Ecto.Query, only: [where: 3]
+  import Ecto.Query, only: [from: 2, where: 3]
   import Mox
   import Phoenix.LiveViewTest
   import Tymeslot.AuthTestHelpers
@@ -33,15 +33,17 @@ defmodule TymeslotWeb.Journeys.PaidGroupBookingJourneyTest do
   alias Plug.Test
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
-  alias Tymeslot.MeetingPayments.Workers.GroupCancelRefund
-  alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
+  alias Tymeslot.MeetingPayments.RefundQueries
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.SeatHoldSchema
   alias Tymeslot.PaymentTestHelpers
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.StripeWebhookFixtures
   alias Tymeslot.TestMocks
   alias TymeslotWeb.BookingDriver
@@ -78,13 +80,19 @@ defmodule TymeslotWeb.Journeys.PaidGroupBookingJourneyTest do
     |> stub(:get_booking_integration_info, fn _context -> {:error, :no_integration} end)
 
     # A completed checkout looks up its charge, which a refund needs.
-    stub(StripeAdapterMock, :retrieve_payment_intent, fn intent_id, _opts ->
-      {:ok, %{"latest_charge" => "ch_" <> intent_id}}
+    StripeStub.stub(:retrieve_payment_intent, fn %{path: path} ->
+      intent_id = last_segment(path)
+      StripeStubResponses.payment_intent(intent_id, "ch_" <> intent_id)
     end)
 
     # A paid seat's confirmation links the charge's receipt.
-    stub(StripeAdapterMock, :retrieve_charge, fn charge_id, _opts ->
-      {:ok, %{"receipt_url" => "https://pay.stripe.com/receipts/" <> charge_id}}
+    StripeStub.stub(:retrieve_charge, fn %{path: path} ->
+      charge_id = last_segment(path)
+
+      StripeFixtures.object("charge", %{
+        "id" => charge_id,
+        "receipt_url" => "https://pay.stripe.com/receipts/" <> charge_id
+      })
     end)
 
     # The real email service, so the rendered emails reach this process.
@@ -158,17 +166,19 @@ defmodule TymeslotWeb.Journeys.PaidGroupBookingJourneyTest do
   # Submits the booking form and follows the page out to Stripe Checkout,
   # whose session the mock opens as `session_id` for `seats` seats.
   defp pay_at_checkout(view, booker, session_id, seats) do
-    expect(StripeAdapterMock, :create_checkout_session, fn params, opts ->
-      assert opts[:connect_account] == @account
+    StripeStub.expect(:create_checkout_session, fn %{form: form, headers: headers} ->
+      assert headers["stripe-account"] == @account
 
-      assert [%{quantity: ^seats, price_data: %{unit_amount: @price}}] = params.line_items
+      assert [%{"quantity" => quantity, "price_data" => %{"unit_amount" => unit_amount}}] =
+               form["line_items"]
 
-      {:ok,
-       %{
-         id: session_id,
-         url: "https://checkout.stripe.com/c/pay/#{session_id}",
-         payment_intent: nil
-       }}
+      assert String.to_integer(quantity) == seats
+      assert String.to_integer(unit_amount) == @price
+
+      StripeFixtures.object("checkout_session_payment", %{
+        "id" => session_id,
+        "url" => "https://checkout.stripe.com/c/pay/#{session_id}"
+      })
     end)
 
     view
@@ -312,13 +322,13 @@ defmodule TymeslotWeb.Journeys.PaidGroupBookingJourneyTest do
     |> render_submit()
 
     assert Repo.get!(MeetingSchema, session.id).status == :cancelled
-    assert length(all_enqueued(worker: GroupCancelRefund)) == 2
+    assert length(cancellation_refunds()) == 2
 
-    expect(StripeAdapterMock, :create_refund, 2, fn params, _opts ->
-      {:ok, %{"id" => "re_" <> params.charge, "amount" => params.amount}}
+    StripeStub.expect(:create_refund, 2, fn %{form: form} = request ->
+      StripeStubResponses.refund(request, "re_" <> form["charge"])
     end)
 
-    assert %{failure: 0, success: 2} = Oban.drain_queue(queue: :payments)
+    assert %{failure: 0, success: 2} = Oban.drain_queue(queue: :payments, with_scheduled: true)
 
     assert %{status: :refunded, refunded_amount_cents: 4000} = Repo.reload!(ada_payment)
     assert %{status: :refunded, refunded_amount_cents: 2000} = Repo.reload!(ben_payment)
@@ -380,17 +390,15 @@ defmodule TymeslotWeb.Journeys.PaidGroupBookingJourneyTest do
 
     assert %{status: :paid} = Repo.reload!(ada_payment)
 
-    assert [_one] =
-             all_enqueued(
-               worker: RefundLatePayment,
-               args: %{"booking_payment_id" => ada_payment.id}
-             )
+    assert [%{source: :late_payment, amount_cents: 4000}] =
+             RefundQueries.list_for_payment(ada_payment.id)
 
-    expect(StripeAdapterMock, :create_refund, 1, fn %{amount: 4000} = params, _opts ->
-      {:ok, %{"id" => "re_" <> params.charge, "amount" => 4000}}
+    StripeStub.expect(:create_refund, fn %{form: form} = request ->
+      assert form["amount"] == "4000"
+      StripeStubResponses.refund(request, "re_" <> form["charge"])
     end)
 
-    assert %{failure: 0} = Oban.drain_queue(queue: :payments)
+    assert %{failure: 0} = Oban.drain_queue(queue: :payments, with_scheduled: true)
 
     assert %{status: :refunded, refunded_amount_cents: 4000} = Repo.reload!(ada_payment)
 
@@ -420,9 +428,8 @@ defmodule TymeslotWeb.Journeys.PaidGroupBookingJourneyTest do
              "Spot cancelled"
 
     assert %{cancelled_at: %DateTime{}} = Repo.reload!(seat)
-    assert all_enqueued(worker: GroupCancelRefund) == []
-    assert all_enqueued(worker: RefundLatePayment) == []
-    assert %{failure: 0} = Oban.drain_queue(queue: :payments)
+    assert RefundQueries.list_for_payment(payment.id) == []
+    assert %{failure: 0} = Oban.drain_queue(queue: :payments, with_scheduled: true)
     assert %{status: :paid, refunded_amount_cents: 0} = Repo.reload!(payment)
 
     {:ok, payments, _html} = live(dashboard(host), "/dashboard/integrations?tab=payments")
@@ -446,11 +453,11 @@ defmodule TymeslotWeb.Journeys.PaidGroupBookingJourneyTest do
     token = seat.management_token
 
     # Moving a seat is not a new sale: no new checkout, no refund.
-    expect(StripeAdapterMock, :create_checkout_session, 0, fn _params, _opts ->
+    StripeStub.stub(:create_checkout_session, fn _request ->
       flunk("a moved seat must not open a checkout")
     end)
 
-    expect(StripeAdapterMock, :create_refund, 0, fn _params, _opts ->
+    StripeStub.stub(:create_refund, fn _request ->
       flunk("a moved seat must not be refunded")
     end)
 
@@ -474,6 +481,12 @@ defmodule TymeslotWeb.Journeys.PaidGroupBookingJourneyTest do
 
     assert participant_id == moved.id
     assert meeting_id == moved.meeting_id
-    refute_enqueued(worker: GroupCancelRefund)
+    assert RefundQueries.list_for_payment(payment.id) == []
   end
+
+  defp last_segment(path), do: path |> String.split("/") |> List.last()
+
+  # The refunds a host's cancellation of a group session recorded.
+  defp cancellation_refunds,
+    do: Repo.all(from(r in RefundSchema, where: r.source == :cancellation))
 end

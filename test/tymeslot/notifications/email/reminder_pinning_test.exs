@@ -84,6 +84,7 @@ defmodule Tymeslot.Notifications.Email.ReminderPinningTest do
     assert :ok =
              perform_job(EmailWorker, %{
                "action" => "send_reminder_emails",
+               "relevant_until" => nil,
                "meeting_id" => meeting.id,
                "reminder_value" => 1,
                "reminder_unit" => "hours"
@@ -105,6 +106,7 @@ defmodule Tymeslot.Notifications.Email.ReminderPinningTest do
 
     args = %{
       "action" => "send_reminder_emails",
+      "relevant_until" => nil,
       "meeting_id" => meeting.id,
       "reminder_value" => "1",
       "reminder_unit" => "hour"

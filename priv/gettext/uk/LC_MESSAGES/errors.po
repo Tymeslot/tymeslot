@@ -915,11 +915,6 @@ msgstr "Цей час більше недоступний. Виберіть ін
 msgid "email confirmation cannot be combined with payment"
 msgstr "підтвердження електронної пошти не можна поєднувати з оплатою"
 
-#: lib/tymeslot/meeting_types/group_validation.ex
-#, elixir-autogen, elixir-format
-msgid "group bookings cannot require email confirmation"
-msgstr "групові бронювання не можуть вимагати підтвердження електронної пошти"
-
 #: lib/tymeslot/meeting_types/meeting_type_schema.ex
 #, elixir-autogen, elixir-format
 msgid "would give a reserved booking link; choose another name or set a custom link"
@@ -934,6 +929,11 @@ msgstr "має бути не більше %{max} за такого ритму, �
 #, elixir-autogen, elixir-format
 msgid "Meeting types that ask invitees to confirm their email cannot be booked as a series."
 msgstr "Типи зустрічей, які просять запрошених підтвердити електронну пошту, не можна бронювати як серію."
+
+#: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe account checks"
+msgstr "перевірок облікового запису Stripe"
 
 #: lib/tymeslot/meeting_types/series_settings.ex
 #, elixir-autogen, elixir-format

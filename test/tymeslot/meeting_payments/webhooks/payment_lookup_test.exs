@@ -3,16 +3,22 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookupTest do
 
   @moduletag :payments
 
-  import Mox
   import Tymeslot.Factory
 
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.Integrations.Stripe.Error, as: StripeError
   alias Tymeslot.MeetingPayments.Webhooks.PaymentLookup
-
-  setup :verify_on_exit!
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
   @account "acct_HOST"
   @other_account "acct_ATTACKER"
+
+  defp intent_for_meeting(id, meeting_id) do
+    StripeFixtures.object("payment_intent_with_latest_charge", %{
+      "id" => id,
+      "metadata" => %{"meeting_id" => meeting_id}
+    })
+  end
 
   describe "find_for_charge/2" do
     test "matches on the charge id" do
@@ -44,27 +50,56 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookupTest do
           stripe_payment_intent_id: nil
         )
 
-      expect(StripeAdapterMock, :retrieve_payment_intent, fn "pi_RACE", opts ->
-        assert opts[:connect_account] == @account
-        {:ok, %{metadata: %{"meeting_id" => meeting.id}}}
-      end)
+      StripeStub.expect(:retrieve_payment_intent, intent_for_meeting("pi_RACE", meeting.id))
 
       assert PaymentLookup.find_for_charge(charge_event(@account, "pi_RACE"), "ch_RACE").id ==
                bp.id
+
+      assert [%{path: "/v1/payment_intents/pi_RACE", headers: headers}] =
+               StripeStub.requests(:retrieve_payment_intent)
+
+      assert headers["stripe-account"] == @account
     end
 
     test "returns nil for a charge that belongs to no Tymeslot booking" do
-      expect(StripeAdapterMock, :retrieve_payment_intent, fn "pi_FOREIGN", _opts ->
-        {:ok, %{metadata: %{}}}
-      end)
+      StripeStub.expect(
+        :retrieve_payment_intent,
+        StripeFixtures.object("payment_intent_with_latest_charge", %{
+          "id" => "pi_FOREIGN",
+          "metadata" => %{}
+        })
+      )
 
       assert PaymentLookup.find_for_charge(charge_event(@account, "pi_FOREIGN"), "ch_FOREIGN") ==
+               nil
+
+      assert [%{path: "/v1/payment_intents/pi_FOREIGN"}] =
+               StripeStub.requests(:retrieve_payment_intent)
+    end
+
+    test "returns a transient Stripe failure instead of reading it as no booking" do
+      insert(:booking_payment,
+        stripe_account_id: @account,
+        stripe_charge_id: nil,
+        stripe_payment_intent_id: nil
+      )
+
+      StripeStub.stub(:retrieve_payment_intent, {:error_fixture, "api_error"})
+
+      assert {:error, %StripeError{type: "api_error", status: 500}} =
+               PaymentLookup.find_for_charge(charge_event(@account, "pi_BLIP"), "ch_BLIP")
+    end
+
+    test "returns nil for an intent Stripe does not know on that account" do
+      StripeStub.stub(:retrieve_payment_intent, {:error_fixture, "resource_missing"})
+
+      assert PaymentLookup.find_for_charge(charge_event(@account, "pi_UNKNOWN"), "ch_UNKNOWN") ==
                nil
     end
 
     test "does not call Stripe when no connected account is available" do
-      # No `expect` is set, so a retrieve_payment_intent call would be unexpected.
       assert PaymentLookup.find_for_charge(charge_event(nil, "pi_NONE"), "ch_NONE") == nil
+      assert StripeStub.requests(:retrieve_payment_intent) == []
     end
 
     test "ignores a row matched by charge id when the event comes from another account" do
@@ -91,15 +126,17 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookupTest do
         stripe_payment_intent_id: nil
       )
 
-      expect(StripeAdapterMock, :retrieve_payment_intent, fn "pi_PLANTED", opts ->
-        assert opts[:connect_account] == @other_account
-        {:ok, %{metadata: %{"meeting_id" => meeting.id}}}
-      end)
+      StripeStub.expect(:retrieve_payment_intent, intent_for_meeting("pi_PLANTED", meeting.id))
 
       assert PaymentLookup.find_for_charge(
                charge_event(@other_account, "pi_PLANTED"),
                "ch_PLANTED"
              ) == nil
+
+      assert [%{path: "/v1/payment_intents/pi_PLANTED", headers: headers}] =
+               StripeStub.requests(:retrieve_payment_intent)
+
+      assert headers["stripe-account"] == @other_account
     end
   end
 

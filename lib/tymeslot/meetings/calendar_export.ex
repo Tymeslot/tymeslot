@@ -119,8 +119,10 @@ defmodule Tymeslot.Meetings.CalendarExport do
 
   defp seat_calendar(participant_id) do
     case ParticipantQueries.get(participant_id) do
-      {:ok, %ParticipantSchema{management_token: token}} when is_binary(token) ->
-        {:seat, Recipient.seat_calendar_url(token)}
+      {:ok, %ParticipantSchema{management_token: token} = participant} when is_binary(token) ->
+        if ParticipantSchema.unverified?(participant),
+          do: :none,
+          else: {:seat, Recipient.seat_calendar_url(token)}
 
       _gone ->
         :none

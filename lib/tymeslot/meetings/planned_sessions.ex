@@ -215,8 +215,15 @@ defmodule Tymeslot.Meetings.PlannedSessions do
   host cancels.
   """
   @spec cancel(Meeting.t(), integer()) :: {:ok, Meeting.t()} | {:error, term()}
-  def cancel(%Meeting{planned: true, organizer_user_id: user_id} = session, user_id),
-    do: Cancellation.cancel(session, user_id, :refund_seats)
+  def cancel(%Meeting{planned: true, organizer_user_id: user_id} = session, user_id) do
+    # A group session's seat refunds are recorded and made in the background,
+    # so none is left pending here (`{:ok, cancelled, :refund_pending}` is
+    # never returned).
+    case Cancellation.cancel(session, user_id, :refund_seats) do
+      {:ok, %Meeting{} = cancelled} -> {:ok, cancelled}
+      {:error, reason} -> {:error, reason}
+    end
+  end
 
   def cancel(_session, _user_id), do: {:error, :not_found}
 

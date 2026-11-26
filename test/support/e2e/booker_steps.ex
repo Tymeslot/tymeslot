@@ -46,12 +46,24 @@ defmodule TymeslotWeb.E2E.BookerSteps do
 
   @doc """
   Picks the first available day and then its first time, leaving the booker
-  on the step that follows the schedule.
+  on the step that follows the schedule. The time is clicked only once the
+  day shows as chosen: until then the times on screen may still be the
+  landed day's.
   """
   @spec pick_first_slot(Wallaby.Session.t()) :: Wallaby.Session.t()
   def pick_first_slot(session) do
+    day = "[data-testid='calendar-day']"
+
+    date =
+      session
+      |> assert_has(css("#{day}:not([disabled])", minimum: 1))
+      |> find(css("#{day}:not([disabled])", count: :any))
+      |> List.first()
+      |> Element.attr("data-value")
+
     session
-    |> pick_first("[data-testid='calendar-day']:not([disabled])")
+    |> click(css("#{day}[data-value='#{date}']"))
+    |> assert_has(css("#{day}[data-value='#{date}'][aria-pressed='true']"))
     |> pick_first("[data-testid='time-slot']")
     |> click_next_step()
   end
@@ -91,12 +103,7 @@ defmodule TymeslotWeb.E2E.BookerSteps do
   """
   @spec click_first_free_date(Wallaby.Session.t()) :: Wallaby.Session.t()
   def click_first_free_date(session) do
-    session
-    |> find(css("[data-fact='date']:not([disabled])", count: :any))
-    |> List.first()
-    |> Element.click()
-
-    session
+    pick_first(session, "[data-fact='date']:not([disabled])")
   end
 
   @doc """
@@ -104,14 +111,7 @@ defmodule TymeslotWeb.E2E.BookerSteps do
   """
   @spec pick_first_free_slot(Wallaby.Session.t()) :: Wallaby.Session.t()
   def pick_first_free_slot(session) do
-    session
-    |> find(
-      css("[data-fact='slot']:not([disabled]), [data-fact='time']:not([disabled])", count: :any)
-    )
-    |> List.first()
-    |> Element.click()
-
-    session
+    pick_first(session, "[data-fact='slot']:not([disabled]), [data-fact='time']:not([disabled])")
   end
 
   @doc """

@@ -45,6 +45,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
     CancelPollModal,
     ConfirmSlotModal,
     DeletePollModal,
+    LeavePollEditorModal,
     PollForm,
     PollInvite,
     PollList,
@@ -59,7 +60,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
-    {:ok, ModalHook.mount_modal(socket, delete: false, cancel: false)}
+    {:ok, ModalHook.mount_modal(socket, delete: false, cancel: false, leave_editor: false)}
   end
 
   @impl Phoenix.LiveComponent
@@ -192,6 +193,11 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
             myself={@myself}
           />
 
+          <LeavePollEditorModal.leave_poll_editor_modal
+            open={@show_leave_editor_modal}
+            myself={@myself}
+          />
+
           <CancelPollModal.cancel_poll_modal
             :if={@selected_poll}
             open={@show_cancel_modal}
@@ -293,6 +299,21 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
   @impl Phoenix.LiveComponent
   def handle_event("cancel_edit_poll_details", _params, socket) do
     {:noreply, assign(socket, editing_details?: false)}
+  end
+
+  # A link was followed with the editor's changes unsaved (its
+  # `UnsavedChanges` hook holds the link until the host answers).
+  def handle_event("leave", _params, socket),
+    do: {:noreply, ModalHook.show_modal(socket, :leave_editor)}
+
+  def handle_event("close_leave_poll_editor_modal", _params, socket),
+    do: {:noreply, ModalHook.hide_modal(socket, :leave_editor)}
+
+  def handle_event("leave_poll_editor", _params, socket) do
+    {:noreply,
+     socket
+     |> ModalHook.hide_modal(:leave_editor)
+     |> push_event("unsaved:proceed", %{})}
   end
 
   def handle_event("invite_participants", %{"invite" => %{"emails" => text}}, socket) do

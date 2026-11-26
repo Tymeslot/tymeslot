@@ -59,19 +59,42 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
   OAuth providers dispatch straight to the callback, unmetered (see
   moduledoc).
   """
-  @spec discover_calendars_for_integration(map()) :: {:ok, list()} | {:error, any()}
+  @spec discover_calendars_for_integration(map()) ::
+          {:ok, list()} | {:error, :discovery_unsupported | any()}
   def discover_calendars_for_integration(%{provider: provider} = integration) do
     with {:ok, provider_atom} <- ProviderConfig.parse_known(provider),
          {:ok, provider_module} <- provider_module_for(provider_atom) do
-      if ProviderConfig.caldav_based?(provider_atom) do
-        metered_integration_discovery(provider_atom, provider_module, integration)
-      else
-        provider_module.discover_calendars_for_integration(integration)
+      cond do
+        not exports_discovery?(provider_module) ->
+          {:error, :discovery_unsupported}
+
+        ProviderConfig.caldav_based?(provider_atom) ->
+          metered_integration_discovery(provider_atom, provider_module, integration)
+
+        true ->
+          provider_module.discover_calendars_for_integration(integration)
       end
     else
       _other ->
         {:error,
          dgettext("integrations_calendar", "Unknown provider: %{provider}", provider: provider)}
+    end
+  end
+
+  @doc """
+  Whether `integration`'s provider has calendars to discover for an existing
+  integration. `discover_calendars_for_integration/1` is an optional
+  `Tymeslot.Integrations.Calendar.Provider` callback; a provider without it
+  (the debug provider) has a fixed calendar list, so there is nothing to
+  rediscover.
+  """
+  @spec discovers_calendars?(%{:provider => String.t(), optional(atom()) => any()}) :: boolean()
+  def discovers_calendars?(%{provider: provider}) do
+    with {:ok, provider_atom} <- ProviderConfig.parse_known(provider),
+         {:ok, provider_module} <- provider_module_for(provider_atom) do
+      exports_discovery?(provider_module)
+    else
+      _other -> false
     end
   end
 
@@ -349,6 +372,11 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
       {:ok, provider_atom} -> {:ok, provider_atom}
       {:error, _reason} -> {:error, :unknown_provider}
     end
+  end
+
+  defp exports_discovery?(provider_module) do
+    Code.ensure_loaded?(provider_module) and
+      function_exported?(provider_module, :discover_calendars_for_integration, 1)
   end
 
   defp provider_module_for(provider_atom) do

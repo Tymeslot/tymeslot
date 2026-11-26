@@ -43,9 +43,10 @@ defmodule Tymeslot.InviteeData do
 
   A booking still held for email confirmation is neither refused nor named:
   the host has not been told of it. It is released, silently as a disowned
-  hold is (`Tymeslot.Meetings.EmailVerification.release/1`), and then
-  erased, so a late click on the confirmation link cannot confirm a booking
-  with no one behind it.
+  hold is (`Tymeslot.Meetings.EmailVerification.release/1`, or
+  `release_seat/1` for a group seat, which voids a slot it alone was
+  holding), and then erased, so a late click on the confirmation link
+  cannot confirm a booking with no one behind it.
 
   Seat holds are deleted rather than anonymised: a settled hold, naming the
   person as its booker or as one of its guests, holds nothing a host's
@@ -161,21 +162,36 @@ defmodule Tymeslot.InviteeData do
     result
   end
 
-  # The holds are released inside the erasure's transaction, and the slots
-  # they free announced only once it commits (`announce_released/1`).
+  # The holds, one-to-one bookings and group seats alike, are released inside
+  # the erasure's transaction, and the time they free announced only once it
+  # commits (`announce_released/1`).
   defp release_holds(email, scope) do
-    email
-    |> Queries.held_meetings_for_attendee(scope)
-    |> Enum.flat_map(fn meeting ->
-      case EmailVerification.release_in_transaction(meeting) do
-        {:ok, released} -> [released.organizer_user_id]
-        {:error, :not_awaiting_verification} -> []
-      end
-    end)
+    bookings =
+      email
+      |> Queries.held_meetings_for_attendee(scope)
+      |> Enum.flat_map(fn meeting ->
+        case EmailVerification.release_in_transaction(meeting) do
+          {:ok, released} -> [released.organizer_user_id]
+          {:error, :not_awaiting_verification} -> []
+        end
+      end)
+
+    seats =
+      email
+      |> Queries.held_seats_for_email(scope)
+      |> Enum.flat_map(fn seat ->
+        case EmailVerification.release_seat_in_transaction(seat) do
+          {:ok, slot} -> [slot]
+          {:error, :not_awaiting_verification} -> []
+        end
+      end)
+
+    {bookings, seats}
   end
 
-  defp announce_released({:ok, {organiser_ids, erased}}) do
+  defp announce_released({:ok, {{organiser_ids, slots}, erased}}) do
     organiser_ids |> Enum.uniq() |> Enum.each(&Availability.changed/1)
+    slots |> Enum.uniq_by(& &1.id) |> Enum.each(&EmailVerification.announce_seat_released/1)
     {:ok, erased}
   end
 

@@ -46,6 +46,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
                           :meeting_not_found,
                           :rate_limited,
                           :refused,
+                          :conference_refused,
                           :rule_not_supported_by_outlook,
                           :day_missing_in_some_months
                         ] ++
@@ -562,7 +563,8 @@ defmodule Tymeslot.Integrations.Calendar.Events do
           | Tymeslot.MeetingTypes.MeetingTypeSchema.t()
           | Tymeslot.Meetings.MeetingSchema.t()
         ) ::
-          {:ok, %{integration_id: pos_integer(), calendar_path: String.t()}} | {:error, term()}
+          {:ok, %{integration_id: pos_integer(), calendar_path: String.t() | nil}}
+          | {:error, term()}
   def get_booking_integration_info(context) do
     behaviour_module().get_booking_integration_info(context)
   end

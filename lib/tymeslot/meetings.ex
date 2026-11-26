@@ -10,6 +10,7 @@ defmodule Tymeslot.Meetings do
   alias Tymeslot.Bookings.{Cancel, CancelSeat, HostMove, Reschedule, RescheduleRequest}
 
   alias Tymeslot.Meetings.{
+    CalendarEventConference,
     CalendarEvents,
     CalendarExport,
     CalendarMove,
@@ -66,6 +67,21 @@ defmodule Tymeslot.Meetings do
 
   @doc "Aggregates RSVP counts for a list of guests."
   defdelegate guest_rsvp_summary(guests), to: Guests, as: :summarize
+
+  @doc """
+  Returns once no write taking the meeting's Meet conference off its Google
+  event is in flight, so a read of that event that follows sees the write's
+  result (`Tymeslot.Meetings.CalendarEventConference.clear_under_lock/2`).
+  """
+  defdelegate await_event_conference_writes(meeting_id), to: MeetingQueries
+
+  @doc """
+  Asks the meeting's Google event `event_id` for a Meet conference in place
+  (`Tymeslot.Meetings.CalendarEventConference.request_under_lock/2`).
+  """
+  defdelegate request_event_conference(meeting_id, event_id),
+    to: CalendarEventConference,
+    as: :request_under_lock
 
   @doc """
   Which of the calendar event `uids` belong to the organiser's group meetings
@@ -204,18 +220,20 @@ defmodule Tymeslot.Meetings do
   @doc """
   Cancels a meeting as its organiser (`acting_user_id`, else
   `{:error, :not_found}`) and issues the resolved refund, or, for a group
-  session, schedules one per paid seat (`:refund_seats`). A refund that
-  failed after the cancellation is `{:error, {:refund_failed, reason}}`.
-  `seat_payment_ids:` names the paid seats the host chose against; others
-  paid under the lock are `{:error, {:payments_changed, payments}}`, with
-  nothing cancelled. See `Tymeslot.Meetings.Cancellation`.
+  session, records one per paid seat (`:refund_seats`). Returns
+  `{:ok, cancelled, :refund_pending}` when Stripe has not confirmed a
+  one-to-one refund yet (Tymeslot finishes it), and `{:error,
+  {:refund_failed, reason}}` when the meeting was cancelled but the refund
+  was declined. `seat_payment_ids:` names the paid seats the host chose
+  against; others paid under the lock are `{:error, {:payments_changed,
+  payments}}`, with nothing cancelled. See `Tymeslot.Meetings.Cancellation`.
   """
   @spec cancel_meeting_with_refund(
           Ecto.Schema.t(),
           integer(),
           Cancellation.refund_action(),
           keyword()
-        ) :: {:ok, Ecto.Schema.t()} | {:error, term()}
+        ) :: {:ok, Ecto.Schema.t()} | {:ok, Ecto.Schema.t(), :refund_pending} | {:error, term()}
   defdelegate cancel_meeting_with_refund(meeting, acting_user_id, refund_action, opts \\ []),
     to: Cancellation,
     as: :cancel
@@ -237,6 +255,9 @@ defmodule Tymeslot.Meetings do
 
   @doc "Deletes a meeting's calendar event through an Oban worker; scheduling failures are not fatal."
   defdelegate cancel_calendar_event(meeting), to: CalendarEvents
+
+  @doc "Deletes the event a meeting is letting go of; see `Tymeslot.Meetings.CalendarEvents.release_calendar_event/1`."
+  defdelegate release_calendar_event(meeting), to: CalendarEvents
 
   # =====================================
   # Video Room Integration Functions

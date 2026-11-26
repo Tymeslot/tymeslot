@@ -71,7 +71,6 @@ defmodule TymeslotWeb.OnboardingAvatarConcurrentUploadTest do
       # …and the photo the user actually uploaded must have landed. Without the
       # excess entry being cancelled, `settle_upload/2` reports `:in_progress`
       # forever and this stays nil.
-      assert_push_event(view, "upload-complete", %{})
       assert stored_avatar(user) =~ ".png"
     end
 

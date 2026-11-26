@@ -6,20 +6,18 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
   @moduletag :database
   @moduletag :payments
 
-  import Mox
   import Tymeslot.ConfigTestHelpers
 
   alias Ecto.Changeset
   alias Ecto.UUID
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.Checkout
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Profiles
   alias Tymeslot.SignedToken
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias TymeslotWeb.Endpoint
-
-  setup :verify_on_exit!
 
   setup do
     setup_config(:tymeslot,
@@ -60,22 +58,31 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
   end
 
   defp stripe_session(id \\ "cs_SEAT") do
-    {:ok, %{id: id, url: "https://checkout.stripe.com/#{id}", payment_intent: "pi_SEAT"}}
+    StripeFixtures.object("checkout_session_payment", %{
+      "id" => id,
+      "url" => "https://checkout.stripe.com/#{id}"
+    })
+  end
+
+  # Opens the checkout, answered with `stripe_session/0`, and returns the
+  # request it sent.
+  defp checkout_request(hold) do
+    StripeStub.expect(:create_checkout_session, stripe_session())
+    result = Checkout.create_seat_checkout_session(hold)
+    assert [request] = StripeStub.requests(:create_checkout_session)
+    {result, request}
   end
 
   describe "create_seat_checkout_session/1" do
     test "a seat hold for three seats charges three times the price", %{meeting: meeting} do
       hold = insert(:seat_hold, meeting: meeting, seats: 3, email: "a@example.com")
 
-      expect(StripeAdapterMock, :create_checkout_session, fn params, _opts ->
-        assert [%{price_data: price_data, quantity: 3}] = params.line_items
-        assert price_data.unit_amount == 2500
-        assert price_data.product_data.name == "Group Class"
-        stripe_session()
-      end)
+      assert {{:ok, %{checkout_url: "https://checkout.stripe.com/cs_SEAT", booking_payment: bp}},
+              %{form: form}} = checkout_request(hold)
 
-      assert {:ok, %{checkout_url: "https://checkout.stripe.com/cs_SEAT", booking_payment: bp}} =
-               Checkout.create_seat_checkout_session(hold)
+      assert [%{"price_data" => price_data, "quantity" => "3"}] = form["line_items"]
+      assert price_data["unit_amount"] == "2500"
+      assert price_data["product_data"]["name"] == "Group Class"
 
       assert bp.amount_cents == 7500
       assert bp.seats == 3
@@ -97,16 +104,17 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
       hold = insert(:seat_hold, meeting: meeting, seats: 3, email: "a@example.com")
 
       # 0.5% of 9.99, rounded up to the cent; on one seat's 3.33 it would be 2.
-      expect(StripeAdapterMock, :create_checkout_session, fn params, _opts ->
-        assert params.payment_intent_data == %{
-                 application_fee_amount: 5,
-                 metadata: %{seat_hold_id: hold.id, meeting_id: meeting.id, host_user_id: user.id}
+      assert {{:ok, %{booking_payment: bp}}, %{form: form}} = checkout_request(hold)
+
+      assert form["payment_intent_data"] == %{
+               "application_fee_amount" => "5",
+               "metadata" => %{
+                 "seat_hold_id" => hold.id,
+                 "meeting_id" => meeting.id,
+                 "host_user_id" => to_string(user.id)
                }
+             }
 
-        stripe_session()
-      end)
-
-      assert {:ok, %{booking_payment: bp}} = Checkout.create_seat_checkout_session(hold)
       assert bp.amount_cents == 999
       assert bp.application_fee_cents == 5
     end
@@ -127,21 +135,17 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
       hold =
         insert(:seat_hold, meeting: meeting, email: "b@example.com", name: "Bea", locale: "de")
 
-      expect(StripeAdapterMock, :create_checkout_session, fn params, _opts ->
-        assert params.customer_email == "b@example.com"
-        assert params.locale == "de"
-        assert params.client_reference_id == "seat_hold:" <> hold.id
+      assert {{:ok, %{booking_payment: bp}}, %{form: form}} = checkout_request(hold)
+      assert form["customer_email"] == "b@example.com"
+      assert form["locale"] == "de"
+      assert form["client_reference_id"] == "seat_hold:" <> hold.id
 
-        assert params.payment_intent_data.metadata == %{
-                 seat_hold_id: hold.id,
-                 meeting_id: meeting.id,
-                 host_user_id: user.id
-               }
+      assert form["payment_intent_data"]["metadata"] == %{
+               "seat_hold_id" => hold.id,
+               "meeting_id" => meeting.id,
+               "host_user_id" => to_string(user.id)
+             }
 
-        stripe_session()
-      end)
-
-      assert {:ok, %{booking_payment: bp}} = Checkout.create_seat_checkout_session(hold)
       assert bp.attendee_email == "b@example.com"
       assert bp.attendee_name == "Bea"
     end
@@ -154,36 +158,28 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
       hold =
         insert(:seat_hold, meeting: meeting, email: "a@example.com", expires_at: hold_expires_at)
 
-      expect(StripeAdapterMock, :create_checkout_session, fn params, _opts ->
-        assert_in_delta params.expires_at, System.os_time(:second) + 30 * 60, 5
-        assert params.expires_at < DateTime.to_unix(hold_expires_at)
-        stripe_session()
-      end)
-
-      assert {:ok, _result} = Checkout.create_seat_checkout_session(hold)
+      assert {{:ok, _result}, %{form: %{"expires_at" => expires_at}}} = checkout_request(hold)
+      expires_at = String.to_integer(expires_at)
+      assert_in_delta expires_at, System.os_time(:second) + 30 * 60, 5
+      assert expires_at < DateTime.to_unix(hold_expires_at)
     end
 
     test "the idempotency key and return pages come from the hold", %{meeting: meeting} do
       hold = insert(:seat_hold, meeting: meeting, email: "a@example.com")
       base = Endpoint.url() <> "/themes/quill"
 
-      expect(StripeAdapterMock, :create_checkout_session, fn params, opts ->
-        assert opts[:idempotency_key] == "checkout:seat_hold:#{hold.id}"
-        assert opts[:connect_account] == "acct_HOST"
+      assert {{:ok, _result}, %{form: form, headers: headers}} = checkout_request(hold)
+      assert headers["idempotency-key"] == "tymeslot:seat_checkout:#{hold.id}"
+      assert headers["stripe-account"] == "acct_HOST"
 
-        assert params.success_url ==
-                 "#{base}/payment-processing/seat/#{hold.id}?session_id={CHECKOUT_SESSION_ID}"
+      assert form["success_url"] ==
+               "#{base}/payment-processing/seat/#{hold.id}?session_id={CHECKOUT_SESSION_ID}"
 
-        assert %URI{path: path, query: query} = URI.parse(params.cancel_url)
-        assert path == "/themes/quill/payment-cancelled/seat/#{hold.id}"
-        assert %{"return_token" => token} = URI.decode_query(query)
-        assert Checkout.returned_from_seat_checkout?(hold.id, token)
-        refute Checkout.returned_from_checkout?(hold.id, token)
-
-        stripe_session()
-      end)
-
-      assert {:ok, _result} = Checkout.create_seat_checkout_session(hold)
+      assert %URI{path: path, query: query} = URI.parse(form["cancel_url"])
+      assert path == "/themes/quill/payment-cancelled/seat/#{hold.id}"
+      assert %{"return_token" => token} = URI.decode_query(query)
+      assert Checkout.returned_from_seat_checkout?(hold.id, token)
+      refute Checkout.returned_from_checkout?(hold.id, token)
     end
 
     test "a hold that would lapse before its session is refused", %{meeting: meeting} do
@@ -194,7 +190,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
           expires_at: DateTime.add(DateTime.utc_now(:second), 29, :minute)
         )
 
-      # Mox raises on any call to the adapter here.
+      # Nothing is stubbed, so any Stripe call fails the test.
       assert {:error, :hold_expired} = Checkout.create_seat_checkout_session(hold)
       assert BookingPaymentQueries.by_seat_hold_id(hold.id) == nil
     end
@@ -280,18 +276,23 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
         stripe_checkout_session_id: "cs_OPEN"
       )
 
-      expect(StripeAdapterMock, :expire_checkout_session, fn "cs_OPEN", opts ->
-        assert opts[:connect_account] == "acct_HOST"
-        {:ok, %{id: "cs_OPEN", status: "expired"}}
-      end)
+      StripeStub.expect(
+        :expire_checkout_session,
+        StripeFixtures.object("checkout_session_expired", %{"id" => "cs_OPEN"})
+      )
 
       assert :ok = Checkout.abandon_seat_checkout(hold.id)
+
+      assert [%{path: path, headers: %{"stripe-account" => "acct_HOST"}}] =
+               StripeStub.requests(:expire_checkout_session)
+
+      assert path =~ "cs_OPEN"
 
       # The hold is released by the `checkout.session.expired` webhook.
       assert SeatHolds.get(hold.id).status == :held
     end
 
-    # Mox raises on any call to the adapter in the cases below.
+    # Nothing is stubbed, so any Stripe call fails the cases below.
     test "is :ok for a hold with no payment", %{meeting: meeting} do
       hold = insert(:seat_hold, meeting: meeting, email: "a@example.com")
 

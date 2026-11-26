@@ -355,6 +355,16 @@ defmodule Tymeslot.Notifications.Events do
   end
 
   @doc """
+  Handles a group slot held for email verification again, its last counting
+  seat gone while held seats remain (`Tymeslot.Bookings.SeatRelease`): its
+  pending reminders are cancelled. Nothing is announced here. The leaving
+  seat's own event tells the organiser and the integrations, as it does for
+  a last leaver whose slot is cancelled, and nobody else was on the slot.
+  """
+  @spec slot_returned_to_held(term()) :: :ok
+  def slot_returned_to_held(meeting), do: cancel_reminders(meeting)
+
+  @doc """
   Handles meeting rescheduling event.
 
   `opts` are passed on to the reschedule emails: `moved_by: :host` marks a

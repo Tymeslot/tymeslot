@@ -491,7 +491,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   # Seats, not headcount. A booker who brings a guest occupies two of the
   # slot's seats, which is what the public booking page counts down and what
   # the organiser needs to read here: a card saying "1/4" beside a slot
-  # advertising "2 seats left" is two answers to the same question.
+  # advertising "2 seats left" is two answers to the same question. The one
+  # exception is a seat still awaiting its booker's email confirmation: it
+  # takes a place on the public page but is not counted here until it is
+  # confirmed, as the organiser is not told of it before then.
   defp seats_label(meeting, guests) do
     dgettext("dashboard_bookings", "%{count}/%{capacity} seats taken",
       count: Seats.seats_taken(Helpers.participants(meeting), guests),

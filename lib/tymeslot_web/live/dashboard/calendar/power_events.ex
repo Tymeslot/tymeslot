@@ -38,6 +38,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.PowerEvents do
     "calendar:ics_open" => IcsImport,
     "calendar:ics_close" => IcsImport,
     "calendar:ics_validate" => IcsImport,
+    "calendar:ics_cutoff" => IcsImport,
+    "calendar:ics_narrow" => IcsImport,
     "calendar:ics_calendar" => IcsImport,
     "calendar:ics_start" => IcsImport,
     "calendar:apply_set" => SetEvents,

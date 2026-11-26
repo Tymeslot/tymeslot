@@ -167,6 +167,8 @@ config :tymeslot,
     {"*/15 * * * *", Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments},
     # Run every 5 min to settle paid seat holds whose payment outcome never arrived
     {"*/5 * * * *", Tymeslot.Meetings.Workers.ExpireSeatHolds},
+    # Run every 15 min to give refunds left pending without a job a new one
+    {"*/15 * * * *", Tymeslot.MeetingPayments.Workers.SweepPendingRefunds},
     # Run daily at 04:30 UTC to cross-check booking analytics against bookings
     {"30 4 * * *", Tymeslot.Workers.AnalyticsReconciliationWorker},
     # Run every 15 min to release approval requests whose deadline passed
@@ -208,6 +210,9 @@ config :tymeslot,
   admin_alerts_impl: Tymeslot.Infrastructure.AdminAlerts.EmailNotifier,
   admin_alerts_enabled: false,
   admin_alert_email: nil,
+  # Modules implementing Tymeslot.Infrastructure.AdminAlerts.AlertTypeProvider,
+  # for a downstream overlay that raises alert types of its own.
+  admin_alert_type_providers: [],
 
   # Repos whose connection pool `PoolPressureMonitor` watches. A downstream
   # overlay with its own repo adds it here.
@@ -388,8 +393,8 @@ config :tymeslot, TymeslotWeb.Endpoint,
 # Configures the mailer
 config :tymeslot, Tymeslot.Mailer, adapter: Swoosh.Adapters.Local
 
-# Configure Swoosh API client
-config :swoosh, :api_client, Swoosh.ApiClient.Hackney
+# Swoosh's API-based adapters send through the app's Finch pool, like Req.
+config :swoosh, api_client: Swoosh.ApiClient.Finch, finch_name: Tymeslot.Finch
 
 # Resolve the deps directory for esbuild's NODE_PATH.
 # config/ is at project_root/config/ and deps at project_root/deps/ → ../deps
@@ -592,16 +597,25 @@ config :tymeslot, :calendar_providers, %{
   debug: [enabled: false]
 }
 
-# Pin the Stripe API version instead of inheriting stripity_stripe's built-in
-# default, which travels with the library: upgrading the dependency would move
-# the wire contract without any change here. This matches the version the
-# locked stripity_stripe generates its structs from; the consumers of the
+# Stripe API integration (`Tymeslot.Integrations.Stripe`), read at runtime.
+#
+# `api_version` pins the wire contract: every request names it, so Stripe never
+# moves the shape of what it returns behind our back. The consumers of the
 # fields that moved in 2025-03-31.basil (billing periods on subscription
-# items, invoice subscription reference under parent, charges without
-# invoice links) accept both the old and new shapes. Webhook payload shape
-# follows the endpoint version configured in the Stripe dashboard, not this
-# pin — keep the two in step.
-config :stripity_stripe, api_version: "2025-11-17.clover"
+# items, invoice subscription reference under parent, charges without invoice
+# links) accept both the old and new shapes. Webhook payload shape follows the
+# endpoint version configured in the Stripe dashboard, not this pin; keep the
+# two in step.
+#
+# `retry_base_ms` is the first retry delay, `req_options` are merged into every
+# Req request, and `tag_requests` adds the operation name as a header for test
+# stubs.
+config :tymeslot, Tymeslot.Integrations.Stripe,
+  api_version: "2025-11-17.clover",
+  base_url: "https://api.stripe.com",
+  retry_base_ms: 250,
+  req_options: [],
+  tag_requests: false
 
 # Payment rate limiting configuration
 config :tymeslot, :payment_rate_limits,
@@ -646,8 +660,7 @@ config :tymeslot,
 # Data retention windows for the cross-domain pruning worker
 # (Tymeslot.Workers.DataRetentionWorker), read via Application.compile_env. Because
 # compile_env requires identical compile-time and runtime values, this key must
-# have a single owner — keep only retention here. An external overlay that adds a
-# dunning schedule must use its own separate config key, never extend :payments.
+# have a single owner — keep only retention here.
 config :tymeslot, :payments,
   retention: [
     outgoing_webhook_days: 60,

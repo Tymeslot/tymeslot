@@ -104,7 +104,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     |> from_meeting(seat, nil)
     |> with_original_texts()
     |> Map.merge(organizer_group_links())
-    |> Map.merge(%{seats_taken: Seats.seats_booked(meeting.id), capacity: meeting.capacity})
+    |> Map.merge(%{seats_taken: Seats.seats_taken(meeting.id), capacity: meeting.capacity})
   end
 
   @doc """

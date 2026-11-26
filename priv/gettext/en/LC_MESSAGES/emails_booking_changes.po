@@ -226,7 +226,7 @@ msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex
 #, elixir-autogen, elixir-format
-msgid "Hi %{name} - you've given up your spot in %{meeting} on %{date}."
+msgid "Hi %{name} - you've given up your spot in %{meeting} on %{on_date}."
 msgstr ""
 
 #: lib/tymeslot/emails/templates/booking_payment_refunded.ex
@@ -706,6 +706,41 @@ msgstr ""
 #: lib/tymeslot/emails/templates/event_update_notification.ex
 #, elixir-autogen, elixir-format
 msgid "Video call"
+msgstr ""
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} cancelled their spot. No one else has confirmed a spot on this slot, so the meeting has been cancelled."
+msgstr ""
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting cancelled: %{name} cancelled - %{date}"
+msgstr ""
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "No one else has confirmed a spot at the earlier time, so that meeting has been cancelled."
+msgstr ""
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} took a spot on this slot, so the meeting you were told had been cancelled goes ahead after all."
+msgstr ""
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Back on"
+msgstr ""
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting back on: %{name} - %{date}"
+msgstr ""
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Your group meeting is on again"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex

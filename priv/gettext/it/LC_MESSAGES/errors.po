@@ -899,11 +899,6 @@ msgstr "Questo orario non è più disponibile. Scegline un altro."
 msgid "email confirmation cannot be combined with payment"
 msgstr "la conferma dell'email non può essere combinata con il pagamento"
 
-#: lib/tymeslot/meeting_types/group_validation.ex
-#, elixir-autogen, elixir-format
-msgid "group bookings cannot require email confirmation"
-msgstr "le prenotazioni di gruppo non possono richiedere la conferma dell'email"
-
 #: lib/tymeslot/meeting_types/meeting_type_schema.ex
 #, elixir-autogen, elixir-format
 msgid "would give a reserved booking link; choose another name or set a custom link"
@@ -918,6 +913,11 @@ msgstr "non può superare %{max} con questa cadenza, in modo che ogni sessione c
 #, elixir-autogen, elixir-format
 msgid "Meeting types that ask invitees to confirm their email cannot be booked as a series."
 msgstr "I tipi di riunione che chiedono agli invitati di confermare la loro email non possono essere prenotati come serie."
+
+#: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe account checks"
+msgstr "verifiche dell'account Stripe"
 
 #: lib/tymeslot/meeting_types/series_settings.ex
 #, elixir-autogen, elixir-format

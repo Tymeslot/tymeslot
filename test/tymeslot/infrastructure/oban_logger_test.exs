@@ -7,6 +7,7 @@ defmodule Tymeslot.Infrastructure.ObanLoggerTest do
 
   @moduletag :infrastructure
 
+  alias Ecto.UUID
   alias Tymeslot.Infrastructure.CorrelationId
   alias Tymeslot.Infrastructure.ObanLogger
 
@@ -52,7 +53,7 @@ defmodule Tymeslot.Infrastructure.ObanLoggerTest do
 
       {process_id, logger_id} = result
 
-      assert {:ok, _uuid_info} = UUID.info(process_id)
+      assert {:ok, ^process_id} = UUID.cast(process_id)
       assert process_id == logger_id
     end
 

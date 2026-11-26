@@ -12,6 +12,7 @@ defmodule Tymeslot.Meetings.CancellationGroupSeatMoneyTest do
   @moduletag :bookings
   @moduletag :integration
 
+  import Ecto.Query, only: [from: 2]
   import Mox
   import Tymeslot.GroupCancellationTestHelpers
 
@@ -19,7 +20,7 @@ defmodule Tymeslot.Meetings.CancellationGroupSeatMoneyTest do
   alias Tymeslot.Emails.Templates.AppointmentCancellation
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
-  alias Tymeslot.MeetingPayments.Workers.GroupCancelRefund
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.Meetings
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
@@ -34,10 +35,13 @@ defmodule Tymeslot.Meetings.CancellationGroupSeatMoneyTest do
   end
 
   defp refund_amounts do
-    [worker: GroupCancelRefund]
-    |> all_enqueued()
-    |> Enum.map(& &1.args["amount_cents"])
-    |> Enum.sort()
+    Repo.all(
+      from(r in RefundSchema,
+        where: r.source == :cancellation,
+        order_by: r.amount_cents,
+        select: r.amount_cents
+      )
+    )
   end
 
   defp seat_refund_arg do

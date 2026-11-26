@@ -8,6 +8,7 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
 
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Ecto.UUID
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.MeetingSchema
@@ -274,6 +275,27 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
                )
 
       assert length(ParticipantQueries.list_live_for_meeting(meeting.id)) == 1
+    end
+  end
+
+  describe "group_changeset/2 — status" do
+    test "a group slot can be created awaiting verification", %{
+      user: user,
+      meeting_type: meeting_type,
+      start_time: start_time
+    } do
+      attrs = meeting_attrs(user, meeting_type, start_time)
+
+      held =
+        MeetingSchema.group_changeset(
+          %MeetingSchema{},
+          Map.put(attrs, :status, :awaiting_verification)
+        )
+
+      assert Changeset.get_field(held, :status) == :awaiting_verification
+
+      forced = MeetingSchema.group_changeset(%MeetingSchema{}, Map.put(attrs, :status, :pending))
+      assert Changeset.get_field(forced, :status) == :confirmed
     end
   end
 

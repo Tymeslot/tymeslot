@@ -44,6 +44,7 @@ defmodule Tymeslot.BookingSeries.Create do
   held for payment first, and requested once paid.
   """
 
+  alias Ecto.UUID
   alias Tymeslot.Availability
   alias Tymeslot.Availability.Schedules
 
@@ -68,7 +69,6 @@ defmodule Tymeslot.BookingSeries.Create do
   alias Tymeslot.MeetingTypes.SeriesSettings
   alias Tymeslot.Repo
   alias Tymeslot.Timezones
-  alias UUID
 
   @type series_request ::
           %{mode: :recurring, first_start: DateTime.t(), count: pos_integer()}
@@ -227,7 +227,7 @@ defmodule Tymeslot.BookingSeries.Create do
 
   defp session(%Occurrence{} = occurrence) do
     %{
-      meeting_uid: UUID.uuid4(),
+      meeting_uid: UUID.generate(),
       start_datetime: occurrence.start,
       end_datetime: occurrence.end,
       series_position: occurrence.position

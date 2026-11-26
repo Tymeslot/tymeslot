@@ -1,34 +1,39 @@
 defmodule Tymeslot.Meetings.CancellationGroupTest do
   @moduledoc """
   The host cancelling a paid group session: every paid seat refunded in
-  full through one job each (`Workers.GroupCancelRefund`), or none with the
-  acknowledgement, and every seat still held for a booker paying released
+  full through one recorded refund each (source `:cancellation`), or none
+  with the acknowledgement, and every seat still held for a booker paying released
   with its checkout expired.
   """
 
   use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
 
+  import Ecto.Query, only: [from: 2]
+
   @moduletag :payments
   @moduletag :bookings
   @moduletag :integration
 
-  import Mox
   import Tymeslot.Factory
   import Tymeslot.GroupCancellationTestHelpers
 
   alias Ecto.Changeset
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.MeetingPayments.BookingPayments
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.RefundQueries
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
-  alias Tymeslot.MeetingPayments.Workers.GroupCancelRefund
-  alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
+  alias Tymeslot.MeetingPayments.Workers.ExecuteRefund
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.StripeWebhookFixtures
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
@@ -36,20 +41,26 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
   @account Tymeslot.GroupCancellationTestHelpers.account()
   @price Tymeslot.GroupCancellationTestHelpers.price_cents()
 
-  setup :verify_on_exit!
-
   setup do
     TestMocks.setup_calendar_mocks()
-    stub(Tymeslot.CalendarMock, :get_booking_integration_info, fn _context -> {:error, :none} end)
+
+    Mox.stub(Tymeslot.CalendarMock, :get_booking_integration_info, fn _context ->
+      {:error, :none}
+    end)
+
     :ok
   end
 
-  defp refund_amounts do
-    [worker: GroupCancelRefund]
-    |> all_enqueued()
-    |> Enum.map(& &1.args["amount_cents"])
-    |> Enum.sort()
+  # The refunds the host's cancellation recorded, by amount.
+  defp cancellation_refunds do
+    from(r in RefundSchema, where: r.source == :cancellation, order_by: r.amount_cents)
+    |> Repo.all()
   end
+
+  defp refund_amounts, do: Enum.map(cancellation_refunds(), & &1.amount_cents)
+
+  defp expired_session(id),
+    do: StripeFixtures.object("checkout_session_expired", %{"id" => id})
 
   defp status(meeting), do: Repo.get!(MeetingSchema, meeting.id).status
 
@@ -78,7 +89,7 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
     end)
   end
 
-  test "cancelling a paid group meeting schedules one refund per paid seat" do
+  test "cancelling a paid group meeting records one refund per paid seat" do
     ctx = host_and_session()
     paid_seat(ctx, "ada@example.com")
     paid_seat(ctx, "grace@example.com")
@@ -129,7 +140,7 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
     assert {:ok, :none} = Meetings.resolve_seat_refund([], %{"cancel_refund_choice" => "none"})
   end
 
-  test "no refund cancels without a refund job" do
+  test "no refund cancels without recording a refund" do
     ctx = host_and_session()
     paid_seat(ctx, "ada@example.com")
 
@@ -194,22 +205,23 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
     Phoenix.PubSub.subscribe(Tymeslot.PubSub, SeatHolds.topic(hold.id))
     session_id = "cs_open_#{hold.id}"
 
-    expect(StripeAdapterMock, :expire_checkout_session, fn ^session_id, opts ->
-      assert opts[:connect_account] == @account
-      {:ok, %{"id" => session_id, "status" => "expired"}}
-    end)
+    StripeStub.expect(:expire_checkout_session, expired_session(session_id))
 
     assert {:ok, _cancelled} =
              Meetings.cancel_meeting_with_refund(ctx.session, ctx.host.id, :none)
 
     assert %{status: :released, released_reason: :meeting_cancelled} = SeatHolds.get(hold.id)
     assert_receive :expired
+
+    assert [%{path: path, headers: headers}] = StripeStub.requests(:expire_checkout_session)
+    assert path =~ session_id
+    assert headers["stripe-account"] == @account
   end
 
   test "a meeting kept alive only by a hold is cancelled with the hold released" do
     ctx = host_and_session(status: :awaiting_payment)
     hold = open_hold(ctx, "late@example.com")
-    stub(StripeAdapterMock, :expire_checkout_session, fn id, _opts -> {:ok, %{"id" => id}} end)
+    StripeStub.stub(:expire_checkout_session, StripeFixtures.object("checkout_session_expired"))
 
     assert {:ok, _cancelled} =
              Meetings.cancel_meeting_with_refund(ctx.session, ctx.host.id, :none)
@@ -234,13 +246,11 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
     settle = fn cancelled ->
       SeatHolds.release_open_for_meeting(cancelled.id, :meeting_cancelled)
 
-      Oban.insert!(
-        GroupCancelRefund.new_for(
-          hd(BookingPayments.seat_payments_for_meeting(cancelled.id, ctx.host.id)),
-          ctx.host.id,
-          @price
-        )
-      )
+      {:ok, _refund} =
+        cancelled.id
+        |> BookingPayments.seat_payments_for_meeting(ctx.host.id)
+        |> hd()
+        |> MeetingPayments.request_refund(@price, :cancellation, host_user_id: ctx.host.id)
 
       {:error, :boom}
     end
@@ -253,7 +263,7 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
     assert refund_amounts() == []
   end
 
-  test "a refund job failure does not undo the cancellation" do
+  test "a refund Stripe declines does not undo the cancellation" do
     ctx = host_and_session()
     payment = paid_seat(ctx, "ada@example.com")
 
@@ -261,12 +271,14 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
     assert {:ok, _cancelled} =
              Meetings.cancel_meeting_with_refund(ctx.session, ctx.host.id, :refund_seats)
 
-    expect(StripeAdapterMock, :create_refund, fn _params, _opts -> {:error, :api_error} end)
-    assert [job] = all_enqueued(worker: GroupCancelRefund)
-    assert {:error, :api_error} = perform_job(GroupCancelRefund, job.args)
+    StripeStub.stub(:create_refund, {:error_fixture, "invalid_request_error"})
+    assert [refund] = cancellation_refunds()
+    assert_enqueued(worker: ExecuteRefund, args: %{refund_id: refund.id})
+    perform_job(ExecuteRefund, %{refund_id: refund.id})
 
     assert status(ctx.session) == :cancelled
     assert Repo.reload!(payment).refunded_amount_cents == 0
+    assert [%{status: :failed}] = RefundQueries.list_for_payment(payment.id)
   end
 
   test "another host's seat payments are never refunded" do
@@ -278,7 +290,7 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
     assert {:ok, _cancelled} =
              Meetings.cancel_meeting_with_refund(ctx.session, ctx.host.id, :refund_seats)
 
-    assert [%{args: %{"host_user_id" => host_id}}] = all_enqueued(worker: GroupCancelRefund)
+    assert [%{requested_by_user_id: host_id}] = cancellation_refunds()
     assert host_id == ctx.host.id
     assert [_other_seat] = BookingPayments.seat_payments_for_meeting(ctx.session.id, other.id)
   end
@@ -289,8 +301,8 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
     refused =
       insert(:seat_hold, meeting: ctx.session, status: :released, released_reason: :failed)
 
-    # Refused at checkout for a full slot: its own refund is already queued
-    # (`RefundLatePayment`), and it never had a participant.
+    # Refused at checkout for a full slot: its own refund is already
+    # recorded (`:late_payment`), and it never had a participant.
     insert(:paid_booking_payment,
       meeting_id: ctx.session.id,
       seat_hold_id: refused.id,
@@ -368,7 +380,7 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
       ctx = host_and_session()
       paid_seat(ctx, "ada@example.com")
       hold = open_hold(ctx, "late@example.com")
-      stub(StripeAdapterMock, :expire_checkout_session, fn id, _opts -> {:ok, %{"id" => id}} end)
+      StripeStub.stub(:expire_checkout_session, StripeFixtures.object("checkout_session_expired"))
 
       assert {:ok, _cancelled} =
                Meetings.cancel_meeting_with_refund(
@@ -410,9 +422,7 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
       Phoenix.PubSub.subscribe(Tymeslot.PubSub, SeatHolds.topic(hold.id))
       session_id = "cs_open_#{hold.id}"
 
-      expect(StripeAdapterMock, :expire_checkout_session, fn ^session_id, _opts ->
-        {:ok, %{"id" => session_id, "status" => "expired"}}
-      end)
+      StripeStub.expect(:expire_checkout_session, expired_session(session_id))
 
       assert {:ok, cancelled} = Cancel.execute_external(ctx.session)
 
@@ -426,13 +436,12 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
   describe "a checkout completing after the host cancelled" do
     setup do
       # The completed webhook backfills the charge the refund is made on.
-      stub(StripeAdapterMock, :retrieve_payment_intent, fn intent, _opts ->
-        {:ok, %{"latest_charge" => "ch_" <> intent}}
+      StripeStub.stub(:retrieve_payment_intent, fn %{path: path} ->
+        intent = path |> String.split("/") |> List.last()
+        StripeStubResponses.payment_intent(intent, "ch_" <> intent)
       end)
 
-      stub(StripeAdapterMock, :expire_checkout_session, fn _id, _opts ->
-        {:error, :already_completed}
-      end)
+      StripeStub.stub(:expire_checkout_session, {:error_fixture, "invalid_request_error"})
 
       :ok
     end
@@ -447,19 +456,14 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
 
       assert :ok = CheckoutSessionCompleted.handle(completed_event(payment))
 
-      assert [_one] =
-               all_enqueued(
-                 worker: RefundLatePayment,
-                 args: %{"booking_payment_id" => payment.id}
-               )
+      assert [%{source: :late_payment, amount_cents: @price}] =
+               RefundQueries.list_for_payment(payment.id)
 
       assert refund_amounts() == []
 
-      expect(StripeAdapterMock, :create_refund, 1, fn %{amount: @price}, _opts ->
-        {:ok, %{"id" => "re_LATE_SEAT"}}
-      end)
+      StripeStub.expect(:create_refund, &StripeStubResponses.refund(&1, "re_LATE_SEAT"))
 
-      assert %{failure: 0} = Oban.drain_queue(queue: :payments)
+      assert %{failure: 0} = Oban.drain_queue(queue: :payments, with_scheduled: true)
 
       assert %{status: :refunded, refunded_amount_cents: @price} = Repo.reload!(payment)
     end

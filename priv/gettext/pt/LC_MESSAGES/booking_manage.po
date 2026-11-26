@@ -745,6 +745,11 @@ msgstr "Este agendamento não está mais disponível, então o horário foi libe
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
+msgid "The booking was cancelled and your place released."
+msgstr "O agendamento foi cancelado e sua vaga, liberada."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen
 msgid "Cancelling…"
 msgstr "Cancelando…"
 
@@ -792,3 +797,18 @@ msgstr[1] "Recusar todas as %{count} sessões"
 #, elixir-autogen, elixir-format
 msgid "If you don't answer by %{deadline}, this request lapses and every session is released."
 msgstr "Se você não responder até %{deadline}, este pedido expira e todas as sessões são liberadas."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "This booking is no longer available, so your place was released."
+msgstr "Este agendamento não está mais disponível, então sua vaga foi liberada."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "This booking is no longer held"
+msgstr "Este agendamento não está mais reservado"
+
+#: lib/tymeslot_web/live/booking_verification_live.ex
+#, elixir-autogen, elixir-format
+msgid "The organiser is changing this meeting's time, so your booking cannot be confirmed for now. You can try again while your place is held."
+msgstr "Quem organiza está alterando o horário desta reunião, então não é possível confirmar seu agendamento por enquanto. Você pode tentar novamente enquanto sua vaga estiver reservada."

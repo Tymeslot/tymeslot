@@ -115,6 +115,14 @@ defmodule Tymeslot.MeetingPayments.Checkout do
   @spec abandon_checkout(String.t()) :: :ok | {:error, term()}
   defdelegate abandon_checkout(meeting_id), to: CheckoutSessions
 
+  @doc """
+  Schedules the end of the open Stripe Checkout of a booking being
+  cancelled while it awaits payment, inside the cancelling transaction. See
+  `CheckoutSessions.schedule_close/1`.
+  """
+  @spec schedule_checkout_close(MeetingSchema.t()) :: :ok | {:error, term()}
+  defdelegate schedule_checkout_close(meeting), to: CheckoutSessions, as: :schedule_close
+
   @doc "As `abandon_checkout/1`, for the checkout of the seat hold `hold_id`."
   @spec abandon_seat_checkout(String.t()) :: :ok | {:error, term()}
   defdelegate abandon_seat_checkout(hold_id), to: CheckoutSessions

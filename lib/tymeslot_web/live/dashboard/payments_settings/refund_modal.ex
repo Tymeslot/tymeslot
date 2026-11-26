@@ -6,6 +6,11 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
   nothing when `payment` is nil. The full/partial radios and amount input
   dispatch `submit_refund`/`close_refund_modal` back to the parent component
   (`@myself`), which owns the modal state and performs the refund.
+
+  A refund still pending counts against what can be refunded, and is shown
+  as being processed; while pending refunds hold all that remains, the
+  submit is disabled. What a lost dispute took back is shown apart from
+  the refunds, since the host made no refund of it.
   """
 
   use TymeslotWeb, :html
@@ -24,10 +29,17 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
   attr :myself, :any, required: true
 
   @spec refund_modal(map()) :: Phoenix.LiveView.Rendered.t()
+  def refund_modal(%{payment: nil} = assigns), do: ~H""
+
   def refund_modal(assigns) do
+    assigns =
+      assign(assigns,
+        remaining: MeetingPayments.refundable_remaining_cents(assigns.payment),
+        pending: MeetingPayments.pending_refund_cents(assigns.payment)
+      )
+
     ~H"""
     <.modal
-      :if={@payment}
       id="refund-modal"
       show={true}
       on_cancel={JS.push("close_refund_modal", target: @myself)}
@@ -47,23 +59,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
           )}
         </p>
 
-        <div class="rounded-token-md border border-tymeslot-100 bg-tymeslot-50 p-4 text-token-sm space-y-1">
-          <p>
-            {dgettext("dashboard_payments", "Original charge:")}
-            <strong>{format_amount(@payment.amount_cents, @payment.currency)}</strong>
-          </p>
-          <p>
-            {dgettext("dashboard_payments", "Already refunded:")}
-            <strong>{format_amount(@payment.refunded_amount_cents, @payment.currency)}</strong>
-          </p>
-          <p>
-            {dgettext("dashboard_payments", "Remaining refundable:")}
-            <strong>{format_amount(
-              MeetingPayments.refundable_remaining_cents(@payment),
-              @payment.currency
-            )}</strong>
-          </p>
-        </div>
+        <.refund_figures payment={@payment} remaining={@remaining} pending={@pending} />
 
         <p class="text-token-sm text-tymeslot-700">
           {dgettext(
@@ -93,7 +89,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
                 checked={@form.type == "full"}
                 phx-click={JS.set_attribute({"data-refund-type", "full"}, to: "#refund-form")}
               /> {dgettext("dashboard_payments", "Full refund")} ({format_amount(
-                MeetingPayments.refundable_remaining_cents(@payment),
+                @remaining,
                 @payment.currency
               )})
             </label>
@@ -113,12 +109,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
             name="amount"
             label={dgettext("dashboard_payments", "Partial amount")}
             min="0.01"
-            max={
-              Money.to_major_string(
-                MeetingPayments.refundable_remaining_cents(@payment),
-                @payment.currency
-              )
-            }
+            max={Money.to_major_string(@remaining, @payment.currency)}
             step="0.01"
             placeholder="0.00"
             value={@form.amount}
@@ -149,6 +140,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
             form="refund-form"
             variant={:danger}
             loading={@submitting}
+            disabled={@remaining == 0 and @pending > 0}
+            aria-describedby={if @pending > 0, do: "refund-pending"}
             loading_text={dgettext("dashboard_payments", "Refunding...")}
           >
             {dgettext("dashboard_payments", "Issue refund")}
@@ -156,6 +149,40 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
         </div>
       </:footer>
     </.modal>
+    """
+  end
+
+  attr :payment, :map, required: true
+  attr :remaining, :integer, required: true
+  attr :pending, :integer, required: true
+
+  # What the payment took and where it went; one figure per line.
+  defp refund_figures(assigns) do
+    ~H"""
+    <div class="rounded-token-md border border-tymeslot-100 bg-tymeslot-50 p-4 text-token-sm space-y-1">
+      <p>
+        {dgettext("dashboard_payments", "Original charge:")}
+        <strong>{format_amount(@payment.amount_cents, @payment.currency)}</strong>
+      </p>
+      <p>
+        {dgettext("dashboard_payments", "Already refunded:")}
+        <strong>{format_amount(MeetingPayments.stripe_refunded_cents(@payment), @payment.currency)}</strong>
+      </p>
+      <%!-- Money a lost dispute took back is not a refund, so it gets its own line. --%>
+      <p :if={@payment.disputed_lost_cents > 0}>
+        {dgettext("dashboard_payments", "Lost in a dispute:")}
+        <strong>{format_amount(@payment.disputed_lost_cents, @payment.currency)}</strong>
+      </p>
+      <p :if={@pending > 0} id="refund-pending">
+        {dgettext("dashboard_payments", "%{amount} being processed",
+          amount: format_amount(@pending, @payment.currency)
+        )}
+      </p>
+      <p>
+        {dgettext("dashboard_payments", "Remaining refundable:")}
+        <strong>{format_amount(@remaining, @payment.currency)}</strong>
+      </p>
+    </div>
     """
   end
 end

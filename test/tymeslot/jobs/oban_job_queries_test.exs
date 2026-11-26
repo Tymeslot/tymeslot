@@ -121,6 +121,7 @@ defmodule Tymeslot.Jobs.ObanJobQueriesTest do
         EmailWorker.new(%{
           "meeting_id" => meeting_id,
           "action" => "send_reminder_emails",
+          "relevant_until" => nil,
           "reminder_value" => 24,
           "reminder_unit" => "hours"
         })

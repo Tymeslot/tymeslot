@@ -95,6 +95,7 @@ defmodule TymeslotWeb.Hooks.ModalHook do
     slack_deliveries: {:show_slack_deliveries_modal, :slack_deliveries_modal_data},
     slug: {:show_slug_modal, :slug_modal_data},
     cancel: {:show_cancel_modal, :cancel_modal_data},
+    leave_editor: {:show_leave_editor_modal, :leave_editor_modal_data},
     stage_preview: {:show_stage_preview_modal, :stage_preview_modal_data},
     disconnect: {:show_disconnect_modal, :disconnect_modal_data},
     refund: {:show_refund_modal, :refund_modal_data}

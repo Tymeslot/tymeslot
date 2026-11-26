@@ -15,6 +15,7 @@ defmodule Tymeslot.Bookings.Cancel do
   alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
+  alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -484,6 +485,11 @@ defmodule Tymeslot.Bookings.Cancel do
   # `Tymeslot.BookingSeries.Cancel` cancels several sessions inside one
   # transaction of its own, `cancel_row/3` runs within it, so
   # `Availability.changed/1` fires before that outer transaction commits.
+  #
+  # A group slot's seats still awaiting email verification go with it, in the
+  # same transaction and after the slot row (the lock order every seat
+  # transition keeps), silently: nobody but each held booker knew of them,
+  # and a seat left live on a cancelled slot could later be confirmed into it.
   defp transition_to_cancelled(meeting, cancellation_reason) do
     changes =
       Enum.reject(
@@ -494,7 +500,7 @@ defmodule Tymeslot.Bookings.Cancel do
         fn {_key, value} -> is_nil(value) end
       )
 
-    case MeetingTransitionQueries.transition_to_cancelled(meeting.id, changes) do
+    case cancel_with_held_seats(meeting, changes) do
       {:ok, updated_meeting} ->
         Logger.info("Meeting status updated to cancelled",
           meeting_id: meeting.id,
@@ -509,7 +515,33 @@ defmodule Tymeslot.Bookings.Cancel do
         )
 
         error
+
+      {:error, reason} = error ->
+        Logger.error("Failed to cancel meeting",
+          meeting_id: meeting.id,
+          reason: LogFormat.reason(reason)
+        )
+
+        error
     end
+  end
+
+  # A booking cancelled while its checkout is open has the checkout closed
+  # by a job committed with the cancellation, so its attendee cannot pay for
+  # it afterwards, and Stripe is not called under these locks. A payment
+  # that completes before the close is refunded in full when it does
+  # (`Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted`).
+  defp cancel_with_held_seats(meeting, changes) do
+    Repo.transaction(fn ->
+      with {:ok, cancelled} <-
+             MeetingTransitionQueries.transition_to_cancelled(meeting.id, changes),
+           :ok <- EmailVerification.release_all_held(cancelled.id),
+           :ok <- Checkout.schedule_checkout_close(meeting) do
+        cancelled
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
   end
 
   # Enqueues the video-sync job that deletes the provider-side meeting (e.g.

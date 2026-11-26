@@ -119,19 +119,25 @@ defmodule Tymeslot.BookingSeries.Approval do
         [status: :cancelled, approval_resolved_at: now, cancelled_at: now] ++
           MeetingApproval.decline_changes(reason, now)
 
-      release(series, changes, &announce_outcome(series, &1, :declined))
+      release(series, fn _session -> changes end, &announce_outcome(series, &1, :declined))
     end
   end
 
   @doc """
   Releases a series nobody answered before its deadline: every session
   still held becomes `:expired`, a paid series is refunded in full, and the
-  booker is told once. For the expiry job and the sweep.
+  booker is told once. For the expiry job and the sweep. Each session is
+  dated as resolved at its deadline (`MeetingState.lapsed_at/2`), however
+  late this runs.
   """
   @spec expire(SeriesSchema.t()) :: {:ok, [Meeting.t()]} | {:error, term()}
   def expire(%SeriesSchema{} = series) do
-    now = DateTime.truncate(Clock.utc_now(), :second)
-    changes = [status: :expired, approval_resolved_at: now, cancelled_at: now]
+    now = Clock.utc_now()
+
+    changes = fn session ->
+      ended_at = MeetingState.lapsed_at(session.approval_deadline_at, now)
+      [status: :expired, approval_resolved_at: ended_at, cancelled_at: ended_at]
+    end
 
     release(series, changes, &announce_outcome(series, &1, :expired))
   end
@@ -154,7 +160,7 @@ defmodule Tymeslot.BookingSeries.Approval do
     now = DateTime.truncate(Clock.utc_now(), :second)
     changes = [status: :cancelled, cancelled_at: now] ++ extra_changes
 
-    release(series, changes, &announce_withdrawal(series, &1, withdrawn_by))
+    release(series, fn _session -> changes end, &announce_withdrawal(series, &1, withdrawn_by))
   end
 
   @doc """
@@ -321,8 +327,9 @@ defmodule Tymeslot.BookingSeries.Approval do
 
   # Release
 
-  defp release(series, changes, announce) do
-    case Repo.transaction(fn -> release_in_transaction(series, changes) end) do
+  # `changes_for` gives each held session the columns its release writes.
+  defp release(series, changes_for, announce) do
+    case Repo.transaction(fn -> release_in_transaction(series, changes_for) end) do
       {:ok, released} ->
         Logger.info("Series request released",
           series_id: series.id,
@@ -342,8 +349,8 @@ defmodule Tymeslot.BookingSeries.Approval do
 
   # Released whole, a series request has nothing left to come: it is closed
   # with its sessions.
-  defp release_in_transaction(series, changes) do
-    released = Enum.map(lock_held(series), &release_session(&1, changes))
+  defp release_in_transaction(series, changes_for) do
+    released = Enum.map(lock_held(series), &release_session(&1, changes_for.(&1)))
     :ok = SeriesCancel.close_in_transaction(series.id)
     released
   end
@@ -373,7 +380,7 @@ defmodule Tymeslot.BookingSeries.Approval do
   # booker reads one email.
   defp announce_outcome(series, released, variant) when variant in [:declined, :expired] do
     announce_release_to_automations(series, released, variant)
-    Notifications.schedule_series_request_outcome(series, variant)
+    Notifications.schedule_series_request_outcome(series, released, variant)
   end
 
   defp announce_release_to_automations(_series, [], _variant), do: :ok

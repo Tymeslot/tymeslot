@@ -30,7 +30,6 @@ defmodule TymeslotWeb.Live.Scheduling.PaidGroupBookingTest do
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Checkout
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired
   alias Tymeslot.Meetings
@@ -41,6 +40,8 @@ defmodule TymeslotWeb.Live.Scheduling.PaidGroupBookingTest do
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.StripeWebhookFixtures
   alias Tymeslot.TestMocks
   alias TymeslotWeb.BookingDriver
@@ -80,9 +81,10 @@ defmodule TymeslotWeb.Live.Scheduling.PaidGroupBookingTest do
     |> stub(:get_booking_integration_info, fn _user_id -> {:error, :no_integration} end)
 
     # The completion webhook looks up the charge; these payments have none.
-    stub(StripeAdapterMock, :retrieve_payment_intent, fn _id, _opts ->
-      {:ok, %{"latest_charge" => nil}}
-    end)
+    StripeStub.stub(
+      :retrieve_payment_intent,
+      StripeFixtures.object("payment_intent_with_latest_charge", %{"latest_charge" => nil})
+    )
 
     :ok
   end
@@ -356,16 +358,14 @@ defmodule TymeslotWeb.Live.Scheduling.PaidGroupBookingTest do
   end
 
   defp expect_checkout(session_id) do
-    expect(StripeAdapterMock, :create_checkout_session, fn params, opts ->
-      assert opts[:connect_account] == @account
-      assert [%{quantity: _seats}] = params.line_items
+    StripeStub.expect(:create_checkout_session, fn %{form: form, headers: headers} ->
+      assert headers["stripe-account"] == @account
+      assert [%{"quantity" => _seats}] = form["line_items"]
 
-      {:ok,
-       %{
-         id: session_id,
-         url: "https://checkout.stripe.com/c/pay/#{session_id}",
-         payment_intent: nil
-       }}
+      StripeFixtures.object("checkout_session_payment", %{
+        "id" => session_id,
+        "url" => "https://checkout.stripe.com/c/pay/#{session_id}"
+      })
     end)
   end
 

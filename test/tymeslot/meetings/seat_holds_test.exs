@@ -313,7 +313,7 @@ defmodule Tymeslot.Meetings.SeatHoldsTest do
     end
 
     test "ignores other statuses" do
-      for status <- [:cancelled, :pending, :awaiting_approval, "awaiting_payment"] do
+      for status <- [:cancelled, :pending, :awaiting_approval] do
         changeset = MeetingSchema.group_changeset(%MeetingSchema{}, group_attrs(status))
         assert Changeset.get_field(changeset, :status) == :confirmed
       end

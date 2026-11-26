@@ -180,7 +180,7 @@ defmodule Tymeslot.Integrations.Video.Update do
   # requires).
   defp save_update(%VideoIntegrationSchema{provider: "nextcloud_talk"} = integration, attrs) do
     if talk_connection_changed?(attrs) do
-      update_with_credentials(integration, attrs, :proven)
+      Reconnect.save(integration, attrs)
     else
       VideoIntegrationQueries.update(integration, attrs)
     end
@@ -188,7 +188,7 @@ defmodule Tymeslot.Integrations.Video.Update do
 
   defp save_update(integration, attrs) do
     if credentials_changed?(integration, attrs) do
-      update_with_credentials(integration, attrs, :unproven)
+      update_with_credentials(integration, attrs)
     else
       VideoIntegrationQueries.update(integration, attrs)
     end
@@ -325,17 +325,14 @@ defmodule Tymeslot.Integrations.Video.Update do
   defp blank?(value) when is_binary(value), do: String.trim(value) == ""
   defp blank?(value), do: is_nil(value)
 
-  defp update_with_credentials(integration, attrs, proof) do
-    with {:ok, updated} = ok <- save_credentials(integration, attrs, proof) do
+  # Credentials the provider has not yet accepted; a proven change goes through
+  # `Reconnect.save/2`, which resets the health row itself.
+  defp update_with_credentials(integration, attrs) do
+    with {:ok, updated} = ok <- VideoIntegrationQueries.update_credentials(integration, attrs) do
       HealthCheck.mark_user_recovered(:video, updated.id)
       ok
     end
   end
-
-  defp save_credentials(integration, attrs, :proven), do: Reconnect.save(integration, attrs)
-
-  defp save_credentials(integration, attrs, :unproven),
-    do: VideoIntegrationQueries.update_credentials(integration, attrs)
 
   # A credential counts as supplied only when it would change what is stored.
   # The edit dialog fills in the stored App ID, so resubmitting it unchanged

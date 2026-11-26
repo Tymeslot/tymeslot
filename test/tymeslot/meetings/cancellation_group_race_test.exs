@@ -21,7 +21,7 @@ defmodule Tymeslot.Meetings.CancellationGroupRaceTest do
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
-  alias Tymeslot.MeetingPayments.Workers.GroupCancelRefund
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.MeetingSchema
@@ -51,13 +51,21 @@ defmodule Tymeslot.Meetings.CancellationGroupRaceTest do
               )
             )
 
+          refund_ids =
+            Repo.all(
+              from(r in RefundSchema, where: r.booking_payment_id in ^payment_ids, select: r.id)
+            )
+
           Repo.delete_all(
             from(j in Oban.Job,
               where:
                 fragment("?->>'meeting_id'", j.args) == ^ctx.session.id or
-                  fragment("?->>'booking_payment_id'", j.args) in ^payment_ids
+                  fragment("?->>'booking_payment_id'", j.args) in ^payment_ids or
+                  fragment("?->>'refund_id'", j.args) in ^refund_ids
             )
           )
+
+          Repo.delete_all(from(r in RefundSchema, where: r.id in ^refund_ids))
 
           Repo.delete_all(from(p in BookingPaymentSchema, where: p.host_user_id == ^ctx.host.id))
           Repo.delete_all(from(m in MeetingSchema, where: m.organizer_user_id == ^ctx.host.id))
@@ -125,9 +133,9 @@ defmodule Tymeslot.Meetings.CancellationGroupRaceTest do
       refunded_ids =
         unboxed(fn ->
           Repo.all(
-            from(j in Oban.Job,
-              where: j.worker == ^inspect(GroupCancelRefund),
-              select: fragment("?->>'booking_payment_id'", j.args)
+            from(r in RefundSchema,
+              where: r.source == :cancellation,
+              select: r.booking_payment_id
             )
           )
         end)

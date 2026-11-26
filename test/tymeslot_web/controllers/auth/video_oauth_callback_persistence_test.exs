@@ -23,12 +23,14 @@ defmodule TymeslotWeb.VideoOAuthCallbackPersistenceTest do
   import Tymeslot.AuthTestHelpers, only: [log_in_user: 2]
   import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.OAuthFlowHelpers
+  import Tymeslot.WorkerTestHelpers, only: [insert_unhealthy_health_row: 3]
 
   alias Phoenix.Flash
   alias Tymeslot.Bookings.Orchestrator
   alias Tymeslot.Factory
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Infrastructure.DashboardCache
+  alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Shared.OAuth.GoogleOAuthHelper
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
@@ -37,6 +39,7 @@ defmodule TymeslotWeb.VideoOAuthCallbackPersistenceTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
+  alias Tymeslot.Workers.IntegrationHealthWorker
   alias Tymeslot.Workers.VideoRoomWorker
 
   setup :verify_on_exit!
@@ -173,6 +176,28 @@ defmodule TymeslotWeb.VideoOAuthCallbackPersistenceTest do
         assert decrypted.access_token == "access-2"
         assert decrypted.refresh_token == "refresh-2"
       end
+
+      # The reconnect proves the grant, so the badge the probe raised clears at
+      # once rather than when a scheduled probe next passes, up to an hour on.
+      test "a reconnect clears the unhealthy badge and queues a probe", %{conn: conn, user: user} do
+        callback(conn, user, @provider, "access-1", "refresh-1")
+        assert [row] = rows_for(user, @provider)
+        insert_unhealthy_health_row(user, :video, row.id)
+        assert attention_status(user, row) == :unhealthy
+
+        build_conn()
+        |> setup_session()
+        |> log_in_user(user)
+        |> callback(user, @provider, "access-2", "refresh-2", integration_id: row.id)
+
+        assert [reconnected] = rows_for(user, @provider)
+        assert attention_status(user, reconnected) == :ok
+
+        assert_enqueued(
+          worker: IntegrationHealthWorker,
+          args: %{"type" => "video", "integration_id" => row.id}
+        )
+      end
     end
   end
 
@@ -252,7 +277,9 @@ defmodule TymeslotWeb.VideoOAuthCallbackPersistenceTest do
 
   # -- helpers ---------------------------------------------------------------
 
-  defp callback(conn, user, provider, access_token, refresh_token) do
+  # `opts` go to `flow_state/4`; an `:integration_id` makes the callback the
+  # reconnect of that integration, as its Reconnect button starts it.
+  defp callback(conn, user, provider, access_token, refresh_token, opts \\ []) do
     config = Map.fetch!(@providers, provider)
 
     tokens =
@@ -274,11 +301,17 @@ defmodule TymeslotWeb.VideoOAuthCallbackPersistenceTest do
       {:ok, tokens}
     end)
 
-    state = flow_state(user.id, provider, Map.fetch!(@secrets, config.secret))
+    state = flow_state(user.id, provider, Map.fetch!(@secrets, config.secret), opts)
     get(conn, config.path, %{"code" => "auth-code", "state" => state})
   end
 
   defp account_id(provider), do: "#{provider}-account-1"
+
+  # What the dashboard's integration row shows for `integration`.
+  defp attention_status(user, integration) do
+    health = HealthCheck.health_states_for_user(user.id).video[integration.id]
+    HealthCheck.attention_status(integration, health)
+  end
 
   defp rows_for(user, provider) do
     Repo.all(

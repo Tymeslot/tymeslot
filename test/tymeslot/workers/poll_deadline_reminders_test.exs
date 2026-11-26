@@ -60,6 +60,7 @@ defmodule Tymeslot.Workers.PollDeadlineRemindersTest do
       assert :ok =
                perform_job(EmailWorker, %{
                  "action" => "send_poll_deadline_reminders",
+                 "relevant_until" => nil,
                  "poll_id" => poll.id
                })
 
@@ -96,6 +97,7 @@ defmodule Tymeslot.Workers.PollDeadlineRemindersTest do
       job =
         persisted_job(EmailWorker, %{
           "action" => "send_poll_deadline_reminders",
+          "relevant_until" => nil,
           "poll_id" => poll.id
         })
 
@@ -132,6 +134,7 @@ defmodule Tymeslot.Workers.PollDeadlineRemindersTest do
       assert :ok =
                perform_job(EmailWorker, %{
                  "action" => "send_poll_deadline_reminders",
+                 "relevant_until" => nil,
                  "poll_id" => poll.id
                })
 
@@ -153,6 +156,7 @@ defmodule Tymeslot.Workers.PollDeadlineRemindersTest do
       assert {:discard, "poll not open"} =
                perform_job(EmailWorker, %{
                  "action" => "send_poll_deadline_reminders",
+                 "relevant_until" => nil,
                  "poll_id" => poll.id
                })
     end
@@ -175,6 +179,7 @@ defmodule Tymeslot.Workers.PollDeadlineRemindersTest do
       assert {:discard, "host has no username"} =
                perform_job(EmailWorker, %{
                  "action" => "send_poll_deadline_reminders",
+                 "relevant_until" => nil,
                  "poll_id" => poll.id
                })
 

@@ -126,19 +126,17 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
     # Extract username from URL if it's a calendar URL
     config = maybe_extract_username_from_url(config)
 
-    # Convert Nextcloud config to CalDAV config with Nextcloud-specific paths
-    caldav_config = %{
+    # Only the Nextcloud-specific keys are overridden; everything else in the
+    # config (free-busy paths, writable paths, the integration id) passes
+    # through to `CalDAVProvider.new/1` untouched, so a key the path config
+    # gains reaches the client without being listed here.
+    config
+    |> Map.merge(%{
       base_url: normalize_base_url(config[:base_url]),
-      username: config[:username],
-      password: config[:password],
       calendar_paths: build_nextcloud_calendar_paths(config),
-      writable_calendar_paths: config[:writable_calendar_paths],
-      skip_breaker: config[:skip_breaker] || false,
-      calendar_integration_id: config[:calendar_integration_id],
       provider: :nextcloud
-    }
-
-    CalDAVProvider.new(caldav_config)
+    })
+    |> CalDAVProvider.new()
   end
 
   @doc """

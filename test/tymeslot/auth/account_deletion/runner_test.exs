@@ -81,6 +81,7 @@ defmodule Tymeslot.Auth.AccountDeletion.RunnerTest do
 
       %{
         "action" => "send_reminder_emails",
+        "relevant_until" => nil,
         "meeting_id" => meeting.id,
         "reminder_value" => 1,
         "reminder_unit" => "hours"
@@ -133,6 +134,7 @@ defmodule Tymeslot.Auth.AccountDeletion.RunnerTest do
       job =
         %{
           "action" => "send_reminder_emails",
+          "relevant_until" => nil,
           "meeting_id" => meeting.id,
           "reminder_value" => 1,
           "reminder_unit" => "hours"

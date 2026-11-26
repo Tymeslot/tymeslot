@@ -1,8 +1,8 @@
 defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
   @moduledoc """
   Human-readable messages for admin alert types, reached through
-  `AlertTypes.format_message/2`. Every type registered in `AlertTypes` has a
-  clause here.
+  `AlertTypes.format_message/2`. Every type in Core's own registry has a
+  clause here; a provider's types are formatted by the provider.
   """
 
   @doc """
@@ -128,48 +128,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
     "#{Map.get(metadata, :summary)}: #{kind} in #{source}: #{reason_text(metadata)}"
   end
 
-  def format_message(:reconciliation_discrepancies, metadata) do
-    count = Map.get(metadata, :discrepancies_count, "unknown")
-    "Payment reconciliation found #{count} discrepancies"
-  end
-
-  def format_message(:reconciliation_incomplete, metadata) do
-    count = Map.get(metadata, :unresolved_count, "unknown")
-
-    "Payment reconciliation could not look up #{count} subscriptions at Stripe, " <>
-      "so it did not check for subscriptions missing there"
-  end
-
-  def format_message(:subscription_not_in_database, metadata) do
-    stripe_id = Map.get(metadata, :stripe_subscription_id, "unknown")
-    "Active Stripe subscription #{stripe_id} has no matching database record"
-  end
-
-  def format_message(:payment_event_enqueue_failed, metadata) do
-    event = Map.get(metadata, :event, "unknown")
-    detail = Map.get(metadata, :summary) || Map.get(metadata, :reason_message, "unknown")
-    "Payment event enqueue failed for #{event}: #{detail}"
-  end
-
-  # The day count is deliberately in the message: the admin needs to see how
-  # long the row has been stalled. It is what makes the message unusable as a
-  # dedup key, which is why this type has its own `dedup_key/2` clause.
-  def format_message(:dunning_stalled, metadata) do
-    stripe_id = Map.get(metadata, :stripe_subscription_id, "unknown")
-    days = Map.get(metadata, :days_past_due, "unknown")
-
-    "Dunning stalled for subscription #{stripe_id}: #{days} days past due is beyond the " <>
-      "auto-cancel guard, so it is never cancelled and still grants Pro; manual review required"
-  end
-
-  def format_message(:account_deletion_billing_sync_failed, metadata) do
-    user_id = Map.get(metadata, :user_id, "unknown")
-    detail = Map.get(metadata, :reason_message, "unknown")
-
-    "Subscription renewal for user #{user_id} could not be synced with an account deletion " <>
-      "after every retry (#{detail}); check the subscription at Stripe by hand"
-  end
-
   def format_message(:account_deletion_held_last_admin, metadata) do
     user_id = Map.get(metadata, :user_id, "unknown")
 
@@ -186,31 +144,59 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
       "sweep tries again, but the account stays past its deletion date until the cause is fixed"
   end
 
-  # Discarded after the snooze cap because the subscription, customer or
-  # dispute it refers to never appeared. The ids are what the operator needs
-  # to find the event in Stripe and reconcile it by hand.
-  def format_message(:payment_event_orphaned, metadata) do
-    event_type = Map.get(metadata, :event_type, "unknown")
-    event_id = Map.get(metadata, :event_id) || "unknown"
-    referent = Map.get(metadata, :referent_id) || "unknown"
-    summary = Map.get(metadata, :summary, "its referent never appeared")
+  # The refund row is settled `failed`, so nothing retries it; the payment
+  # id is what the operator needs to find the charge.
+  def format_message(:refund_failed, metadata) do
+    get = &Map.get(metadata, &1, "unknown")
 
-    "Payment event #{event_type} (ID: #{event_id}, referent: #{referent}) discarded: " <>
-      "#{summary} (#{reason_text(metadata)})"
+    "Refund #{get.(:refund_id)} (#{get.(:source)}) of booking payment " <>
+      "#{get.(:booking_payment_id)} failed: #{get.(:failure_code)}. The attendee is still " <>
+      "owed the money; refund the booking from the host's payments settings or the " <>
+      "Stripe dashboard"
   end
 
-  # The booking stays on the host's outstanding-refunds list; the id is what
-  # the operator needs to find the charge in Stripe. The job is unique per
-  # payment over every state, so a fresh one cannot be inserted: retrying
-  # means retrying this one.
-  def format_message(:late_payment_refund_failed, metadata) do
-    id = Map.get(metadata, :booking_payment_id, "unknown")
-    job_id = Map.get(metadata, :oban_job_id, "unknown")
+  def format_message(:refund_failure_reversed, metadata) do
+    get = &Map.get(metadata, &1, "unknown")
 
-    "Refund of booking payment #{id}, paid after its slot was taken, failed on every " <>
-      "attempt (#{reason_text(metadata)}); the attendee is still owed the money. " <>
-      "To settle it, refund the booking from the host's payments settings (or the " <>
-      "Stripe dashboard), or once the cause is fixed retry Oban job #{job_id}"
+    "Refund #{get.(:refund_id)} of booking payment #{get.(:booking_payment_id)}, reported " <>
+      "as failed (#{get.(:failure_code)}), was made at Stripe after all as " <>
+      "#{get.(:stripe_refund_id)} and is now recorded. The earlier failure alert is void: " <>
+      "the attendee has been refunded, so refund nothing by hand" <> host_told(metadata)
+  end
+
+  def format_message(:refund_duplicated, metadata) do
+    get = &Map.get(metadata, &1, "unknown")
+
+    "Stripe made a second refund, #{get.(:duplicate_stripe_refund_id)} of " <>
+      "#{get.(:duplicate_amount_cents)} cents, for refund #{get.(:refund_id)} of booking " <>
+      "payment #{get.(:booking_payment_id)}, which records #{get.(:stripe_refund_id)}: the " <>
+      "attendee has been refunded twice. Check the charge in the Stripe dashboard and settle " <>
+      "the difference with the host and the attendee"
+  end
+
+  # The job is unique per payment and reason over every state, so a fresh
+  # one cannot be inserted: retrying means retrying this one.
+  def format_message(:late_payment_refund_failed, metadata) do
+    get = &Map.get(metadata, &1, "unknown")
+
+    "Refund of booking payment #{get.(:booking_payment_id)}, owed in full to the attendee " <>
+      "(paid after its slot was taken, to a host whose account is being deleted, or left " <>
+      "with the host by a decided dispute), could not be recorded on any attempt " <>
+      "(#{reason_text(metadata)}); the attendee is still owed the money. Refund the " <>
+      "booking from the host's payments settings or the Stripe dashboard, or once the " <>
+      "cause is fixed retry Oban job #{get.(:oban_job_id)}"
+  end
+
+  def format_message(:refund_stuck, metadata) do
+    get = &Map.get(metadata, &1, "unknown")
+
+    "Refund #{get.(:refund_id)} (#{get.(:source)}) of booking payment " <>
+      "#{get.(:booking_payment_id)} is still pending after #{get.(:attempt)} attempts: " <>
+      "Tymeslot cannot tell whether Stripe made it. Tymeslot keeps trying; check the " <>
+      "charge in the Stripe dashboard, then record what Stripe did with " <>
+      ~s|Tymeslot.Release.settle_stuck_refund("#{get.(:refund_id)}", | <>
+      ~s|{:succeeded, "re_…", charge_refunded_cents}) through bin/tymeslot rpc, | <>
+      "or with :failed in place of the tuple if Stripe never made it"
   end
 
   # The job is unique per account, so once the cause is fixed the way to try
@@ -225,15 +211,14 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
       "Tymeslot from the account's authorised apps in the Stripe dashboard"
   end
 
-  def format_message(:subscription_withdrawal_unfinished, metadata) do
-    user_id = Map.get(metadata, :user_id, "unknown")
-    withdrawal_id = Map.get(metadata, :withdrawal_id, "unknown")
-    stripe_id = Map.get(metadata, :stripe_subscription_id, "unknown")
+  def format_message(:connect_event_unmatched, metadata) do
+    get = &Map.get(metadata, &1, "unknown")
 
-    "Withdrawal #{withdrawal_id} of user #{user_id} (subscription #{stripe_id}) is recorded " <>
-      "but unfinished (#{reason_text(metadata)}); the host may still be owed a refund or a " <>
-      "cancellation. Once the cause is fixed, finish it from a release shell or ask the host " <>
-      "to press Finish my withdrawal"
+    "Stripe event #{get.(:event_type)} #{get.(:event_id)} from account " <>
+      "#{get.(:stripe_account_id)} was acknowledged without a booking match: its payment " <>
+      "intent #{get.(:payment_intent_id)} could not be read (#{reason_text(metadata)}). " <>
+      "Any refund or dispute on charge #{get.(:charge_id)} is not recorded in Tymeslot; " <>
+      "check the charge in the Stripe dashboard"
   end
 
   # One alert per integration and sync run (`Calendar.InvalidEventReport`).
@@ -272,23 +257,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
       [] -> "#{summary}: #{reason}"
       labels -> "#{summary} (#{Enum.join(labels, ", ")}): #{reason}"
     end
-  end
-
-  # Unlike `:recipient_email_rejected`, the refused address is our own inbox,
-  # so every enquiry bounces until it is reactivated with the mail provider.
-  def format_message(:contact_recipient_rejected, metadata) do
-    recipient =
-      case Map.get(metadata, :recipients_masked) do
-        masked when is_binary(masked) and masked != "" -> " (#{masked})"
-        _none -> ""
-      end
-
-    action = Map.get(metadata, :action, "unknown")
-    job_id = Map.get(metadata, :job_id, "unknown")
-
-    "The configured contact recipient#{recipient} is being rejected by the mail provider, " <>
-      "so incoming enquiries are not being delivered; reactivate the address with the provider " <>
-      "(#{action}, job #{job_id}: #{reason_text(metadata)})"
   end
 
   # A configured email (a payment notice, say) is lost once Oban stops
@@ -362,6 +330,12 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
     end
   end
 
+  # A refund the host decided emails the host when it fails.
+  defp host_told(%{host_may_have_been_told: true}),
+    do: ". The host may have been emailed that it failed: tell them it was made"
+
+  defp host_told(_metadata), do: ""
+
   defp recipients_label(metadata) do
     case Map.get(metadata, :recipients_masked) do
       recipients when is_binary(recipients) and recipients != "" -> "to #{recipients}"
@@ -370,7 +344,8 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
   end
 
   # The reason as `AdminAlerts.report/2` flattens it: the normalised message,
-  # falling back to the bare code for callers that set only that.
+  # falling back to the bare code for callers that set only that. Providers
+  # reach it through `AlertTypes.reason_text/1`.
   @doc false
   @spec reason_text(map()) :: term()
   def reason_text(metadata) do

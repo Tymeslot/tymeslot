@@ -26,15 +26,51 @@ defmodule Tymeslot.Emails.EmailActionsTest do
     send_poll_vote_digest send_poll_participant_link send_poll_vote_receipt
     send_poll_invitation
     send_poll_new_times send_poll_cancelled
-    send_seat_session_moved
+    send_seat_session_moved send_seat_email_verification send_seat_slot_revived
     send_registration_closed send_booking_link_email
     send_series_confirmation send_series_cancellation send_series_request
     send_series_request_outcome send_series_request_nudge
     send_released_guest_cancellations send_external_booking_change send_calendar_sync_error
   )
 
+  # The emails that are dropped unsent once the moment they carry has passed.
+  # Adding one here, or a new action that should be here, is a decision about
+  # when its news expires. The reschedule request carries none: its deadline
+  # moves with the meeting, so its handler reads it from the meeting.
+  @time_bound ~w(
+    send_reminder_emails send_seat_reminder
+    send_reschedule_request_lapsed send_reschedule_request_unanswered
+    send_booking_request_emails send_booking_approval_nudge send_booking_request_outcome
+    send_series_request send_series_request_nudge send_series_request_outcome
+    send_poll_deadline_reminders
+  )
+
   test "every action keeps the name jobs are already queued under" do
     assert Enum.sort(EmailActions.names()) == Enum.sort(@names)
+  end
+
+  test "exactly the time-bound actions require the moment their news stops mattering" do
+    time_bound =
+      Enum.filter(EmailActions.names(), fn name ->
+        {:ok, fields} = EmailActions.required_fields(name)
+        "relevant_until" in fields
+      end)
+
+    assert Enum.sort(time_bound) == Enum.sort(@time_bound)
+  end
+
+  describe "relevant?/2" do
+    @now ~U[2026-11-21 12:00:00Z]
+
+    test "is true up to the moment and false after it" do
+      assert EmailActions.relevant?(%{"relevant_until" => "2026-11-21T12:00:00Z"}, @now)
+      refute EmailActions.relevant?(%{"relevant_until" => "2026-11-21T11:59:59Z"}, @now)
+    end
+
+    test "is true for a job with no moment, or one written before the arg existed" do
+      assert EmailActions.relevant?(%{"relevant_until" => nil}, @now)
+      assert EmailActions.relevant?(%{"meeting_id" => "m"}, @now)
+    end
   end
 
   test "every action names a handler that exists, with the arity its tag says" do
@@ -58,7 +94,7 @@ defmodule Tymeslot.Emails.EmailActionsTest do
   test "every per-seat action is a registered action" do
     seats =
       ~w(seat_confirmation seat_cancellation seat_meeting_cancellation seat_reschedule
-         seat_reschedule_request seat_reminder)a
+         seat_reschedule_request seat_reminder seat_email_verification seat_slot_revived)a
 
     assert Enum.reject(seats, &(EmailActions.seat_action(&1) in EmailActions.names())) == []
   end
@@ -79,7 +115,7 @@ defmodule Tymeslot.Emails.EmailActionsTest do
     test "refuses a job missing a required arg" do
       changeset = EmailWorker.new(%{"action" => "send_reminder_emails", "meeting_id" => "m"})
 
-      assert {"missing required fields: reminder_value, reminder_unit", _opts} =
+      assert {"missing required fields: reminder_value, reminder_unit, relevant_until", _opts} =
                changeset.errors[:args]
     end
 

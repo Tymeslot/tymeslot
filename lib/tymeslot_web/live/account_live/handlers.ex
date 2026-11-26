@@ -16,6 +16,7 @@ defmodule TymeslotWeb.AccountLive.Handlers do
   alias TymeslotWeb.AccountLive.Helpers
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Helpers.DeletionDate
+  alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.Hooks.ModalHook
 
   # Provider constants
@@ -226,8 +227,11 @@ defmodule TymeslotWeb.AccountLive.Handlers do
     else
       dgettext(
         "account",
-        "Your account will be deleted on %{date}. Sign in before then if you change your mind.",
-        date: DeletionDate.format(pending.deletion_scheduled_at, pending)
+        "Your account will be deleted on %{on_date}. Sign in before then if you change your mind.",
+        on_date:
+          pending.deletion_scheduled_at
+          |> DeletionDate.format(pending)
+          |> LocaleFormat.with_article(:none, Gettext.get_locale(TymeslotWeb.Gettext))
       )
     end
   end

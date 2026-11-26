@@ -27,6 +27,7 @@ defmodule Tymeslot.Integrations.Calendar.OwnerActions do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarSelectionQueries
   alias Tymeslot.Integrations.Calendar.Deletion
+  alias Tymeslot.Integrations.Calendar.Discovery
   alias Tymeslot.Integrations.Calendar.Management
   alias Tymeslot.Integrations.Calendar.Orchestration.Workflows
   alias Tymeslot.Integrations.Calendar.ProviderConfig
@@ -201,20 +202,27 @@ defmodule Tymeslot.Integrations.Calendar.OwnerActions do
   # returns the same synthetic entry every time), so refreshing one re-fetches
   # the feed instead, through the same worker the scheduled sync sweep uses; a
   # refresh already queued for it counts as success. Every other provider
-  # re-runs discovery and merges the result into the selection.
+  # that discovers calendars re-runs discovery and merges the result into the
+  # selection; one with a fixed calendar list (the debug provider) has nothing
+  # to rediscover, so it is synced instead.
   #
   # This asks about the feed family specifically, not about read-only
   # providers: `ics_url` is the only read-only provider left, but the two
   # questions are different and need not stay in step. An Exchange mailbox
   # discovers real folders and has no feed to re-fetch, so it belongs on the
   # discovery path with every other credentialed provider.
-  defp refresh(%{provider: provider} = integration) do
-    if ProviderConfig.subscription?(provider) do
-      with {:ok, _outcome} <- SyncIcsCalendarWorker.enqueue(integration.id),
-           do: {:ok, :feed_sync_enqueued}
-    else
-      with {:ok, _updated} <- Workflows.update_integration_with_discovery(integration),
-           do: {:ok, :calendars_rediscovered}
+  defp refresh(%CalendarIntegrationSchema{provider: provider} = integration) do
+    cond do
+      ProviderConfig.subscription?(provider) ->
+        with {:ok, _outcome} <- SyncIcsCalendarWorker.enqueue(integration.id),
+             do: {:ok, :feed_sync_enqueued}
+
+      Discovery.discovers_calendars?(integration) ->
+        with {:ok, _updated} <- Workflows.update_integration_with_discovery(integration),
+             do: {:ok, :calendars_rediscovered}
+
+      true ->
+        with {:ok, _job} <- SyncSchedule.request_sync(integration), do: {:ok, :sync_requested}
     end
   end
 

@@ -6,7 +6,9 @@ defmodule Tymeslot.Meetings.Cancellation do
   underneath: the meeting is local state, the refund is a Stripe call that
   cannot be rolled back. This module owns the rule connecting them so that the
   rule is stated once, rather than reconstructed at each place a host can
-  cancel from.
+  cancel from. The refund is recorded with the decision
+  (`MeetingPayments.refund_now/4`) and finished by Tymeslot: a refund Stripe
+  has not confirmed yet stays pending and is retried until it goes through.
 
   ## The refund rule
 
@@ -29,10 +31,13 @@ defmodule Tymeslot.Meetings.Cancellation do
 
   The meeting is cancelled first and refunded second. The reverse order would
   risk refunding an attendee whose meeting then fails to cancel, leaving them
-  with a live booking they have been paid back for. In this order the bad case
-  is a cancelled meeting with no refund, which is visible to the host and can
-  be settled manually from Stripe — hence the distinct `:refund_failed` reason,
-  so callers can say so rather than reporting a failed cancellation.
+  with a live booking they have been paid back for. A refund Stripe has not
+  answered yet is no failure (`{:ok, cancelled, :refund_pending}`): it is
+  recorded and Tymeslot keeps trying. The bad case is a refund Stripe
+  declined, leaving a cancelled meeting with no refund, which is visible to
+  the host and can be settled manually from Stripe; hence the distinct
+  `:refund_failed` reason, so callers can say so rather than reporting a
+  failed cancellation.
 
   The cancellation is announced third, once the refund has settled either
   way. The host's cancellation email tells them what they still hold for the
@@ -60,18 +65,21 @@ defmodule Tymeslot.Meetings.Cancellation do
 
   The seats are settled in the cancellation's own transaction, once the
   meeting row is cancelled and so locked (`Cancel.execute_settling/3`):
-  every seat hold still open is released as `:meeting_cancelled`, and one
-  `Workers.GroupCancelRefund` job is inserted per paid seat still inside the
-  60-day refund window; a seat paid before that is left for the host to
-  refund from Stripe, as the dialog and the organiser's email say. Read under that lock, the seats include one paid while the
-  cancellation waited for it. The Stripe calls run in the jobs, never under
-  the lock, so a refund that fails leaves the session cancelled, and the job
-  tells the host. Once committed, each released hold's checkout is expired
+  every seat hold still open is released as `:meeting_cancelled`, and a
+  refund of what each paid seat still inside the 60-day refund window has
+  left is recorded (`MeetingPayments.request_refund/4`, source
+  `:cancellation`); a seat paid before that is left for the host to refund
+  from Stripe, as the dialog and the organiser's email say. Read under that
+  lock, the seats include one paid while the cancellation waited for it. A
+  recorded refund is made by its own job (`Workers.ExecuteRefund`) once the
+  cancellation commits, never under the lock, so a refund that fails leaves
+  the session cancelled, and the host is told (`Refunds.FailureNotice`).
+  Once committed, each released hold's checkout is expired
   (a payment completing anyway is refunded, its hold having been released
   for a cancelled meeting) and its booker's payment page told, and the
   cancellation is announced. The organiser's email is told of the seats
   settled under the lock and what each held then (`t:seat_refund/0`), so it
-  names exactly the refunds scheduled, or the money left with the host.
+  names exactly the refunds recorded, or the money left with the host.
   """
 
   alias Tymeslot.Bookings.Cancel
@@ -80,7 +88,6 @@ defmodule Tymeslot.Meetings.Cancellation do
   alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Checkout
-  alias Tymeslot.MeetingPayments.Workers.GroupCancelRefund
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.SeatHolds
 
@@ -212,14 +219,17 @@ defmodule Tymeslot.Meetings.Cancellation do
   refusal is not a failed cancellation or refund, and must not leave a
   cancelled meeting behind.
 
-  A refund failure is reported as `{:error, {:refund_failed, reason}}` and
-  leaves the meeting cancelled; see the module docs on ordering.
+  A refund Stripe has not confirmed yet returns
+  `{:ok, cancelled, :refund_pending}`; one refused is reported as
+  `{:error, {:refund_failed, reason}}` and leaves the meeting cancelled; see
+  the module docs on ordering.
 
   A group session is settled seat by seat (see "A group session" above),
-  whatever the action: `:refund_seats` (or an amount) schedules a full
+  whatever the action: `:refund_seats` (or an amount) records a full
   refund of every paid seat, `:none` (or a refusal) refunds none, and
   either releases the seats still held for bookers paying. Its refunds
-  are made by jobs, so it never returns `{:refund_failed, _}`.
+  are made in the background, so it never returns `:refund_pending` or
+  `{:refund_failed, _}`.
   `:refund_seats` on a one-to-one meeting, which has no seats, is
   `{:error, :not_found}`, with nothing cancelled.
 
@@ -232,6 +242,7 @@ defmodule Tymeslot.Meetings.Cancellation do
   """
   @spec cancel(struct(), integer() | nil, refund_action(), keyword()) ::
           {:ok, struct()}
+          | {:ok, struct(), :refund_pending}
           | {:error, :not_found}
           | {:error, {:refund_failed, term()}}
           | {:error, {:payments_changed, [BookingPaymentSchema.t()]}}
@@ -303,15 +314,21 @@ defmodule Tymeslot.Meetings.Cancellation do
   # cancellation email reports what they still hold for the booking, read from
   # the payment when the email is built.
   #
-  # A meeting is cancelled once, so it and the amount name the refund.
+  # A refund left pending (`:stuck` included) is Tymeslot's to finish.
   defp cancel_and_refund(meeting, payment, host_user_id, amount_cents) do
-    key = "cancel_refund:#{meeting.id}:#{amount_cents}"
-
     with {:ok, cancelled} <- Cancel.execute(meeting, caller: :organizer, announce: false) do
       try do
-        case MeetingPayments.refund_payment_for_host(payment.id, host_user_id, amount_cents, key) do
-          {:ok, _payment} -> {:ok, cancelled}
-          {:error, reason} -> {:error, {:refund_failed, reason}}
+        case MeetingPayments.refund_now(payment, amount_cents, :cancellation,
+               host_user_id: host_user_id
+             ) do
+          {:ok, _refund} ->
+            {:ok, cancelled}
+
+          {pending, _refund} when pending in [:pending, :stuck] ->
+            {:ok, cancelled, :refund_pending}
+
+          {:error, reason} ->
+            {:error, {:refund_failed, reason}}
         end
       after
         Cancel.announce(cancelled)
@@ -352,9 +369,15 @@ defmodule Tymeslot.Meetings.Cancellation do
   # back to them for a session they cancelled, and nothing refunds it.
   #
   # A seat paid more than 60 days ago is past the refund window
-  # (`BookingPayments.split_by_refund_window/1`): no job is queued for it,
-  # which would only be refused, and the email tells the host to refund it
-  # from Stripe.
+  # (`BookingPayments.split_by_refund_window/1`): no refund is recorded for
+  # it, which would only be refused, and the email tells the host to refund
+  # it from Stripe.
+  #
+  # Each refund is recorded under its payment's row lock, taken here after
+  # the meeting's, the order `Tymeslot.BookingSeries.Cancel` takes for a
+  # series payment too. No writer holding a seat payment's row lock waits on
+  # its meeting's: the paths that lock both (`Webhooks.SeatCheckoutCompleted`)
+  # do so only for a payment still pending, never one already paid.
   #
   # The seats read here are the ones settled, so they must be the ones the
   # host chose against (`seen_ids`): any others roll the cancellation back.
@@ -386,13 +409,27 @@ defmodule Tymeslot.Meetings.Cancellation do
 
   defp schedule_refunds(payments, organizer_user_id, true) do
     Enum.reduce_while(payments, {:ok, 0}, fn payment, {:ok, count} ->
-      amount = MeetingPayments.refundable_remaining_cents(payment)
-
-      case Oban.insert(GroupCancelRefund.new_for(payment, organizer_user_id, amount)) do
-        {:ok, _job} -> {:cont, {:ok, count + 1}}
+      case record_refund(payment, organizer_user_id) do
+        {:ok, :none} -> {:cont, {:ok, count}}
+        {:ok, _refund} -> {:cont, {:ok, count + 1}}
         {:error, reason} -> {:halt, {:error, reason}}
       end
     end)
+  end
+
+  # What the seat has left, less any refund of it still pending; a seat
+  # whose pending refunds already hold all of it needs none more.
+  defp record_refund(payment, organizer_user_id) do
+    case MeetingPayments.refundable_remaining_cents(payment) do
+      0 ->
+        {:ok, :none}
+
+      amount ->
+        MeetingPayments.request_refund(payment, amount, :cancellation,
+          host_user_id: organizer_user_id,
+          enqueue_now: true
+        )
+    end
   end
 
   # The organiser's email says what happens to the money only when somebody

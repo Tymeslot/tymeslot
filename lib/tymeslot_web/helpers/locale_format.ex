@@ -16,11 +16,14 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   - uk: 15 січня 2026
   - pt: 15 de janeiro de 2026
   - es: 15 de enero de 2026
+
+  The first of a month is an ordinal in French, Italian and Portuguese
+  (`format_day_of_month/2`): "1er octobre 2026", "1° ottobre 2026".
   """
   @spec format_date(Calendar.date(), String.t()) :: String.t()
   def format_date(date, locale) do
     month_name = format_month_name(date.month, locale)
-    order_date_parts(date.day, month_name, date.year, locale)
+    order_date_parts(format_day_of_month(date.day, locale), month_name, date.year, locale)
   end
 
   @doc """
@@ -50,36 +53,43 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   """
   @spec format_date_range(Calendar.date(), Calendar.date(), String.t()) :: String.t()
   def format_date_range(start_date, end_date, locale) do
+    start_day = format_day_of_month(start_date.day, locale)
+    end_day = format_day_of_month(end_date.day, locale)
     start_month = format_month_name(start_date.month, locale)
     end_month = format_month_name(end_date.month, locale)
+    same_month? = start_date.month == end_date.month
 
     case locale do
       loc when loc in ["pt", "es"] ->
-        linked_range(start_date, start_month, end_date, end_month)
+        linked_range({start_day, start_month}, {end_day, end_month}, end_date.year, same_month?)
 
       _other_locale ->
         day_suffix = if locale in ["de", "cs"], do: ".", else: ""
-        day_first_range(start_date, start_month, end_date, end_month, day_suffix)
+        start_day = start_day <> day_suffix
+        end_day = end_day <> day_suffix
+
+        day_first_range(
+          {start_day, start_month},
+          {end_day, end_month},
+          end_date.year,
+          same_month?
+        )
     end
   end
 
-  defp day_first_range(start_date, start_month, end_date, end_month, day_suffix) do
-    if start_date.month == end_date.month do
-      "#{start_date.day}#{day_suffix}–#{end_date.day}#{day_suffix} #{end_month} #{end_date.year}"
-    else
-      "#{start_date.day}#{day_suffix} #{start_month} – #{end_date.day}#{day_suffix} #{end_month} #{end_date.year}"
-    end
-  end
+  defp day_first_range({start_day, _start_month}, {end_day, end_month}, year, true),
+    do: "#{start_day}–#{end_day} #{end_month} #{year}"
+
+  defp day_first_range({start_day, start_month}, {end_day, end_month}, year, false),
+    do: "#{start_day} #{start_month} – #{end_day} #{end_month} #{year}"
 
   # Portuguese and Spanish link day, month and year with "de", so they cannot
-  # share `day_first_range/5`: "10–12 abril 2026" is ungrammatical in both.
-  defp linked_range(start_date, start_month, end_date, end_month) do
-    if start_date.month == end_date.month do
-      "#{start_date.day}–#{end_date.day} de #{end_month} de #{end_date.year}"
-    else
-      "#{start_date.day} de #{start_month} – #{end_date.day} de #{end_month} de #{end_date.year}"
-    end
-  end
+  # share `day_first_range/4`: "10–12 abril 2026" is ungrammatical in both.
+  defp linked_range({start_day, _start_month}, {end_day, end_month}, year, true),
+    do: "#{start_day}–#{end_day} de #{end_month} de #{year}"
+
+  defp linked_range({start_day, start_month}, {end_day, end_month}, year, false),
+    do: "#{start_day} de #{start_month} – #{end_day} de #{end_month} de #{year}"
 
   @doc """
   Formats time according to locale conventions.
@@ -346,6 +356,52 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   def format_day_of_month(1, locale), do: Map.get(@first_of_month, locale, "1")
   def format_day_of_month(day, _locale) when day in 2..31, do: Integer.to_string(day)
 
+  # Italian merges the definite article into the preposition before it, and
+  # elides it before a day read with a vowel: {before a consonant, before a vowel}.
+  @italian_articles %{
+    none: {"il ", "l'"},
+    a: {"al ", "all'"},
+    da: {"dal ", "dall'"},
+    di: {"del ", "dell'"},
+    in: {"nel ", "nell'"},
+    su: {"sul ", "sull'"}
+  }
+
+  # Of the days of a month, only 8 (otto) and 11 (undici) are read with a vowel.
+  # "1°" is read "primo" and takes "il".
+  @italian_vowel_day ~r/^(?:8|11)(?!\d)/
+
+  @typedoc """
+  The Italian preposition merged with the article before a date, or `:none`
+  for the bare article: `:da` gives "dal"/"dall'".
+  """
+  @type preposition :: :none | :a | :da | :di | :in | :su
+
+  @doc """
+  Puts the article that a date takes in a sentence before an already formatted
+  date that starts with its day, for the languages where the article depends on
+  how the day is read and so cannot be written into a translation.
+
+  Only Italian needs it. The article is merged with `preposition` and elided
+  before 8 and 11: "dall'8 ottobre", "l'11 marzo", but "dal 9 ottobre" and
+  "il 1° ottobre". Every other language gets `formatted_date` unchanged and
+  writes its own preposition in the translated sentence.
+
+  A placeholder that takes this value is named for its preposition
+  (`%{on_date}`, `%{until_date}`, `%{from_date}`), which tells the Italian
+  translation to write neither the preposition's article nor the article.
+  """
+  @spec with_article(String.t(), preposition(), String.t()) :: String.t()
+  def with_article(formatted_date, preposition, "it") do
+    {before_consonant, before_vowel} = Map.fetch!(@italian_articles, preposition)
+
+    if formatted_date =~ @italian_vowel_day,
+      do: before_vowel <> formatted_date,
+      else: before_consonant <> formatted_date
+  end
+
+  def with_article(formatted_date, _preposition, _locale), do: formatted_date
+
   @doc """
   Formats a date led by its full weekday name, in the locale's order and
   punctuation. The weekday keeps the case the locale gives it, so French and
@@ -424,9 +480,10 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
 
   # Portuguese and Spanish link day and month with "de" ("5 de fevereiro").
   defp day_month(date, month_name, locale) when locale in ["pt", "es"],
-    do: "#{date.day} de #{month_name}"
+    do: "#{format_day_of_month(date.day, locale)} de #{month_name}"
 
-  defp day_month(date, month_name, _other_locale), do: "#{date.day} #{month_name}"
+  defp day_month(date, month_name, locale),
+    do: "#{format_day_of_month(date.day, locale)} #{month_name}"
 
   defp with_year(day_month, year, locale) when locale in ["pt", "es"],
     do: "#{day_month} de #{year}"

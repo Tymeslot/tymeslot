@@ -29,6 +29,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
     Urls
   }
 
+  alias TymeslotWeb.Helpers.LocaleFormat
+
   use Gettext, backend: TymeslotWeb.Gettext
 
   # A cancellation email communicates a negative state change.
@@ -275,10 +277,13 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
     given_up =
       dgettext(
         "emails_booking_changes",
-        "Hi %{name} - you've given up your spot in %{meeting} on %{date}.",
+        "Hi %{name} - you've given up your spot in %{meeting} on %{on_date}.",
         name: appointment_details.attendee_name,
         meeting: appointment_details.meeting_type || appointment_details.title,
-        date: Formatting.format_datetime(appointment_details.start_time_attendee_tz, locale)
+        on_date:
+          appointment_details.start_time_attendee_tz
+          |> Formatting.format_datetime(locale)
+          |> LocaleFormat.with_article(:none, locale)
       )
 
     case goes_ahead_line(appointment_details) do

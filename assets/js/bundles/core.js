@@ -18,7 +18,6 @@ import { ClipboardCopy } from "../clipboard_hook"
 import { RecaptchaV3Hook } from "../hooks/recaptcha_v3_hook"
 import { EmailLogoUpload } from "../hooks/email_logo_upload"
 import { CustomColourPicker } from "../hooks/custom_colour_picker"
-import { AutoUpload } from "../hooks/auto_upload"
 import { ScrollStrip } from "../hooks/scroll_strip"
 import { Select } from "../hooks/select"
 import { DateTimePicker } from "../hooks/date_time_picker"
@@ -86,14 +85,6 @@ const CoreHooks = {
   // /admin has no route bundle (see EmailLogoUpload above).
   CustomColourPicker,
 
-  // Onboarding's profile step mounts this for the avatar picker, and
-  // onboarding runs its own live_session with no route bundle (see
-  // RouteBundleHook), so the dashboard bundle's lazy-loaded copy never
-  // reaches it. Registered here for the same reason as EmailLogoUpload
-  // above; the dashboard bundle still overrides this with its lazy-loaded
-  // version for dashboard pages.
-  AutoUpload,
-
   // Every tab strip and segmented control carries it, and those render on
   // pages without the dashboard bundle (the analytics page), so it
   // is registered for every page. It is a few lines.
@@ -105,7 +96,8 @@ const CoreHooks = {
   DateTimePicker,
 
   // The onboarding stage's page miniature and its sticky nav row; onboarding
-  // has no route bundle (see AutoUpload above), so they are registered here.
+  // runs its own live_session with no route bundle (see RouteBundleHook), so
+  // they are registered here.
   // Each is a few lines. So are the live step's share button and the
   // iframe of the host's real page it switches on.
   StageScale,
@@ -195,17 +187,6 @@ window.addEventListener("phx:ts:setting-saved", (e) => {
   el.__tymeslot_savedPulseTimer = setTimeout(() => {
     el.classList.remove(...pulseClasses);
   }, 1200);
-});
-
-window.addEventListener("phx:copy-to-clipboard", (e) => {
-  const text = e.detail.text;
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).then(() => {
-      console.log('Copied to clipboard');
-    }).catch(err => {
-      console.error('Failed to copy:', err);
-    });
-  }
 });
 
 window.addEventListener("tymeslot:clip-copy", (e) => {

@@ -19,11 +19,14 @@ defmodule Tymeslot.Meetings.SessionMoveTest do
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Emails.Templates.AppointmentRescheduled
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Meetings.EmailVerification
+  alias Tymeslot.Meetings.EmailVerificationJobs
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.Meetings.SeatHolds
+  alias Tymeslot.Meetings.Workers.EmailVerificationExpiryWorker
   alias Tymeslot.Notifications.EmailHandlers
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
@@ -114,6 +117,27 @@ defmodule Tymeslot.Meetings.SessionMoveTest do
 
     assert SeatHolds.get(held.id).start_time == moved.start_time
     assert SeatHolds.get(released.id).start_time == ctx.session.start_time
+  end
+
+  test "releases a seat awaiting verification silently, with its expiry job", ctx do
+    held =
+      insert(:participant,
+        meeting: ctx.session,
+        email: "held@example.com",
+        verification_deadline_at: DateTime.add(DateTime.utc_now(:second), 30, :minute)
+      )
+
+    :ok = EmailVerificationJobs.schedule_seat_expiry(held)
+    expiry = [worker: EmailVerificationExpiryWorker, args: %{"participant_id" => held.id}]
+    assert_enqueued(expiry)
+
+    {:ok, _moved} = PlannedSessions.move(ctx.session, ctx.user.id, at(12, ~T[09:30:00]), nil)
+
+    released = Repo.reload!(held)
+    assert %DateTime{} = released.cancelled_at
+    refute_enqueued(expiry)
+    refute_enqueued(worker: EmailWorker, args: seat_job_args(ctx.session, held))
+    assert {:error, :expired} = EmailVerification.verify_seat(released)
   end
 
   test "asks the guests to answer for the new time, but a decline stands", ctx do

@@ -127,4 +127,31 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefundsTest do
       assert html =~ "Not booked, paid 3 Nov 2026"
     end
   end
+
+  # Italian puts the article before the date, elided before a day read with
+  # a vowel, so it cannot be written into the translation.
+  describe "in Italian" do
+    setup do
+      Gettext.put_locale(TymeslotWeb.Gettext, "it")
+      :ok
+    end
+
+    test "a row's date takes the article its day is read with" do
+      eighth =
+        payment(
+          meeting: build(:meeting, status: :cancelled, cancelled_at: ~U[2026-10-08 12:00:00Z])
+        )
+
+      ninth =
+        payment(
+          meeting: build(:meeting, status: :cancelled, cancelled_at: ~U[2026-10-09 12:00:00Z])
+        )
+
+      text =
+        [payments: [eighth, ninth]] |> render_card() |> Floki.parse_fragment!() |> Floki.text()
+
+      assert text =~ "Annullata l'8 ott 2026"
+      assert text =~ "Annullata il 9 ott 2026"
+    end
+  end
 end

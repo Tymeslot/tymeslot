@@ -26,9 +26,10 @@ defmodule TymeslotWeb.Live.Themes.MeetingPriceTest do
 
   alias Tymeslot.CalendarMock
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.TestMocks
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.BookingDriver
@@ -283,9 +284,11 @@ defmodule TymeslotWeb.Live.Themes.MeetingPriceTest do
   # payment in place and reaches the confirmation on the `:paid` broadcast.
   # The referer is the parent page `allowed_embed_domains` admits.
   defp pay_embedded(conn, path, meeting_type) do
-    expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
-      {:ok, %{id: "cs_PRICE", url: "https://checkout.stripe.com/cs_PRICE"}}
-    end)
+    StripeStub.expect(
+      :create_checkout_session,
+      1,
+      StripeStubResponses.checkout_session("cs_PRICE", "https://checkout.stripe.com/cs_PRICE")
+    )
 
     conn = put_req_header(conn, "referer", "https://embedder.test/page")
     {:ok, view, _html} = live(conn, path)

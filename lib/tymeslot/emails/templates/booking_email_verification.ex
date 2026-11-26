@@ -31,14 +31,40 @@ defmodule Tymeslot.Emails.Templates.BookingEmailVerification do
   }
 
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Utils.DateTimeUtils
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   use Gettext, backend: TymeslotWeb.Gettext
 
   @intent :alert
 
   @spec render(Meeting.t(), String.t()) :: Swoosh.Email.t()
-  def render(%Meeting{} = meeting, verify_url) when is_binary(verify_url) do
+  def render(%Meeting{} = meeting, verify_url) when is_binary(verify_url),
+    do: render_held(meeting, verify_url, :booking)
+
+  @doc """
+  The same email for one seat of a group meeting. The slot row carries no
+  attendee, so the seat supplies the recipient, locale, timezone and deadline.
+  """
+  @spec render_seat(Meeting.t(), ParticipantSchema.t(), String.t()) :: Swoosh.Email.t()
+  def render_seat(%Meeting{} = slot, %ParticipantSchema{} = seat, verify_url)
+      when is_binary(verify_url) do
+    render_held(
+      %{
+        slot
+        | attendee_name: seat.name,
+          attendee_email: seat.email,
+          attendee_timezone: seat.timezone,
+          attendee_locale: seat.locale,
+          verification_deadline_at: seat.verification_deadline_at
+      },
+      verify_url,
+      :seat
+    )
+  end
+
+  defp render_held(meeting, verify_url, held) do
     locale = RecipientLocale.attendee_locale(meeting)
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
@@ -46,7 +72,7 @@ defmodule Tymeslot.Emails.Templates.BookingEmailVerification do
       attendee_time = TimezoneHelper.convert_to_attendee_timezone(meeting)
       details = meeting_details(meeting, attendee_time)
 
-      intro = intro(meeting, locale)
+      intro = intro(meeting, held, locale)
 
       mjml_content = """
       #{MeetingComponents.meeting_details_table(details, locale)}
@@ -102,13 +128,33 @@ defmodule Tymeslot.Emails.Templates.BookingEmailVerification do
   # the hold is capped at the meeting's start, and a resend never moves it.
   # Always with its date: the email may be read the next day, and a hold
   # running past midnight would otherwise read as a time already gone.
-  defp intro(%Meeting{verification_deadline_at: %DateTime{} = deadline} = meeting, locale) do
+  #
+  # A seat holds a place on a slot whose time other attendees may share, so
+  # it is the place, not the time, that is held.
+  defp intro(%Meeting{verification_deadline_at: %DateTime{} = deadline} = meeting, held, locale) do
     {local, _zone} = DateTimeUtils.shift_or_utc(deadline, meeting.attendee_timezone)
 
+    by_deadline =
+      %{start_time: local}
+      |> Formatting.format_meeting_datetime(locale)
+      |> LocaleFormat.with_article(:none, locale)
+
+    intro_text(held, by_deadline)
+  end
+
+  defp intro_text(:booking, by_deadline) do
     dgettext(
       "emails_booking_requests",
-      "Your booking is not confirmed yet. Click the button below by %{deadline} to confirm it, and we will hold the time for you until then.",
-      deadline: Formatting.format_meeting_datetime(%{start_time: local}, locale)
+      "Your booking is not confirmed yet. Click the button below by %{by_deadline} to confirm it, and we will hold the time for you until then.",
+      by_deadline: by_deadline
+    )
+  end
+
+  defp intro_text(:seat, by_deadline) do
+    dgettext(
+      "emails_booking_requests",
+      "Your booking is not confirmed yet. Click the button below by %{by_deadline} to confirm it, and we will hold your place until then.",
+      by_deadline: by_deadline
     )
   end
 

@@ -118,6 +118,7 @@ defmodule Tymeslot.Bookings.GroupSeatJobsIntegrationTest do
         assert :ok =
                  perform_job(EmailWorker, %{
                    "action" => "send_reminder_emails",
+                   "relevant_until" => nil,
                    "meeting_id" => meeting.id,
                    "reminder_value" => value,
                    "reminder_unit" => unit
@@ -134,7 +135,13 @@ defmodule Tymeslot.Bookings.GroupSeatJobsIntegrationTest do
 
       # The same offset dispatched again is the same email.
       assert :ok =
-               EmailScheduler.schedule_seat_reminder_email(meeting.id, first_id, 15, "minutes")
+               EmailScheduler.schedule_seat_reminder_email(
+                 meeting.id,
+                 first_id,
+                 15,
+                 "minutes",
+                 nil
+               )
 
       assert length(seat_jobs("send_seat_reminder", first_id)) == 2
     end

@@ -656,8 +656,8 @@ msgstr[1] "Sessione di gruppo: hai uno dei %{count} posti."
 
 #: lib/tymeslot_web/themes/shared/components/group_session.ex
 #, elixir-autogen, elixir-format
-msgid "Moving your spot on %{datetime}. Pick a new time below."
-msgstr "Stai spostando il tuo posto del %{datetime}. Scegli un nuovo orario qui sotto."
+msgid "Moving your spot on %{on_datetime}. Pick a new time below."
+msgstr "Stai spostando il tuo posto %{on_datetime}. Scegli un nuovo orario qui sotto."
 
 #: lib/tymeslot_web/themes/shared/seat_move_link.ex
 #, elixir-autogen, elixir-format

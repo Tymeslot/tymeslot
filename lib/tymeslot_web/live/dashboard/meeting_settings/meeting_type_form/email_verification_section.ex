@@ -6,9 +6,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.EmailVerificatio
   While it is on, a booking counts only once the invitee clicks the link
   emailed to them; until then the slot is held and the host hears nothing.
 
-  The setting excludes group bookings, payments and series: while any is on, the
-  toggle renders disabled with the reason, the parent guards the event
-  server-side and the changeset enforces the rule. Turning it off is never
+  The setting excludes payments and series: while either is on, the toggle
+  renders disabled with the reason, the parent guards the event server-side
+  and the changeset enforces the rule. Turning it off is never
   blocked, so a type that somehow carries both settings can always be fixed.
   """
 
@@ -19,7 +19,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.EmailVerificatio
 
   attr :requires_email_verification, :boolean, required: true
   attr :payment_required, :boolean, default: false
-  attr :group_bookings_enabled, :boolean, default: false
   attr :series_enabled, :boolean, default: false
   attr :errors, :list, default: []
   attr :myself, :any, required: true
@@ -30,7 +29,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.EmailVerificatio
       assign(
         assigns,
         :toggle_disabled,
-        (assigns.group_bookings_enabled or assigns.payment_required or assigns.series_enabled) and
+        (assigns.payment_required or assigns.series_enabled) and
           not assigns.requires_email_verification
       )
 
@@ -59,22 +58,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.EmailVerificatio
         data-testid="requires-email-verification-toggle"
       >
         <:disabled_reason>
-          <%= cond do %>
-            <% @group_bookings_enabled -> %>
-              {dgettext(
-                "dashboard_meeting_form",
-                "Turn off group bookings to ask invitees to confirm their email."
-              )}
-            <% @payment_required -> %>
-              {dgettext(
-                "dashboard_meeting_form",
-                "Turn off payments to ask invitees to confirm their email. Paying already confirms who they are."
-              )}
-            <% true -> %>
-              {dgettext(
-                "dashboard_meeting_form",
-                "Turn off series booking to ask invitees to confirm their email. A series confirms all its sessions at once."
-              )}
+          <%= if @payment_required do %>
+            {dgettext(
+              "dashboard_meeting_form",
+              "Turn off payments to ask invitees to confirm their email. Paying already confirms who they are."
+            )}
+          <% else %>
+            {dgettext(
+              "dashboard_meeting_form",
+              "Turn off series booking to ask invitees to confirm their email. A series confirms all its sessions at once."
+            )}
           <% end %>
         </:disabled_reason>
       </.setting_row>

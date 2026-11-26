@@ -308,7 +308,8 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
       |> file_input("#fixture-emblem-upload", :fixture_emblem_path, [emblem])
       |> render_upload("emblem.png")
 
-      assert_push_event(view, "upload-complete", %{})
+      # `render/1` pings the LiveView, so the save the progress callback queued has run.
+      render(view)
 
       saved = ThemeCustomizations.get_by_profile_and_theme(profile.id, @theme_id)
       assert saved.settings["fixture_emblem_path"] =~ ~r{^themes/#{profile.id}/99/images/}
@@ -337,7 +338,7 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
       )
       |> render_upload("intro.vtt")
 
-      assert_push_event(view, "upload-complete", %{})
+      render(view)
 
       saved = ThemeCustomizations.get_by_profile_and_theme(profile.id, @theme_id)
 
@@ -345,11 +346,9 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
                ~r{^themes/#{profile.id}/99/captions/}
     end
 
-    # `render_upload/2` consumes through the progress callback (above). To reach
-    # the panel form's `upload_asset` handler instead, the progress callback's
-    # consume is refused by an exhausted rate limit (the entry stays done),
-    # then the limit is cleared and the form submitted.
-    test "saves through the panel form's upload_asset event", %{conn: conn} do
+    # The progress callback saves a finished upload, so one the rate limit
+    # refused waits until the file is picked again, which replaces the entry.
+    test "a refused upload is saved when the file is picked again", %{conn: conn} do
       {:ok, ctx} = setup_dashboard_user_with_theme(%{conn: conn}, @theme_id)
       %{conn: conn, profile: profile, user: user} = Map.new(ctx)
       {:ok, view, _html} = live(conn, ~p"/dashboard/pages/customize/#{@theme_id}")
@@ -358,16 +357,20 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
       on_exit(fn -> RateLimiter.clear_bucket(bucket) end)
       for _attempt <- 1..5, do: RateLimiter.check(:theme_upload, user.id)
 
-      emblem = %{
-        last_modified: System.system_time(:millisecond),
-        name: "emblem.png",
-        content: @png,
-        type: "image/png"
-      }
+      emblem = fn name ->
+        %{
+          last_modified: System.system_time(:millisecond),
+          name: name,
+          content: @png,
+          type: "image/png"
+        }
+      end
 
       view
-      |> file_input("#fixture-emblem-upload", :fixture_emblem_path, [emblem])
+      |> file_input("#fixture-emblem-upload", :fixture_emblem_path, [emblem.("emblem.png")])
       |> render_upload("emblem.png")
+
+      render(view)
 
       refute match?(
                %{settings: %{"fixture_emblem_path" => _path}},
@@ -376,11 +379,12 @@ defmodule TymeslotWeb.Themes.ThemeOpennessTest do
 
       RateLimiter.clear_bucket(bucket)
 
+      # Under another name: the test client tracks an upload by its file name.
       view
-      |> form("#fixture-emblem-upload", %{"asset_field" => "fixture_emblem_path"})
-      |> render_submit()
+      |> file_input("#fixture-emblem-upload", :fixture_emblem_path, [emblem.("again.png")])
+      |> render_upload("again.png")
 
-      assert_push_event(view, "upload-complete", %{})
+      render(view)
 
       saved = ThemeCustomizations.get_by_profile_and_theme(profile.id, @theme_id)
       assert saved.settings["fixture_emblem_path"] =~ ~r{^themes/#{profile.id}/99/images/}

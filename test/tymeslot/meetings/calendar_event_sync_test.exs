@@ -150,16 +150,17 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
     end
 
     test "recreates the event when the provider reports it as not found (404 recovery)" do
-      %{user: user, integration: integration, meeting: meeting} = setup_calendar_scenario()
+      %{integration: integration, meeting: meeting} = setup_calendar_scenario()
       uid = meeting.calendar_uid
 
       expect(Tymeslot.CalendarMock, :update_event, fn ^uid, _data, _ctx ->
         {:error, :not_found}
       end)
 
-      # Recovery path creates against the organizer's user id.
-      expect(Tymeslot.CalendarMock, :create_event, fn _data, id ->
-        assert id == user.id
+      # Recovery creates in the booking's own calendar, as a first create does.
+      meeting_id = meeting.id
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _data, %MeetingSchema{id: ^meeting_id} ->
         {:ok, CreatedEvent.from_provider_event(%{"uid" => "new-google-event-id"})}
       end)
 

@@ -31,10 +31,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
     {"Prefer", "outlook.calendar-update.disableNotifications"}
   ]
 
-  # Fields the event-driven sync workers need to normalise a single event.
-  # `originalStartTimeZone` is the event's own zone: with `Prefer:
-  # outlook.timezone="UTC"` every `start.timeZone` reads UTC.
-  @event_sync_select_fields "id,subject,start,end,iCalUId,location,bodyPreview,attendees,isReminderOn,reminderMinutesBeforeStart,recurrence,seriesMasterId,type,originalStart,originalStartTimeZone,isAllDay,showAs"
+  # Every field `EventNormaliser` reads, for both the calendar read and the
+  # single-event read the change-notification sync caches from: a field left
+  # out is cached as absent. `originalStartTimeZone` is the event's own zone:
+  # with `Prefer: outlook.timezone="UTC"` every `start.timeZone` reads UTC.
+  @event_select_fields "id,iCalUId,subject,body,location,start,end,showAs,sensitivity,isCancelled,responseStatus,isAllDay,organizer,attendees,isReminderOn,reminderMinutesBeforeStart,recurrence,seriesMasterId,type,originalStart,originalStartTimeZone,originalEndTimeZone"
 
   @type calendar_event :: %{
           id: String.t(),
@@ -445,13 +446,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   """
   @spec get_event_raw(String.t(), String.t()) :: {:ok, map()} | api_error()
   def get_event_raw(token, event_id) do
-    params = %{
-      "$select" => @event_sync_select_fields,
-      "$expand" =>
-        "singleValueExtendedProperties($filter=id eq '#{TymeslotFingerprint.property_id()}')"
-    }
-
-    make_request(:get, event_path(event_id), token, params)
+    make_request(:get, event_path(event_id), token, event_fields())
   end
 
   # HTTP plumbing — used internally and by GraphSubscription
@@ -505,13 +500,17 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   # Query helpers
 
   defp build_events_query_params(start_time, end_time) do
-    %{
+    Map.merge(event_fields(), %{
       "startDateTime" => DateTime.to_iso8601(start_time),
       "endDateTime" => DateTime.to_iso8601(end_time),
       "$orderby" => "start/dateTime",
-      "$top" => Integer.to_string(ReadPageSize.get(@list_page_size)),
-      "$select" =>
-        "id,iCalUId,subject,body,location,start,end,showAs,sensitivity,isCancelled,responseStatus,isAllDay,organizer,attendees,isReminderOn,reminderMinutesBeforeStart,recurrence,seriesMasterId,type,originalStart,originalStartTimeZone,originalEndTimeZone",
+      "$top" => Integer.to_string(ReadPageSize.get(@list_page_size))
+    })
+  end
+
+  defp event_fields do
+    %{
+      "$select" => @event_select_fields,
       "$expand" =>
         "singleValueExtendedProperties($filter=id eq '#{TymeslotFingerprint.property_id()}')"
     }

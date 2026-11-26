@@ -282,8 +282,8 @@ defmodule Tymeslot.CalendarGrid do
   defp colour_class(_integration, index),
     do: EventColour.rotation_class(rem(index, EventColour.rotation_size()) + 1)
 
-  @doc "Parses an uploaded `.ics` file into an import plan. See `IcsImport.plan/2`."
-  defdelegate plan_ics_import(content, timezone), to: IcsImport, as: :plan
+  @doc "Parses an uploaded `.ics` file into an import plan. See `IcsImport.plan/3`."
+  defdelegate plan_ics_import(content, timezone, opts \\ []), to: IcsImport, as: :plan
 
   @doc "Whether an `.ics` import of the user's is under way. See `IcsImport.running?/1`."
   defdelegate ics_import_running?(user_id), to: IcsImport, as: :running?

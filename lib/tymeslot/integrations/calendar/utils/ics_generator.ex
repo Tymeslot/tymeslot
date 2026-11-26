@@ -5,6 +5,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Ecto.UUID
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Emails.Shared.BookingRequestLocation
   alias Tymeslot.Integrations.Calendar.ICalBuilder.ContentLines
@@ -163,7 +164,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     }
   end
 
-  defp ics_uid(nil), do: ics_uid(UUID.uuid4())
+  defp ics_uid(nil), do: ics_uid(UUID.generate())
   defp ics_uid(uid), do: "#{uid}@#{Application.get_env(:tymeslot, :email)[:domain]}"
 
   # An all-day event has dates and no instants: RFC 5545 §3.3.4 date-only

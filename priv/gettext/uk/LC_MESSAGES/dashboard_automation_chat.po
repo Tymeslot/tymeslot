@@ -362,7 +362,7 @@ msgstr "Термін дії посилання минув"
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Loading channels from Slack..."
-msgstr "Завантаження каналів зі Slack..."
+msgstr "Завантаження каналів зі Slack…"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
@@ -425,7 +425,7 @@ msgstr "Виберіть канал, щоб завершити налаштув�
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Pick a channel..."
-msgstr "Виберіть канал..."
+msgstr "Виберіть канал…"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex
@@ -463,7 +463,7 @@ msgstr "Зберегти канал"
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Saving..."
-msgstr "Збереження..."
+msgstr "Збереження…"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
 #, elixir-autogen, elixir-format
@@ -483,7 +483,7 @@ msgstr "Надішліть цю команду безпосередньо в ч�
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Setting up connection..."
-msgstr "Налаштування підключення..."
+msgstr "Налаштування підключення…"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex
 #, elixir-autogen, elixir-format
@@ -589,7 +589,7 @@ msgstr "Перевірка"
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Testing & Saving..."
-msgstr "Перевірка та збереження..."
+msgstr "Перевірка та збереження…"
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
 #, elixir-autogen, elixir-format
@@ -615,7 +615,7 @@ msgstr "Оновіть URL-адресу вебхука або підписки �
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Waiting for Telegram connection... (link expires in 10 minutes)"
-msgstr "Очікування з'єднання з Telegram... (посилання дійсне 10 хвилин)"
+msgstr "Очікування з'єднання з Telegram… (посилання дійсне 10 хвилин)"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_card.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex

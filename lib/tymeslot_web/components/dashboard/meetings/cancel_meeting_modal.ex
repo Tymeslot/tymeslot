@@ -75,16 +75,16 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
     <Modal.confirm_modal
       id={@id}
       show={@show}
-      title={dgettext("dashboard_bookings", "Cancel meeting")}
+      title={dgettext("dashboard_bookings_cancel", "Cancel meeting")}
       confirm_label={
         if @paid? or @seats_paid?,
-          do: dgettext("dashboard_bookings", "Confirm cancellation"),
-          else: dgettext("dashboard_bookings", "Cancel Meeting")
+          do: dgettext("dashboard_bookings_cancel", "Confirm cancellation"),
+          else: dgettext("dashboard_bookings_cancel", "Cancel Meeting")
       }
-      cancel_label={dgettext("dashboard_bookings", "Keep Meeting")}
+      cancel_label={dgettext("dashboard_bookings_cancel", "Keep Meeting")}
       confirm_form="cancel-meeting-form"
       loading={@cancelling}
-      loading_label={dgettext("dashboard_bookings", "Cancelling...")}
+      loading_label={dgettext("dashboard_bookings_cancel", "Cancelling...")}
       on_cancel={@on_cancel}
     >
       <form
@@ -115,9 +115,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
           refund_form={@refund_form}
         >
           <:full :if={is_binary(@booking_payment.series_id)}>
-            <strong>{dgettext("dashboard_bookings", "Refund this session.")}</strong>
+            <strong>{dgettext("dashboard_bookings_cancel", "Refund this session.")}</strong>
             {dgettext(
-              "dashboard_bookings",
+              "dashboard_bookings_cancel",
               "Refunds one session's share of the series payment (%{amount}).",
               amount:
                 format_amount(
@@ -127,8 +127,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
             )}
           </:full>
           <:full :if={!is_binary(@booking_payment.series_id)}>
-            <strong>{dgettext("dashboard_bookings", "Full refund.")}</strong>
-            {dgettext("dashboard_bookings", "Refunds the remaining balance (%{amount}).",
+            <strong>{dgettext("dashboard_bookings_cancel", "Full refund.")}</strong>
+            {dgettext("dashboard_bookings_cancel", "Refunds the remaining balance (%{amount}).",
               amount: format_amount(refundable_remaining(@booking_payment), @booking_payment.currency)
             )}
           </:full>
@@ -140,16 +140,25 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
           refund_form={@refund_form}
         />
         <.no_refund_warning booking_payment={@booking_payment} />
+        <p
+          :if={pending_refund(@booking_payment) > 0}
+          id="cancel-meeting-pending-refund"
+          class="text-token-sm text-tymeslot-700"
+        >
+          {dgettext("dashboard_bookings_cancel", "A refund of %{amount} is already being processed.",
+            amount: format_amount(pending_refund(@booking_payment), @booking_payment.currency)
+          )}
+        </p>
         <p :if={not @paid? and not @seats_paid?} class="text-tymeslot-500">
           {if Helpers.group_meeting?(@meeting),
             do:
               dgettext(
-                "dashboard_bookings",
+                "dashboard_bookings_cancel",
                 "This action cannot be undone. Every participant will be notified of the cancellation."
               ),
             else:
               dgettext(
-                "dashboard_bookings",
+                "dashboard_bookings_cancel",
                 "This action cannot be undone. The attendee will be notified of the cancellation."
               )}
         </p>
@@ -171,7 +180,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         count = length(Helpers.participants(meeting))
 
         dngettext(
-          "dashboard_bookings",
+          "dashboard_bookings_cancel",
           "Are you sure you want to cancel this group meeting with %{count} participant scheduled for %{when}?",
           "Are you sure you want to cancel this group meeting with %{count} participants scheduled for %{when}?",
           count,
@@ -180,7 +189,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
 
       HostManaged.managed?(meeting) ->
         dgettext(
-          "dashboard_bookings",
+          "dashboard_bookings_cancel",
           "Are you sure you want to cancel “%{title}” scheduled for %{when}? Every guest is told.",
           title: meeting.title,
           when: scheduled_for
@@ -188,7 +197,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
 
       true ->
         dgettext(
-          "dashboard_bookings",
+          "dashboard_bookings_cancel",
           "Are you sure you want to cancel the meeting with %{name} scheduled for %{when}?",
           name: meeting.attendee_name,
           when: scheduled_for
@@ -218,7 +227,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
       <fieldset class="space-y-2">
         <legend class="mb-3">
           {dgettext(
-            "dashboard_bookings",
+            "dashboard_bookings_cancel",
             "This booking was paid. Choose how to handle the refund - the attendee always receives the full amount you refund."
           )}
         </legend>
@@ -241,8 +250,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
             checked={@refund_form.choice == "partial"}
           />
           <span>
-            <strong>{dgettext("dashboard_bookings", "Partial refund.")}</strong>
-            {dgettext("dashboard_bookings", "Refund only part of the booking amount.")}
+            <strong>{dgettext("dashboard_bookings_cancel", "Partial refund.")}</strong>
+            {dgettext("dashboard_bookings_cancel", "Refund only part of the booking amount.")}
           </span>
         </label>
 
@@ -250,7 +259,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
           <Forms.input
             type="number"
             name="cancel_refund_amount"
-            label={dgettext("dashboard_bookings", "Partial amount")}
+            label={dgettext("dashboard_bookings_cancel", "Partial amount")}
             min="0.01"
             max={Money.to_major_string(@remaining, @booking_payment.currency)}
             step="0.01"
@@ -264,15 +273,18 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
           id_prefix={@id_prefix}
           refund_form={@refund_form}
           refund_error={@refund_error}
-          label={dgettext("dashboard_bookings", "Cancel without refund.")}
+          label={dgettext("dashboard_bookings_cancel", "Cancel without refund.")}
           detail={
             dgettext(
-              "dashboard_bookings",
+              "dashboard_bookings_cancel",
               "The attendee keeps no money. Use only if the attendee already agreed."
             )
           }
           acknowledgement={
-            dgettext("dashboard_bookings", "I understand the attendee will not receive a refund.")
+            dgettext(
+              "dashboard_bookings_cancel",
+              "I understand the attendee will not receive a refund."
+            )
           }
         />
       </fieldset>
@@ -307,7 +319,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
       <fieldset class="space-y-2">
         <legend class="mb-3">
           {dngettext(
-            "dashboard_bookings",
+            "dashboard_bookings_cancel",
             "%{count} participant paid for this session (%{amount} still held).",
             "%{count} participants paid for this session (%{amount} still held).",
             @count,
@@ -323,9 +335,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
             checked={@refund_form.choice != "none"}
           />
           <span>
-            <strong>{dgettext("dashboard_bookings", "Refund everyone in full.")}</strong>
+            <strong>{dgettext("dashboard_bookings_cancel", "Refund everyone in full.")}</strong>
             {dgettext(
-              "dashboard_bookings",
+              "dashboard_bookings_cancel",
               "Each participant gets back what they paid, and an email once their refund is issued."
             )}
           </span>
@@ -335,16 +347,16 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
           id_prefix="cancel"
           refund_form={@refund_form}
           refund_error={@refund_error}
-          label={dgettext("dashboard_bookings", "Don't refund anyone.")}
+          label={dgettext("dashboard_bookings_cancel", "Don't refund anyone.")}
           detail={
             dgettext(
-              "dashboard_bookings",
+              "dashboard_bookings_cancel",
               "Each participant's payment stays with you until you refund it from Payments."
             )
           }
           acknowledgement={
             dgettext(
-              "dashboard_bookings",
+              "dashboard_bookings_cancel",
               "I understand the participants get nothing back unless I refund them later from Payments."
             )
           }
@@ -353,7 +365,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
     </div>
     <.info_box :if={@outside_window_count > 0} variant={:warning} class="mb-0!">
       {dngettext(
-        "dashboard_bookings",
+        "dashboard_bookings_cancel",
         "Cancelling won't refund %{count} participant (%{amount}): their payment is older than the 60-day refund window. You can refund it from Stripe.",
         "Cancelling won't refund %{count} participants (%{amount}): their payments are older than the 60-day refund window. You can refund them from Stripe.",
         @outside_window_count,
@@ -416,10 +428,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
     """
   end
 
-  defp refundable_remaining(%{amount_cents: amount, refunded_amount_cents: refunded}),
-    do: max(amount - refunded, 0)
+  defp refundable_remaining(nil), do: 0
+  defp refundable_remaining(payment), do: MeetingPayments.refundable_remaining_cents(payment)
 
-  defp refundable_remaining(_payment), do: 0
+  defp pending_refund(nil), do: 0
+  defp pending_refund(payment), do: MeetingPayments.pending_refund_cents(payment)
 
   attr :booking_payment, :map, default: nil
 
@@ -462,21 +475,21 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
   defp no_refund_sentence(:outside_refund_window),
     do:
       dgettext(
-        "dashboard_bookings",
+        "dashboard_bookings_cancel",
         "Cancelling won't refund the attendee: the payment is older than the 60-day refund window. You can refund it from Stripe."
       )
 
   defp no_refund_sentence(:under_dispute),
     do:
       dgettext(
-        "dashboard_bookings",
+        "dashboard_bookings_cancel",
         "Cancelling won't refund the attendee: the payment is under dispute. Settle the dispute in Stripe first."
       )
 
   defp no_refund_sentence(:not_paid),
     do:
       dgettext(
-        "dashboard_bookings",
+        "dashboard_bookings_cancel",
         "Cancelling won't refund the attendee: the booking was not paid."
       )
 end

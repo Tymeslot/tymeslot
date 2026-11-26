@@ -901,11 +901,6 @@ msgstr "Confirmação de e-mail"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
-msgid "Turn off group bookings to ask invitees to confirm their email."
-msgstr "Desative os agendamentos em grupo para pedir que quem agenda confirme o e-mail."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
-#, elixir-autogen, elixir-format
 msgid "Turn off payments to ask invitees to confirm their email. Paying already confirms who they are."
 msgstr "Desative os pagamentos para pedir que quem agenda confirme o e-mail. O pagamento já confirma quem é a pessoa."
 
@@ -915,11 +910,6 @@ msgid "Bookings count only once the invitee clicks the link we email them. Until
 msgid_plural "Bookings count only once the invitee clicks the link we email them. Until then the time is held for up to %{count} minutes, and you are not notified."
 msgstr[0] "O agendamento só vale quando quem agenda clica no link que enviamos por e-mail. Até lá, o horário fica reservado por até %{count} minuto, e você não recebe nenhuma notificação."
 msgstr[1] "O agendamento só vale quando quem agenda clica no link que enviamos por e-mail. Até lá, o horário fica reservado por até %{count} minutos, e você não recebe nenhuma notificação."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off email confirmation to enable group bookings."
-msgstr "Desative a confirmação de e-mail para ativar os agendamentos em grupo."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format

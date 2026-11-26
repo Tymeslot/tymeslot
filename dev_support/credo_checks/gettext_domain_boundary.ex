@@ -77,7 +77,8 @@ defmodule CredoChecks.GettextDomainBoundary do
         dashboard_automation dashboard_automation_chat dashboard_appearance
         dashboard_booking_series
         dashboard_booking_pages dashboard_languages
-        dashboard_embed dashboard_payments dashboard_bookings dashboard_profile
+        dashboard_embed dashboard_payments dashboard_bookings dashboard_bookings_cancel
+        dashboard_profile
         dashboard_analytics dashboard_admin dashboard_admin_users dashboard_video dashboard_polls
         integrations
         integrations_calendar
