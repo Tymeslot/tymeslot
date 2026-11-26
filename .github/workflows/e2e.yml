@@ -27,8 +27,10 @@ on:
   pull_request:
     paths:
       - "assets/js/**"
-      - "assets/css/scheduling/**"
+      - "assets/css/**"
       - "lib/tymeslot_web/themes/**"
+      - "lib/tymeslot_web/live/**"
+      - "lib/tymeslot_web/components/**"
       - "test/tymeslot_web/e2e/**"
       - "test/support/e2e/**"
       - ".github/workflows/e2e.yml"
