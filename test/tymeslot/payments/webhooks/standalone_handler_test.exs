@@ -122,6 +122,25 @@ defmodule Tymeslot.Payments.Webhooks.StandaloneHandlerTest do
       assert {:error, :permanent, :invalid_timestamp} = TrialWillEndHandler.handle(event)
     end
 
+    test "sends no trial reminder for a subscription cancelled during its trial" do
+      stub_recorded_subscription(insert(:user).id)
+
+      event = %{
+        "type" => "customer.subscription.trial_will_end",
+        "data" => %{
+          "object" => %{
+            "id" => "sub_existing",
+            "customer" => "cus_existing",
+            "trial_end" => DateTime.to_unix(DateTime.add(DateTime.utc_now(), 2, :day)),
+            "cancel_at_period_end" => false,
+            "cancel_at" => DateTime.to_unix(DateTime.add(DateTime.utc_now(), 2, :day))
+          }
+        }
+      }
+
+      assert {:ok, :trial_ending_subscription_cancelled} = TrialWillEndHandler.handle(event)
+    end
+
     test "processes trial ending events when subscription exists" do
       stub_recorded_subscription(insert(:user).id)
 
