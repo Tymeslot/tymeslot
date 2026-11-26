@@ -8,7 +8,6 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
   @moduletag :payments
   @moduletag :integration
 
-  import Mox
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.StripeConnectTestHelpers
 
@@ -16,10 +15,8 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccountRetirement
   alias Tymeslot.MeetingPayments.ConnectAccounts
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount
-
-  setup :verify_on_exit!
+  alias Tymeslot.StripeStub
 
   describe "start_onboarding/1" do
     setup :enable_meeting_payments
@@ -27,7 +24,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
     test "start sends the host to Stripe's authorise page with no account created" do
       user = insert(:user)
 
-      # No adapter expectation: verify_on_exit! fails the test on any call.
+      # No Stripe stub: any request fails the test.
       assert {:ok, %{url: url, account: account}} = ConnectAccounts.start_onboarding(user)
 
       assert URI.parse(url).host == "connect.stripe.com"
@@ -135,6 +132,9 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
 
       assert {:error, :state_already_used} =
                ConnectAccounts.complete_oauth_callback(user, "code_once", state)
+
+      assert_received {:oauth_exchange, "code_once"}
+      refute_received {:oauth_exchange, _code}
     end
 
     test "two simultaneous callbacks exchange once" do
@@ -152,6 +152,8 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
 
       assert [{:error, :state_already_used}] = Enum.reject(results, &match?({:ok, _account}, &1))
       assert [{:ok, _account}] = Enum.filter(results, &match?({:ok, _account}, &1))
+      assert_received {:oauth_exchange, "code_race"}
+      refute_received {:oauth_exchange, _code}
     end
 
     test "a state issued to another host is refused before any exchange" do
@@ -188,9 +190,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       user = insert(:user)
       state = started_state(user)
 
-      expect(StripeAdapterMock, :exchange_oauth_code, fn "code_bad" ->
-        {:error, :invalid_grant}
-      end)
+      expect_exchange("code_bad", {:error, :invalid_grant})
 
       assert {:error, :invalid_grant} =
                ConnectAccounts.complete_oauth_callback(user, "code_bad", state)
@@ -261,9 +261,10 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       state = started_state(user)
       expect_exchange("code_x", "acct_RACE")
 
-      expect(StripeAdapterMock, :retrieve_account, fn "acct_RACE" ->
+      StripeStub.expect(:retrieve_account, 1, fn request ->
+        assert request.headers["stripe-account"] == "acct_RACE"
         insert(:connect_account, stripe_account_id: "acct_RACE")
-        {:ok, snapshot("acct_RACE", %{"country" => "FR", "default_currency" => "eur"})}
+        snapshot("acct_RACE", %{"country" => "FR", "default_currency" => "eur"})
       end)
 
       assert {:error, :account_already_linked} =
@@ -294,8 +295,9 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
 
       assert length(all_enqueued(worker: DeauthorizeConnectAccount)) == 1
 
-      expect(StripeAdapterMock, :deauthorize_account, fn "acct_JP" -> :ok end)
+      expect_deauthorize("acct_JP")
       assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :payments, with_scheduled: true)
+      assert_received {:oauth_deauthorize, "acct_JP"}
     end
 
     test "an unsupported currency leaves an account the host already holds connected" do
@@ -310,7 +312,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
 
       assert_enqueued(worker: DeauthorizeConnectAccount, args: %{stripe_account_id: "acct_CH"})
 
-      # No `deauthorize_account` expectation: Mox fails the job on any call.
+      # No deauthorisation stub: the job fails on any OAuth request.
       assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :payments, with_scheduled: true)
 
       row = ConnectAccountQueries.live_for_user(user.id)
@@ -324,9 +326,9 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       state = started_state(user)
       old_row = ConnectAccountQueries.live_for_user(user.id)
 
-      expect(StripeAdapterMock, :exchange_oauth_code, fn "code_fr" ->
+      expect_exchange("code_fr", fn ->
         ConnectAccountQueries.soft_delete_for_user(user.id, DateTime.utc_now(:second))
-        {:ok, %{stripe_user_id: "acct_FR"}}
+        "acct_FR"
       end)
 
       expect_retrieve("acct_FR", %{"country" => "FR", "default_currency" => "eur"})
@@ -343,7 +345,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       user = insert(:user)
       state = started_state(user)
       expect_exchange("code_one", "acct_FR")
-      expect(StripeAdapterMock, :retrieve_account, fn "acct_FR" -> {:error, :timeout} end)
+      StripeStub.stub(:retrieve_account, {:transport_error, :timeout})
 
       assert {:error, :oauth_failed} =
                ConnectAccounts.complete_oauth_callback(user, "code_one", state)
@@ -365,7 +367,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
 
       assert account.stripe_account_id == "acct_FR"
 
-      # No `deauthorize_account` expectation: Mox fails the job on any call.
+      # No deauthorisation stub: the job fails on any OAuth request.
       assert %{success: 1, failure: 0} =
                Oban.drain_queue(queue: :payments, with_scheduled: true)
     end
@@ -374,7 +376,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       user = insert(:user)
       state = started_state(user)
       expect_exchange("code_fr", "acct_FR")
-      expect_retrieve("acct_FR", %{"country" => "FR"})
+      expect_retrieve("acct_FR", %{"country" => "FR", "default_currency" => nil})
 
       assert {:error, :oauth_failed} =
                ConnectAccounts.complete_oauth_callback(user, "code_fr", state)
@@ -392,9 +394,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       user = insert(:user)
       state = started_state(user)
 
-      expect(StripeAdapterMock, :exchange_oauth_code, fn "code_one" ->
-        {:error, :oauth_failed}
-      end)
+      expect_exchange("code_one", {:error, :oauth_failed})
 
       assert {:error, :oauth_failed} =
                ConnectAccounts.complete_oauth_callback(user, "code_one", state)
@@ -448,7 +448,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       assert [job] = revocation_jobs("acct_FR")
       assert DateTime.diff(job.scheduled_at, DateTime.utc_now(), :second) in 3500..3601
 
-      # No `deauthorize_account` expectation: Mox fails the job on any call.
+      # No deauthorisation stub: the job fails on any OAuth request.
       assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :payments, with_scheduled: true)
       assert ConnectAccountQueries.live_for_user(user.id).stripe_account_id == "acct_FR"
     end
@@ -458,9 +458,10 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       state = started_state(user)
       expect_exchange("code_x", "acct_RACE")
 
-      expect(StripeAdapterMock, :retrieve_account, fn "acct_RACE" ->
+      StripeStub.expect(:retrieve_account, 1, fn request ->
+        assert request.headers["stripe-account"] == "acct_RACE"
         insert(:connect_account, stripe_account_id: "acct_RACE")
-        {:ok, snapshot("acct_RACE", %{"country" => "FR", "default_currency" => "eur"})}
+        snapshot("acct_RACE", %{"country" => "FR", "default_currency" => "eur"})
       end)
 
       assert {:error, :account_already_linked} =
@@ -509,13 +510,14 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       state = started_state(user)
       test_pid = self()
 
-      # Waits out the second so that a stamp taken after the exchange would
-      # differ from the one taken before it.
-      expect(StripeAdapterMock, :exchange_oauth_code, fn "code_fr" ->
+      # Waits out the second so that a stamp taken after the exchange is
+      # later than `started`. A stamp taken before it may fall in the
+      # previous second, so the assertion is "not later", not equality.
+      expect_exchange("code_fr", fn ->
         started = DateTime.utc_now(:second)
         send(test_pid, {:exchange_started, started})
         wait_until_after(started)
-        {:ok, %{stripe_user_id: "acct_FR"}}
+        "acct_FR"
       end)
 
       expect_retrieve("acct_FR", %{"country" => "FR", "default_currency" => "eur"})
@@ -523,7 +525,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       assert {:ok, account} = ConnectAccounts.complete_oauth_callback(user, "code_fr", state)
 
       assert_received {:exchange_started, started}
-      assert account.oauth_connected_at == started
+      assert DateTime.compare(account.oauth_connected_at, started) != :gt
     end
 
     defp wait_until_after(second) do

@@ -23,6 +23,20 @@ defmodule Tymeslot.MeetingPayments.RefundsParseTest do
       assert {:ok, 4000} = Refunds.parse_refund_amount(payment, %{"refund_type" => "full"})
     end
 
+    test "full type leaves what pending refunds hold, and says when they hold it all" do
+      payment = payment_stub(%{amount_cents: 5000, refunded_amount_cents: 1000})
+
+      assert {:ok, 3000} =
+               Refunds.parse_refund_amount(Map.put(payment, :pending_refund_cents, 1000), %{
+                 "refund_type" => "full"
+               })
+
+      assert {:error, :refund_in_progress} =
+               Refunds.parse_refund_amount(Map.put(payment, :pending_refund_cents, 4000), %{
+                 "refund_type" => "full"
+               })
+    end
+
     test "partial type with valid decimal amount returns cents" do
       payment = payment_stub(%{amount_cents: 5000, refunded_amount_cents: 0})
 

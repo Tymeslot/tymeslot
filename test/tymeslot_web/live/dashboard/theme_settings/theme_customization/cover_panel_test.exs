@@ -50,7 +50,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.CoverPanelTest 
     }
 
     view |> file_input(form, field, [entry]) |> render_upload(name)
-    assert_push_event(view, "upload-complete", %{})
+    # `render/1` pings the LiveView, so the save the progress callback queued has run.
+    render(view)
   end
 
   defp upload_cover(view, name), do: upload(view, "#theme-cover-form", :cover_path, name)

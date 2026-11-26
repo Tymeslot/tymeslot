@@ -124,6 +124,97 @@ defmodule TymeslotWeb.Dashboard.LanguagesDraftsTest do
     end
   end
 
+  describe "a link to another section" do
+    setup %{user: user} do
+      meeting_type = insert(:meeting_type, user: user, name: "Intro call", description: nil)
+
+      %{
+        meeting_type: meeting_type,
+        component: "translation-meeting_types-meeting_type-#{meeting_type.id}"
+      }
+    end
+
+    # What the form's `UnsavedChanges` hook does when a link elsewhere is
+    # clicked with text typed: the `leave` event, to the target the form names.
+    defp follow_link_away(view, form) do
+      [target] =
+        view
+        |> element(form)
+        |> render()
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.attribute("data-leave-target")
+
+      view |> with_target("[data-phx-component='#{target}']") |> render_hook("leave", %{})
+      settle(view)
+    end
+
+    test "waits for what was typed to be saved, then lets the link go", %{
+      conn: conn,
+      user: user,
+      meeting_type: meeting_type,
+      component: component
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/languages/de")
+
+      assert has_element?(
+               view,
+               "##{component}-form[phx-hook='UnsavedChanges'][data-leave-event='leave']"
+             )
+
+      view
+      |> form("##{component}-form", %{"translation" => %{"name" => "Erstgespräch"}})
+      |> render_change()
+
+      follow_link_away(view, "##{component}-form")
+
+      assert meeting_type_translation(meeting_type, user, "name") == "Erstgespräch"
+      assert_push_event(view, "unsaved:proceed", %{})
+    end
+
+    test "is held while what was typed cannot be saved, and goes when asked again", %{
+      conn: conn,
+      user: user,
+      profile: profile,
+      meeting_type: meeting_type,
+      component: component
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/languages/de")
+
+      view
+      |> form("##{component}-form", %{"translation" => %{"name" => "Erstgespräch"}})
+      |> render_change()
+
+      # Another tab stops offering German meanwhile.
+      profile
+      |> Changeset.change(translation_locales: ["fr"], offer_all_locales: false)
+      |> Repo.update!()
+
+      follow_link_away(view, "##{component}-form")
+
+      refute_push_event(view, "unsaved:proceed", %{})
+      assert render(view) =~ "Try again to leave without saving them."
+
+      follow_link_away(view, "##{component}-form")
+
+      assert_push_event(view, "unsaved:proceed", %{})
+      assert meeting_type_translation(meeting_type, user, "name") == nil
+    end
+
+    test "is no longer held once Save translations has stored what was typed", %{
+      conn: conn,
+      component: component
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/languages/de")
+
+      view
+      |> form("##{component}-form", %{"translation" => %{"name" => "Erstgespräch"}})
+      |> render_submit()
+
+      assert_push_event(view, "autosave:clean", %{id: id})
+      assert id == "#{component}-form"
+    end
+  end
+
   describe "an outdated translation" do
     test "is kept as still correct, and counts as translated again", %{
       conn: conn,

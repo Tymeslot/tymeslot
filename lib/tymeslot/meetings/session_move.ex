@@ -30,7 +30,17 @@ defmodule Tymeslot.Meetings.SessionMove do
   alias Tymeslot.Clock
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Meetings.{GuestQueries, MeetingState, ParticipantQueries, Scheduling, VideoRooms}
+  alias Tymeslot.Meetings.EmailVerification
+
+  alias Tymeslot.Meetings.{
+    GuestQueries,
+    MeetingState,
+    ParticipantQueries,
+    Scheduling,
+    SeatHolds,
+    VideoRooms
+  }
+
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Repo
@@ -93,9 +103,12 @@ defmodule Tymeslot.Meetings.SessionMove do
 
   # The time, the reset reminder tracking and the next calendar revision land
   # in one write, conflict-checked against the host's other meetings as a
-  # planned session is when it is added. The seats' revisions and the
-  # calendar job go in the same transaction, so a refused move changes
-  # nothing.
+  # planned session is when it is added. The seats' revisions, the open
+  # seat holds' snapshotted start and the calendar job go in the same
+  # transaction, so a refused move changes nothing. A seat still awaiting
+  # email verification is released silently with its expiry job: its booker
+  # picked the old time, and must not later confirm into one they never
+  # chose.
   defp write(session, starts_at, closes_at) do
     length = DateTime.diff(session.end_time, session.start_time)
 
@@ -118,8 +131,10 @@ defmodule Tymeslot.Meetings.SessionMove do
                enforce_booking_limits: false,
                guard: &still_planned/1
              ),
+           :ok = EmailVerification.release_all_held(moved.id),
            _seats = ParticipantQueries.bump_ical_sequence_for_meeting(moved.id),
            _guests = GuestQueries.reset_for_moved_session(moved.id),
+           _holds = SeatHolds.follow_moved_meeting(moved.id, moved.start_time),
            {:ok, _job} <- CalendarJobs.schedule_job(moved, "update") do
         moved
       else

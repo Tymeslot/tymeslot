@@ -335,3 +335,8 @@ msgstr "Gości można dodać tylko do pojedynczej rezerwacji. Usuń swoich gośc
 #, elixir-autogen, elixir-format
 msgid "The request to pick a new time for this meeting has lapsed, so it is no longer booked. You're welcome to book a new time."
 msgstr "Prośba o wybranie nowego terminu wygasła, więc to spotkanie nie jest już zarezerwowane. Możesz zarezerwować nowy termin."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "A payment for this email is still open for this time. Finish that payment, or try again in about half an hour."
+msgstr "Płatność za ten termin powiązana z tym adresem e-mail nie została jeszcze dokończona. Dokończ ją albo spróbuj ponownie za około pół godziny."

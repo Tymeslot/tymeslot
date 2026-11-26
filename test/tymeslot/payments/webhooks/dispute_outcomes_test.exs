@@ -3,21 +3,17 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
 
   @moduletag :payments
 
+  import Tymeslot.AdminAlertsCaptureHelpers
   import Tymeslot.Test.PaymentEventCapture
-  import Mox
   import Tymeslot.Factory
 
   alias Swoosh.Email
   alias Tymeslot.Payments.Webhooks.DisputeHandler
-
-  setup :set_mox_from_context
-  setup :verify_on_exit!
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
   setup do
-    original_provider = Application.get_env(:tymeslot, :stripe_provider)
     original_manager = Application.get_env(:tymeslot, :subscription_manager)
-
-    Application.put_env(:tymeslot, :stripe_provider, Tymeslot.Payments.StripeMock)
 
     # Dispute routing for charges without invoice/subscription references
     # depends on a subscription manager being configured; pin it so earlier
@@ -28,11 +24,9 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
       Tymeslot.Payments.SubscriptionManagerMock
     )
 
-    on_exit(fn ->
-      restore(:stripe_provider, original_provider)
-      restore(:subscription_manager, original_manager)
-    end)
+    on_exit(fn -> restore(:subscription_manager, original_manager) end)
 
+    capture_admin_alerts()
     capture_payment_events()
   end
 
@@ -52,18 +46,19 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
     )
   end
 
+  # A charge as older API versions render it, naming its invoice and
+  # subscription.
   defp subscription_charge(customer_id \\ "cus_sub") do
-    %{
+    StripeFixtures.object("charge", %{
       "id" => "ch_sub",
       "customer" => customer_id,
       "subscription" => "sub_123",
       "invoice" => "in_123"
-    }
+    })
   end
 
-  defp one_time_charge(customer_id) do
-    %{"id" => "ch_one_time", "customer" => customer_id}
-  end
+  defp one_time_charge(customer_id),
+    do: StripeFixtures.object("charge", %{"id" => "ch_one_time", "customer" => customer_id})
 
   defp with_object(event, object), do: Map.put(event, "data", %{"object" => object})
 
@@ -85,7 +80,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
   describe "handle/1 — a failed hand-off" do
     setup do
       Application.put_env(:tymeslot, :payment_event_handler, FailingHandler)
-      stub(Tymeslot.Payments.StripeMock, :get_charge, fn _id -> {:ok, subscription_charge()} end)
+      StripeStub.stub(:retrieve_charge, subscription_charge())
       :ok
     end
 
@@ -110,9 +105,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
       d = dispute("under_review")
       event = %{"id" => "evt_upd_1", "type" => "charge.dispute.updated"}
 
-      expect(Tymeslot.Payments.StripeMock, :get_charge, fn _charge_id ->
-        {:ok, subscription_charge()}
-      end)
+      StripeStub.expect(:retrieve_charge, subscription_charge())
 
       assert {:ok, :dispute_updated} = DisputeHandler.handle(with_object(event, d))
 
@@ -133,9 +126,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
         "type" => "charge.dispute.updated"
       }
 
-      expect(Tymeslot.Payments.StripeMock, :get_charge, fn _charge_id ->
-        {:ok, subscription_charge()}
-      end)
+      StripeStub.expect(:retrieve_charge, subscription_charge())
 
       assert {:ok, :dispute_updated} =
                DisputeHandler.handle(with_object(event, dispute("under_review")))
@@ -158,9 +149,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
       d = dispute("under_review")
       event = %{"id" => "evt_upd_2", "type" => "charge.dispute.updated"}
 
-      expect(Tymeslot.Payments.StripeMock, :get_charge, fn _charge_id ->
-        {:ok, one_time_charge("cus_one_time")}
-      end)
+      StripeStub.expect(:retrieve_charge, one_time_charge("cus_one_time"))
 
       assert {:ok, :dispute_updated} = DisputeHandler.handle(with_object(event, d))
 
@@ -174,9 +163,10 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
       d = dispute("under_review")
       event = %{"id" => "evt_upd_4", "type" => "charge.dispute.updated"}
 
-      expect(Tymeslot.Payments.StripeMock, :get_charge, fn _charge_id ->
-        {:ok, %{"id" => "ch_sub_basil", "customer" => "cus_sub_basil"}}
-      end)
+      StripeStub.expect(
+        :retrieve_charge,
+        StripeFixtures.object("charge", %{"id" => "ch_sub_basil", "customer" => "cus_sub_basil"})
+      )
 
       assert {:ok, :dispute_updated} = DisputeHandler.handle(with_object(event, d))
 
@@ -186,16 +176,16 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
       }
     end
 
-    test "Stripe API error triggers retry_later" do
+    test "a charge Stripe does not have is acknowledged unrouted" do
       d = dispute("under_review")
       event = %{"id" => "evt_upd_3", "type" => "charge.dispute.updated"}
 
-      expect(Tymeslot.Payments.StripeMock, :get_charge, fn _charge_id ->
-        {:error, %{message: "down"}}
-      end)
+      StripeStub.expect(:retrieve_charge, {:error_fixture, "resource_missing"})
 
-      assert {:error, :retry_later, "Stripe API unavailable"} =
+      assert {:error, :permanent, :charge_unreadable} =
                DisputeHandler.handle(with_object(event, d))
+
+      refute_received %{event: _event, data: _data}
     end
   end
 
@@ -204,9 +194,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
       d = dispute("won")
       event = %{"id" => "evt_close_1", "type" => "charge.dispute.closed"}
 
-      expect(Tymeslot.Payments.StripeMock, :get_charge, fn _charge_id ->
-        {:ok, subscription_charge()}
-      end)
+      StripeStub.expect(:retrieve_charge, subscription_charge())
 
       assert {:ok, :dispute_closed} = DisputeHandler.handle(with_object(event, d))
 
@@ -233,9 +221,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
       d = dispute("lost", %{"amount" => 5000, "reason" => "duplicate"})
       event = %{"id" => "evt_close_2", "type" => "charge.dispute.closed"}
 
-      expect(Tymeslot.Payments.StripeMock, :get_charge, fn _charge_id ->
-        {:ok, one_time_charge("cus_lost_dispute")}
-      end)
+      StripeStub.expect(:retrieve_charge, one_time_charge("cus_lost_dispute"))
 
       assert {:ok, :dispute_closed} = DisputeHandler.handle(with_object(event, d))
 
@@ -255,9 +241,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
       d = dispute("won")
       event = %{"id" => "evt_close_3", "type" => "charge.dispute.closed"}
 
-      expect(Tymeslot.Payments.StripeMock, :get_charge, fn _charge_id ->
-        {:ok, one_time_charge("cus_won_dispute")}
-      end)
+      StripeStub.expect(:retrieve_charge, one_time_charge("cus_won_dispute"))
 
       assert {:ok, :dispute_closed} = DisputeHandler.handle(with_object(event, d))
       refute_received %{event: :dispute_closed, data: _}
@@ -284,9 +268,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
         stripe_customer_id: "cus_won_notice"
       )
 
-      expect(Tymeslot.Payments.StripeMock, :get_charge, fn _charge_id ->
-        {:ok, one_time_charge("cus_won_notice")}
-      end)
+      StripeStub.expect(:retrieve_charge, one_time_charge("cus_won_notice"))
 
       won =
         dispute("won", %{
@@ -325,16 +307,65 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
              }
     end
 
-    test "Stripe API error triggers retry_later" do
+    test "a won dispute on a charge Stripe does not have is acknowledged unrouted" do
       d = dispute("won")
       event = %{"id" => "evt_close_4", "type" => "charge.dispute.closed"}
 
-      expect(Tymeslot.Payments.StripeMock, :get_charge, fn _charge_id ->
-        {:error, %{message: "down"}}
-      end)
+      StripeStub.expect(:retrieve_charge, {:error_fixture, "resource_missing"})
 
-      assert {:error, :retry_later, "Stripe API unavailable"} =
+      assert {:error, :permanent, :charge_unreadable} =
                DisputeHandler.handle(with_object(event, d))
+
+      refute_received %{event: _event, data: _data}
+      refute_received {:send_alert, _type, _payload}
+    end
+
+    test "a lost dispute on a charge Stripe does not have is reported to the operator" do
+      d = dispute("lost", %{"charge" => "ch_gone_lost"})
+      event = %{"id" => "evt_close_gone", "type" => "charge.dispute.closed"}
+
+      StripeStub.expect(:retrieve_charge, {:error_fixture, "resource_missing"})
+
+      assert {:error, :permanent, :charge_unreadable} =
+               DisputeHandler.handle(with_object(event, d))
+
+      dispute_id = d["id"]
+
+      assert_receive {:send_alert, :dispute_lost, %{dispute_id: ^dispute_id, user_id: nil}}
+    end
+  end
+
+  describe "handle/1 — reading the disputed charge" do
+    test "a Stripe error reading the charge asks Stripe to redeliver" do
+      StripeStub.stub(:retrieve_charge, {:error_fixture, "api_error"})
+      d = dispute("needs_response", %{"charge" => "ch_unreadable"})
+      event = %{"id" => "evt_unreadable", "type" => "charge.dispute.created"}
+
+      assert {:error, :retry_later, _reason} = DisputeHandler.handle(with_object(event, d))
+
+      assert [%{method: :get, path: "/v1/charges/ch_unreadable"} | _retries] =
+               StripeStub.requests(:retrieve_charge)
+
+      refute_received %{event: _event, data: _data}
+    end
+
+    # Redelivering it would fail the same way for the three days Stripe
+    # keeps trying, so the event is acknowledged, and the dispute reported
+    # to the operator as one linked to no user.
+    test "a charge Stripe does not have is acknowledged and the dispute reported" do
+      StripeStub.stub(:retrieve_charge, {:error_fixture, "resource_missing"})
+      d = dispute("needs_response", %{"charge" => "ch_gone"})
+      event = %{"id" => "evt_gone", "type" => "charge.dispute.created"}
+
+      assert {:error, :permanent, :charge_unreadable} =
+               DisputeHandler.handle(with_object(event, d))
+
+      assert [%{path: "/v1/charges/ch_gone"}] = StripeStub.requests(:retrieve_charge)
+      dispute_id = d["id"]
+
+      assert_receive {:send_alert, :dispute_created, %{dispute_id: ^dispute_id, user_id: nil}}
+
+      refute_received %{event: _event, data: _data}
     end
   end
 
@@ -343,9 +374,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
       d = dispute("needs_response")
       event = %{"id" => "evt_orphan", "type" => "charge.dispute.created"}
 
-      expect(Tymeslot.Payments.StripeMock, :get_charge, fn _charge_id ->
-        {:ok, one_time_charge("cus_orphan_dispute")}
-      end)
+      StripeStub.expect(:retrieve_charge, one_time_charge("cus_orphan_dispute"))
 
       # No payment_transaction exists for cus_orphan_dispute and the charge
       # carries no invoice/subscription reference; with a subscription manager
@@ -361,9 +390,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
       d = dispute("needs_response")
       event = %{"id" => "evt_orphan_standalone", "type" => "charge.dispute.created"}
 
-      expect(Tymeslot.Payments.StripeMock, :get_charge, fn _charge_id ->
-        {:ok, one_time_charge("cus_orphan_standalone")}
-      end)
+      StripeStub.expect(:retrieve_charge, one_time_charge("cus_orphan_standalone"))
 
       # Without a subscription manager there is nothing to forward to — the
       # handler logs the orphan dispute and alerts the admin instead.

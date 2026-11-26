@@ -205,6 +205,7 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
     assert :ok =
              perform_job(EmailWorker, %{
                "action" => "send_reminder_emails",
+               "relevant_until" => nil,
                "meeting_id" => meeting.id,
                "reminder_value" => 30,
                "reminder_unit" => "minutes"
@@ -242,6 +243,7 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
     assert :ok =
              perform_job(EmailWorker, %{
                "action" => "send_seat_reminder",
+               "relevant_until" => nil,
                "meeting_id" => meeting.id,
                "participant_id" => first_id,
                "reminder_value" => 30,
@@ -258,6 +260,7 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
     assert :ok =
              perform_job(EmailWorker, %{
                "action" => "send_seat_reminder",
+               "relevant_until" => nil,
                "meeting_id" => meeting.id,
                "participant_id" => second_id,
                "reminder_value" => 30,

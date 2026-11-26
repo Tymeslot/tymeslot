@@ -27,7 +27,7 @@ defmodule Tymeslot.BookingSeries.Create do
   A full session, or one the booker already has a seat in, refuses the
   whole series. No seat sends a confirmation of its own.
 
-  On a paid type (one-to-one only: a group type cannot take payment) every
+  On a paid one-to-one type (a paid group type offers no series) every
   session is held `awaiting_payment` instead, with nothing else done for it
   and no confirmation scheduled, and once the series commits one Stripe
   Checkout is opened for all of them (`Tymeslot.BookingSeries.Payment`).
@@ -44,6 +44,7 @@ defmodule Tymeslot.BookingSeries.Create do
   held for payment first, and requested once paid.
   """
 
+  alias Ecto.UUID
   alias Tymeslot.Availability
   alias Tymeslot.Availability.Schedules
 
@@ -68,7 +69,6 @@ defmodule Tymeslot.BookingSeries.Create do
   alias Tymeslot.MeetingTypes.SeriesSettings
   alias Tymeslot.Repo
   alias Tymeslot.Timezones
-  alias UUID
 
   @type series_request ::
           %{mode: :recurring, first_start: DateTime.t(), count: pos_integer()}
@@ -97,7 +97,8 @@ defmodule Tymeslot.BookingSeries.Create do
     time_conflict: :booked,
     booking_limit_reached: :limit_reached,
     slot_full: :session_full,
-    already_booked: :already_booked
+    already_booked: :already_booked,
+    seat_held: :seat_held
   }
 
   @doc """
@@ -227,7 +228,7 @@ defmodule Tymeslot.BookingSeries.Create do
 
   defp session(%Occurrence{} = occurrence) do
     %{
-      meeting_uid: UUID.uuid4(),
+      meeting_uid: UUID.generate(),
       start_datetime: occurrence.start,
       end_datetime: occurrence.end,
       series_position: occurrence.position
@@ -348,9 +349,11 @@ defmodule Tymeslot.BookingSeries.Create do
     end
   end
 
-  # The booker's own seat already in the session, caught by the unique
-  # index. Postgres has aborted the transaction with it, so this reads the
-  # insert's changeset and asks the database nothing more.
+  # The booker's own seat already in the session. The seat transaction's
+  # pre-check refuses it as `:already_booked` first; the unique index stays
+  # the backstop for a seat that slips past it, and then Postgres has aborted
+  # the transaction, so this reads the insert's changeset and asks the
+  # database nothing more.
   defp seat_refusal(%Ecto.Changeset{} = changeset) do
     if ParticipantSchema.duplicate_seat?(changeset), do: :already_booked, else: changeset
   end

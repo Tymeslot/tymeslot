@@ -17,6 +17,11 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
   attr :language_dropdown_open, :boolean, required: true
   attr :offered_locales, :list, default: nil
   attr :legal_links, :map, required: true
+
+  attr :booking_path, :string,
+    required: true,
+    doc: "the booking page to send the guest back to (`PathHandlers.meeting_booking_path/2`)"
+
   attr :meeting, :map, required: true
   attr :organizer_profile, :map, default: nil
   attr :loading, :boolean, required: true
@@ -84,7 +89,11 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                     )}
                   </p>
 
-                  <.action_button type="button" phx-click={JS.navigate("/")} variant={:primary}>
+                  <.action_button
+                    type="button"
+                    phx-click={JS.navigate(@booking_path)}
+                    variant={:primary}
+                  >
                     {dgettext("booking_manage", "Done")}
                   </.action_button>
                 </div>

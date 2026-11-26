@@ -198,8 +198,8 @@ msgstr "Zamítnout všechny termíny"
 
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format
-msgid "Every session is held until you answer. If you haven't replied by %{deadline}, the request lapses and %{name} is told the times are free again."
-msgstr "Všechny termíny zůstávají rezervované, dokud neodpovíte. Bez odpovědi do %{deadline} žádost propadne a %{name} se dozví, že jsou termíny opět volné."
+msgid "Every session is held until you answer. If you haven't replied by %{by_deadline}, the request lapses and %{name} is told the times are free again."
+msgstr "Všechny termíny zůstávají rezervované, dokud neodpovíte. Bez odpovědi do %{by_deadline} žádost propadne a %{name} se dozví, že jsou termíny opět volné."
 
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format
@@ -213,8 +213,8 @@ msgstr "Dobrý den, %{name}, %{host} na níže uvedené termíny nemá čas, pro
 
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format
-msgid "Hi %{name}, %{host} has your request for the sessions below. They are held for you but not booked until %{host} approves them, and you'll hear either way by %{deadline}."
-msgstr "Dobrý den, %{name}, vaši žádost o níže uvedené termíny jsme předali hostiteli %{host}. Termíny pro vás zatím držíme, ale zarezervované budou až poté, co je %{host} schválí. Odpověď dostanete v každém případě do %{deadline}."
+msgid "Hi %{name}, %{host} has your request for the sessions below. They are held for you but not booked until %{host} approves them, and you'll hear either way by %{by_deadline}."
+msgstr "Dobrý den, %{name}, vaši žádost o níže uvedené termíny jsme předali hostiteli %{host}. Termíny pro vás zatím držíme, ale zarezervované budou až poté, co je %{host} schválí. Odpověď dostanete v každém případě do %{by_deadline}."
 
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format

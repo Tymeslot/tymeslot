@@ -8,6 +8,7 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Bookings.MeetingLinks
+  alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Meetings.Approval
@@ -479,6 +480,25 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
 
       assert_received {:built, "en", "Europe/Berlin"}
       refute_received {:built, _locale, _timezone}
+    end
+  end
+
+  describe "guest_details/2" do
+    # What the booker paid is between them and the host: a paid booking's
+    # payload carries the payment for the organiser's copy, and a guest's
+    # copy must not.
+    test "a guest's payload carries nothing of the booker's payment" do
+      %{meeting: meeting, accepted: guest} = meeting_with_guests()
+      insert(:paid_booking_payment, meeting: meeting)
+
+      details = AppointmentBuilder.from_meeting(meeting)
+      assert %{amount_cents: _amount} = details.booking_payment
+
+      guest_view = GuestNotifications.guest_details(details, guest)
+
+      refute Map.has_key?(guest_view, :booking_payment)
+      refute Map.has_key?(guest_view, :attendee_email)
+      assert guest_view.guest_name == guest.email
     end
   end
 end

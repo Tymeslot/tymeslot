@@ -74,7 +74,6 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
         |> maybe_put_fixed_dates(params)
         |> Map.merge(SeriesSettings.form_attrs(params))
         |> Map.merge(payment)
-        |> unpaid_when_group()
 
       {:ok, attrs}
     end
@@ -120,16 +119,6 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   end
 
   defp parse_threshold(_value), do: nil
-
-  # Payments and group bookings are mutually exclusive. A host who cannot take
-  # charges posts no payment fields at all (see `payment_attrs/1`), so turning
-  # group bookings on for a paid type has to switch the payment off here or
-  # the save is refused with no control left to fix it. The stored price is
-  # kept, exactly as it is while charges are unavailable.
-  defp unpaid_when_group(%{max_participants: limit} = attrs) when limit > 1,
-    do: Map.put(attrs, :payment_required, false)
-
-  defp unpaid_when_group(attrs), do: attrs
 
   # A form that cannot render the payment controls does not post them, and an
   # absent key is not a request to make the meeting type free. Both

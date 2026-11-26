@@ -1,9 +1,13 @@
 defmodule Tymeslot.MeetingPayments.ApplicationFeeTest do
-  use ExUnit.Case, async: true
+  # configured_bp/0 reads the application environment, which is global.
+  use ExUnit.Case, async: false
+
+  import Tymeslot.ConfigTestHelpers
 
   @moduletag :payments
   @moduletag :unit
 
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.ApplicationFee
 
   describe "calculate/2" do
@@ -50,6 +54,21 @@ defmodule Tymeslot.MeetingPayments.ApplicationFeeTest do
 
       # Exactly on: 1 * 10_000 → (10_000 + 9_999) div 10_000 = 1, not 2.
       assert ApplicationFee.calculate(1, 10_000) == 1
+    end
+  end
+
+  describe "configured_bp/0" do
+    test "is the configured fee" do
+      setup_config(:tymeslot, :payment_application_fee_bp, 125)
+
+      assert MeetingPayments.application_fee_bp() == 125
+    end
+
+    test "is 0 when no fee is configured" do
+      setup_config(:tymeslot, :payment_application_fee_bp, nil)
+      Application.delete_env(:tymeslot, :payment_application_fee_bp)
+
+      assert MeetingPayments.application_fee_bp() == 0
     end
   end
 end

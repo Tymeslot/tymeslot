@@ -30,6 +30,8 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   alias Tymeslot.Demo
   alias Tymeslot.Invitations
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.MeetingTypes
@@ -53,7 +55,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
           session_id :: String.t() | nil
         ) :: {:ok, ctx()} | {:error, atom()}
   defp authorize(meeting_id, theme_slug, session_id) do
-    with {:ok, meeting, profile} <- organizer(meeting_id, theme_slug),
+    with {:ok, meeting, profile} <- organizer_for_meeting(meeting_id, theme_slug),
          {:ok, payment} <- get_payment(meeting_id),
          :ok <- validate_session(session_id, payment) do
       {:ok, %{meeting: meeting, payment: payment, profile: profile}}
@@ -70,7 +72,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   when the host has no public username); see `rebook/3` for a meeting
   booked through an invitation, which `guest?` decides: whether the visitor
   proved they came back from this meeting's checkout
-  (`MeetingPayments.returned_from_checkout?/2`).
+  (`Checkout.returned_from_checkout?/2`).
   """
   @spec lookup_for_cancel(meeting_id :: String.t(), theme_slug :: String.t(), guest? :: boolean()) ::
           {:ok,
@@ -83,7 +85,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
            }}
           | {:error, atom()}
   def lookup_for_cancel(meeting_id, theme_slug, guest?) do
-    with {:ok, meeting, profile} <- organizer(meeting_id, theme_slug) do
+    with {:ok, meeting, profile} <- organizer_for_meeting(meeting_id, theme_slug) do
       {:ok, Map.merge(%{meeting: meeting, profile: profile}, rebook(profile, meeting, guest?))}
     end
   end
@@ -181,20 +183,25 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   @spec assign_dead_render_language(LiveView.Socket.t(), String.t(), String.t()) ::
           LiveView.Socket.t()
   def assign_dead_render_language(socket, meeting_id, theme_slug) do
-    case organizer(meeting_id, theme_slug) do
+    case organizer_for_meeting(meeting_id, theme_slug) do
       {:ok, meeting, profile} -> assign_language(socket, profile, meeting)
       {:error, _reason} -> socket
     end
   end
 
-  # The booking page's rule (`OrganizerHelpers.assign_page_language/3`): the
-  # visitor's own pick, else the language the meeting was booked in, else the
-  # browser's, among the languages the organiser offers, so the attendee
-  # comes back from Stripe in a language the booking page offers.
-  # `:offered_locales` restricts the switcher alike. A pick the organiser
-  # does not offer gives the original; when the URL's own `?locale=` asked
-  # for it, the page reloads with `?locale=` naming the original.
-  defp assign_language(socket, profile, meeting) do
+  @doc """
+  Assigns the page's language by the booking page's rule
+  (`OrganizerHelpers.assign_page_language/3`): the visitor's own pick, else
+  the language the meeting was booked in, else the browser's, among the
+  languages the organiser offers, so the attendee comes back from Stripe in
+  a language the booking page offers. `:offered_locales` restricts the
+  switcher alike. A pick the organiser does not offer gives the original;
+  when the URL's own `?locale=` asked for it, the page reloads with
+  `?locale=` naming the original.
+  """
+  @spec assign_language(LiveView.Socket.t(), Tymeslot.Profiles.ProfileSchema.t(), Meeting.t()) ::
+          LiveView.Socket.t()
+  def assign_language(socket, profile, meeting) do
     socket = OrganizerHelpers.assign_page_language(socket, profile, meeting.attendee_locale)
 
     if socket.assigns.stale_locale_param,
@@ -255,10 +262,14 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
     path <> "?" <> URI.encode_query(Map.put(query, "locale", locale))
   end
 
-  @doc "A page's path from its URL segments, each escaped."
-  @spec page_path(String.t(), String.t(), String.t()) :: String.t()
-  def page_path(theme_slug, page, meeting_id) do
-    "/" <> Enum.map_join(["themes", theme_slug, page, meeting_id], "/", &escape_segment/1)
+  @doc """
+  A page's path from its URL segments, each escaped: the meeting id, or the
+  segments after the page (`["seat", hold_id]` for a seat's page).
+  """
+  @spec page_path(String.t(), String.t(), String.t() | [String.t()]) :: String.t()
+  def page_path(theme_slug, page, segments) do
+    "/" <>
+      Enum.map_join(["themes", theme_slug, page | List.wrap(segments)], "/", &escape_segment/1)
   end
 
   defp escape_segment(segment), do: URI.encode(segment, &URI.char_unreserved?/1)
@@ -269,17 +280,15 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   and its meeting type when that still exists.
   """
   @spec booking_path(Tymeslot.Profiles.ProfileSchema.t() | nil, Meeting.t()) :: String.t()
-  def booking_path(%{username: username}, meeting)
-      when is_binary(username) and username != "" do
-    address = BookingPages.address_for_meeting(meeting, username)
-
-    case meeting_type_slug(meeting) do
-      nil -> "/" <> address
-      slug -> "/" <> address <> "/" <> slug
+  def booking_path(profile, meeting) do
+    case PathHandlers.meeting_booking_path(profile, meeting) do
+      "/" -> "/"
+      path -> with_type_slug(path, meeting_type_slug(meeting))
     end
   end
 
-  def booking_path(_profile, _meeting), do: "/"
+  defp with_type_slug(path, nil), do: path
+  defp with_type_slug(path, slug), do: path <> "/" <> slug
 
   defp meeting_type_slug(%{meeting_type_id: id, organizer_user_id: user_id})
        when is_integer(id) and is_integer(user_id) do
@@ -351,7 +360,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
       )
 
     if LiveView.connected?(socket) do
-      PubSub.subscribe(Tymeslot.PubSub, MeetingPayments.payment_topic(meeting_id))
+      PubSub.subscribe(Tymeslot.PubSub, Checkout.payment_topic(meeting_id))
 
       case authorize(meeting_id, theme_slug, params["session_id"]) do
         {:ok, %{meeting: meeting, payment: payment, profile: profile}} ->
@@ -401,7 +410,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   """
   @spec refresh(LiveView.Socket.t()) :: LiveView.Socket.t()
   def refresh(socket) do
-    payment = MeetingPayments.payment_for_meeting(socket.assigns.meeting.id)
+    payment = BookingPayments.payment_for_meeting(socket.assigns.meeting.id)
 
     socket =
       case Meetings.get_meeting(socket.assigns.meeting.id) do
@@ -431,7 +440,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   @doc """
   Classifies the return page's state for a themed `render/1` `case`.
 
-  The booking outcome is the domain's (`MeetingPayments.checkout_outcome/2`);
+  The booking outcome is the domain's (`Checkout.checkout_outcome/2`);
   this only adds `:loading` for the disconnected render and shows a checkout
   still being processed the same way.
   """
@@ -440,11 +449,20 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   def outcome(true, _payment, _meeting), do: :loading
 
   def outcome(false, payment, meeting) do
-    case MeetingPayments.checkout_outcome(payment, meeting) do
+    case Checkout.checkout_outcome(payment, meeting) do
       :processing -> :loading
       outcome -> outcome
     end
   end
+
+  @doc """
+  The outcome a processing page's assigns show: the `:outcome` a seat's page
+  assigns (`PaymentReturn.Seat.outcome/3`), else the meeting's (`outcome/3`).
+  """
+  @spec page_outcome(map()) :: outcome()
+  def page_outcome(%{outcome: outcome}) when outcome != nil, do: outcome
+
+  def page_outcome(assigns), do: outcome(assigns.loading, assigns.payment, assigns.meeting)
 
   @doc """
   Where an outcome leaves the booking, for the page's status mark: still
@@ -471,7 +489,16 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
 
   def approval_deadline_text(_meeting), do: nil
 
-  defp organizer(meeting_id, theme_slug) do
+  @doc """
+  The meeting `meeting_id` and its organiser's profile (the booking page's,
+  for a meeting booked through one), when that profile's theme is the one
+  the URL's `theme_slug` names: `:meeting_not_found`, `:profile_not_found`
+  or `:wrong_theme` otherwise. Shared with the seat pages
+  (`PaymentReturn.Seat`).
+  """
+  @spec organizer_for_meeting(String.t(), String.t()) ::
+          {:ok, Meeting.t(), Tymeslot.Profiles.ProfileSchema.t()} | {:error, atom()}
+  def organizer_for_meeting(meeting_id, theme_slug) do
     with {:ok, meeting} <- get_meeting(meeting_id),
          {:ok, profile} <- get_profile(meeting),
          :ok <- validate_theme(profile, theme_slug) do
@@ -513,18 +540,25 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   defp profile_theme_key(_profile), do: ThemeRegistry.default_theme_key()
 
   defp get_payment(meeting_id) do
-    case MeetingPayments.payment_for_meeting(meeting_id) do
+    case BookingPayments.payment_for_meeting(meeting_id) do
       nil -> {:error, :payment_not_found}
       payment -> {:ok, payment}
     end
   end
 
-  defp validate_session(nil, _payment), do: {:error, :missing_session}
+  @doc """
+  Whether the success URL's `session_id` is the checkout session the
+  payment was opened with, so a visitor holding only the meeting's or the
+  hold's id cannot read its outcome.
+  """
+  @spec validate_session(String.t() | nil, MeetingPayments.booking_payment()) ::
+          :ok | {:error, :missing_session | :session_mismatch}
+  def validate_session(nil, _payment), do: {:error, :missing_session}
 
-  defp validate_session(provided, %{stripe_checkout_session_id: stored})
-       when is_binary(stored) do
+  def validate_session(provided, %{stripe_checkout_session_id: stored})
+      when is_binary(stored) do
     if provided == stored, do: :ok, else: {:error, :session_mismatch}
   end
 
-  defp validate_session(_provided, _payment), do: {:error, :session_mismatch}
+  def validate_session(_provided, _payment), do: {:error, :session_mismatch}
 end

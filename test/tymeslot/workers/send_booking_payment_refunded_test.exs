@@ -72,9 +72,10 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefundedTest do
       end)
     end
 
-    # The meeting's stored title is the host's calendar event, in the host's
-    # language; the booker reads it in theirs.
-    test "names the booking in the booker's language" do
+    # The meeting's stored title is the host's calendar event, naming the
+    # booker in the host's language; the booker reads the booking named after
+    # the host, in theirs.
+    test "names the booking after the host, in the booker's language" do
       meeting =
         insert(:meeting,
           title: "Discovery Call mit Alice",
@@ -91,8 +92,53 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefundedTest do
                })
 
       assert_email_sent(fn email ->
-        refute email.text_body =~ "mit Alice"
-        assert email.text_body =~ "Discovery Call con Alice"
+        refute email.text_body =~ "con Alice"
+        assert email.text_body =~ "Discovery Call con Bob Host"
+      end)
+    end
+
+    # A group meeting's `attendee_locale` is its first booker's, so a later
+    # seat's refund notice is written in that seat's booker's own language.
+    test "writes a seat's refund in that seat's booker's language" do
+      meeting =
+        insert(:group_meeting, capacity: 3, meeting_type: "Workshop", attendee_locale: "en")
+
+      _first = insert(:participant, meeting: meeting, locale: "en")
+      second = insert(:participant, meeting: meeting, locale: "de")
+
+      payment =
+        insert_payment(%{
+          meeting_id: meeting.id,
+          participant_id: second.id,
+          seat_payment: true
+        })
+
+      assert :ok =
+               perform_job(SendBookingPaymentRefunded, %{
+                 "booking_payment_id" => payment.id
+               })
+
+      assert_email_sent(fn email ->
+        assert email.subject == "Rückerstattung veranlasst – 50,00\u00A0€"
+      end)
+    end
+
+    # A seat whose checkout was never confirmed has no participant; its hold
+    # carries the booker's language.
+    test "writes an unconfirmed seat's refund in its hold's language" do
+      meeting = insert(:group_meeting, capacity: 3, attendee_locale: "en")
+      hold = insert(:seat_hold, meeting: meeting, locale: "de")
+
+      payment =
+        insert_payment(%{meeting_id: meeting.id, seat_hold_id: hold.id, seat_payment: true})
+
+      assert :ok =
+               perform_job(SendBookingPaymentRefunded, %{
+                 "booking_payment_id" => payment.id
+               })
+
+      assert_email_sent(fn email ->
+        assert email.subject == "Rückerstattung veranlasst – 50,00\u00A0€"
       end)
     end
 
@@ -136,6 +182,73 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefundedTest do
 
     test "no-ops when refunded_amount_cents is zero" do
       payment = insert_payment(%{refunded_amount_cents: 0, status: :paid})
+
+      assert :ok =
+               perform_job(SendBookingPaymentRefunded, %{
+                 "booking_payment_id" => payment.id
+               })
+
+      refute_email_sent()
+    end
+
+    test "the refund email states only the refund made" do
+      payment =
+        insert_payment(%{
+          amount_cents: 10_000,
+          refunded_amount_cents: 10_000,
+          disputed_lost_cents: 6_000,
+          status: :disputed
+        })
+
+      assert :ok =
+               perform_job(SendBookingPaymentRefunded, %{
+                 "booking_payment_id" => payment.id
+               })
+
+      assert_email_sent(fn email ->
+        assert email.subject == "Partial Refund Issued - €40.00"
+
+        assert email.text_body =~
+                 "Hi Alice, €40.00 of your €100.00 payment has been refunded."
+
+        assert email.html_body =~ "€40.00 of your €100.00 payment has been refunded."
+
+        for body <- [email.text_body, email.html_body] do
+          refute body =~ "€100.00 has been refunded"
+          refute body =~ "refunded in full"
+          refute body =~ "dispute"
+        end
+      end)
+    end
+
+    test "the refund email still goes out once a dispute over the same money is lost" do
+      payment =
+        insert_payment(%{
+          amount_cents: 10_000,
+          refunded_amount_cents: 10_000,
+          stripe_refunded_cents: 10_000,
+          disputed_lost_cents: 10_000,
+          status: :refunded
+        })
+
+      assert :ok =
+               perform_job(SendBookingPaymentRefunded, %{
+                 "booking_payment_id" => payment.id
+               })
+
+      assert_email_sent(fn email ->
+        assert email.to == [{"Alice", "alice@example.com"}]
+        assert email.subject == "Refund Issued - €100.00"
+      end)
+    end
+
+    test "no refund email when only a dispute took the money" do
+      payment =
+        insert_payment(%{
+          refunded_amount_cents: 3_000,
+          disputed_lost_cents: 3_000,
+          status: :disputed
+        })
 
       assert :ok =
                perform_job(SendBookingPaymentRefunded, %{

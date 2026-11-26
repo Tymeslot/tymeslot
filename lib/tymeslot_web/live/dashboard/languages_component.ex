@@ -18,10 +18,12 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
   Unticking a translation language asks first (`RemoveLanguageModal`); its
   texts are kept, so ticking the language again brings them back.
 
-  Switching tab or language, or turning "Only missing or outdated" on or off
-  (which takes away the editors of what is then hidden), first has every
-  editor on the page save what was typed in it (`TranslationEditor.leave/2`);
-  the page moves on once each has, and stays where it is if one could not.
+  Switching tab or language, turning "Only missing or outdated" on or off
+  (which takes away the editors of what is then hidden), or following a link
+  to another section (`"leave"`, from an editor's `UnsavedChanges` hook),
+  first has every editor on the page save what was typed in it
+  (`TranslationEditor.leave/2`); the page moves on once each has, and stays
+  where it is if one could not.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -221,6 +223,9 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
   def handle_event("toggle_only_open", _params, socket),
     do: {:noreply, after_drafts_saved(socket, :toggle_only_open)}
 
+  def handle_event("leave", _params, socket),
+    do: {:noreply, after_drafts_saved(socket, :proceed)}
+
   # The language with the most left to translate, so the tab opens where
   # there is work; the first one when everything is done.
   # Among the organiser's own languages first: offering every language,
@@ -252,6 +257,9 @@ defmodule TymeslotWeb.Dashboard.LanguagesComponent do
   end
 
   defp run(socket, :toggle_only_open), do: update(socket, :only_open, &(not &1))
+
+  # The hook that held the link follows it.
+  defp run(socket, :proceed), do: push_event(socket, "unsaved:proceed", %{})
 
   defp run(socket, {:patch, path}) do
     send(self(), {:patch, path})

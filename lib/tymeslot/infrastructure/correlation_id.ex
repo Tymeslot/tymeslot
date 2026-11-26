@@ -24,6 +24,7 @@ defmodule Tymeslot.Infrastructure.CorrelationId do
   response always carries `x-correlation-id` with the id the request settled on.
   """
 
+  alias Ecto.UUID
   alias Phoenix.Component
   alias Phoenix.LiveView.Socket
   alias Plug.Conn
@@ -54,7 +55,7 @@ defmodule Tymeslot.Infrastructure.CorrelationId do
   """
   @spec generate() :: String.t()
   def generate do
-    UUID.uuid4()
+    UUID.generate()
   end
 
   @doc """

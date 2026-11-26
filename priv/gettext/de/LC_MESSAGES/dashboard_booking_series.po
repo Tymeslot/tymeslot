@@ -171,13 +171,6 @@ msgstr "Bisher %{amount} erstattet"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
 #, elixir-autogen, elixir-format
-msgid "%{count} session cancelled. Refund of %{amount} issued."
-msgid_plural "%{count} sessions cancelled. Refund of %{amount} issued."
-msgstr[0] "%{count} Termin abgesagt. Rückerstattung von %{amount} veranlasst."
-msgstr[1] "%{count} Termine abgesagt. Rückerstattung von %{amount} veranlasst."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
-#, elixir-autogen, elixir-format
 msgid "%{count} session cancelled. The attendee has been told."
 msgid_plural "%{count} sessions cancelled. The attendee has been told."
 msgstr[0] "%{count} Termin abgesagt. Der Teilnehmer wurde benachrichtigt."
@@ -417,3 +410,25 @@ msgstr "Eine Rückerstattung ist nicht möglich, da die Zahlung angefochten wird
 #, elixir-autogen, elixir-format
 msgid "No refund can be made: the series was not paid."
 msgstr "Eine Rückerstattung ist nicht möglich, da die Serie nicht bezahlt wurde."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} being processed"
+msgstr "%{amount} in Bearbeitung"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled. Refund of %{amount} is being processed."
+msgid_plural "%{count} sessions cancelled. Refund of %{amount} is being processed."
+msgstr[0] "%{count} Termin abgesagt. Die Rückerstattung von %{amount} wird bearbeitet."
+msgstr[1] "%{count} Termine abgesagt. Die Rückerstattung von %{amount} wird bearbeitet."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{lost} lost in a dispute"
+msgstr "%{lost} durch eine Anfechtung verloren"
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{refunded} refunded so far, plus %{lost} lost in a dispute"
+msgstr "Bisher %{refunded} erstattet, dazu %{lost} durch eine Anfechtung verloren"

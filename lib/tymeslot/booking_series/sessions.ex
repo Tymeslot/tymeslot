@@ -37,6 +37,7 @@ defmodule Tymeslot.BookingSeries.Sessions do
   alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.Clock
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
@@ -149,10 +150,14 @@ defmodule Tymeslot.BookingSeries.Sessions do
     }
   end
 
+  # Its pending refunds read once, for every figure the overview shows.
   defp taken_payment(%SeriesSchema{id: id}) do
-    case MeetingPayments.payment_for_series(id) do
-      %{paid_at: %DateTime{}} = payment -> payment
-      _unpaid_or_none -> nil
+    case BookingPayments.payment_for_series(id) do
+      %{paid_at: %DateTime{}} = payment ->
+        %{payment | pending_refund_cents: MeetingPayments.pending_refund_cents(payment)}
+
+      _unpaid_or_none ->
+        nil
     end
   end
 
@@ -225,7 +230,7 @@ defmodule Tymeslot.BookingSeries.Sessions do
     do: %{reschedule_url: reschedule_url, cancel_url: cancel_url}
 
   defp paid?(%SeriesSchema{id: id}) do
-    case MeetingPayments.payment_for_series(id) do
+    case BookingPayments.payment_for_series(id) do
       %{status: status} -> status in @paid_statuses
       nil -> false
     end

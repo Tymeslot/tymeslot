@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Themes.Shared.SeriesSummary do
 
   use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
+  alias Tymeslot.Bookings.CreateGroup
   alias Tymeslot.Bookings.MeetingLinks
   alias TymeslotWeb.Themes.Shared.Components.SubmitPrice
   alias TymeslotWeb.Themes.Shared.ConfirmationText
@@ -54,7 +55,8 @@ defmodule TymeslotWeb.Themes.Shared.SeriesSummary do
   @doc """
   The id the submit's `aria-describedby` names for its amount: a paid
   series' total (`SeriesParts.total/1`), a single booking's price
-  (`SubmitPrice.describedby/4`), or nil when there is none.
+  for its seats (`SubmitPrice.describedby/5`, `seats/1`), or nil when there
+  is none.
   """
   @spec price_describedby(map(), pos_integer() | nil) :: String.t() | nil
   def price_describedby(assigns, count) when is_integer(count) do
@@ -73,8 +75,23 @@ defmodule TymeslotWeb.Themes.Shared.SeriesSummary do
         assigns.meeting_type,
         assigns.host_currency,
         assigns.locale,
-        assigns.is_rescheduling
+        assigns.is_rescheduling,
+        seats(assigns)
       )
+
+  @doc """
+  The seats the booking form books: the booker's, and one for each guest
+  added, counted as the booking will be charged
+  (`CreateGroup.seats_for/3`), so a guest the booking would drop (the
+  booker's own address, one past the type's limit) is not priced.
+  """
+  @spec seats(map()) :: pos_integer()
+  def seats(assigns),
+    do:
+      CreateGroup.seats_for(assigns[:guest_emails], booker_email(assigns), assigns[:meeting_type])
+
+  defp booker_email(%{form: %{params: %{"email" => email}}}) when is_binary(email), do: email
+  defp booker_email(_assigns), do: nil
 
   @doc """
   The submit's label: "Book 4 sessions" ("Request 4 sessions" on a type the
@@ -101,6 +118,7 @@ defmodule TymeslotWeb.Themes.Shared.SeriesSummary do
   attr :locale, :string, required: true
   attr :rescheduling, :boolean, default: false
   attr :count, :integer, default: nil, doc: "the sessions of a series, nil for one booking"
+  attr :seats, :integer, default: 1, doc: "the seats one booking takes (`seats/1`)"
   attr :class, :any, default: nil
 
   @doc """
@@ -124,6 +142,7 @@ defmodule TymeslotWeb.Themes.Shared.SeriesSummary do
       currency={@currency}
       locale={@locale}
       rescheduling={@rescheduling}
+      seats={@seats}
       class={@class}
     />
     """

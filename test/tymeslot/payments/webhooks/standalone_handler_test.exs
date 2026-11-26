@@ -8,6 +8,8 @@ defmodule Tymeslot.Payments.Webhooks.StandaloneHandlerTest do
   alias Tymeslot.Payments.Webhooks.RefundHandler
   alias Tymeslot.Payments.Webhooks.TrialWillEndHandler
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
   import Mox
   import Tymeslot.Factory
@@ -49,17 +51,6 @@ defmodule Tymeslot.Payments.Webhooks.StandaloneHandlerTest do
 
   defp with_object(event, object), do: Map.put(event, "data", %{"object" => object})
 
-  defp setup_test_configs(user) do
-    original_provider = Application.get_env(:tymeslot, :stripe_provider)
-
-    Application.put_env(:tymeslot, :stripe_provider, Tymeslot.Payments.StripeMock)
-    stub_recorded_subscription(user.id)
-
-    on_exit(fn ->
-      Application.put_env(:tymeslot, :stripe_provider, original_provider)
-    end)
-  end
-
   describe "RefundHandler standalone" do
     test "logs refund events in standalone mode" do
       charge = %{
@@ -82,6 +73,9 @@ defmodule Tymeslot.Payments.Webhooks.StandaloneHandlerTest do
       }
 
       event = %{"type" => "charge.refunded", "id" => "evt_124"}
+
+      # Without them on the charge, the refunds are read from Stripe.
+      StripeStub.expect(:list_refunds, StripeFixtures.list([]))
 
       assert {:ok, :refund_logged} = RefundHandler.handle(with_object(event, charge))
     end
@@ -128,6 +122,25 @@ defmodule Tymeslot.Payments.Webhooks.StandaloneHandlerTest do
       assert {:error, :permanent, :invalid_timestamp} = TrialWillEndHandler.handle(event)
     end
 
+    test "sends no trial reminder for a subscription cancelled during its trial" do
+      stub_recorded_subscription(insert(:user).id)
+
+      event = %{
+        "type" => "customer.subscription.trial_will_end",
+        "data" => %{
+          "object" => %{
+            "id" => "sub_existing",
+            "customer" => "cus_existing",
+            "trial_end" => DateTime.to_unix(DateTime.add(DateTime.utc_now(), 2, :day)),
+            "cancel_at_period_end" => false,
+            "cancel_at" => DateTime.to_unix(DateTime.add(DateTime.utc_now(), 2, :day))
+          }
+        }
+      }
+
+      assert {:ok, :trial_ending_subscription_cancelled} = TrialWillEndHandler.handle(event)
+    end
+
     test "processes trial ending events when subscription exists" do
       stub_recorded_subscription(insert(:user).id)
 
@@ -161,25 +174,17 @@ defmodule Tymeslot.Payments.Webhooks.StandaloneHandlerTest do
 
       event = %{"type" => "charge.dispute.created"}
 
-      # Mock Stripe provider to return error
-      original_provider = Application.get_env(:tymeslot, :stripe_provider)
-      Application.put_env(:tymeslot, :stripe_provider, Tymeslot.Payments.StripeMock)
+      StripeStub.stub(:retrieve_charge, {:error_fixture, "api_error"})
 
-      expect(Tymeslot.Payments.StripeMock, :get_charge, fn "ch_error" ->
-        {:error, %{message: "Stripe API is down"}}
-      end)
+      assert {:error, :retry_later, _reason} =
+               DisputeHandler.handle(with_object(event, dispute))
 
-      try do
-        assert {:error, :retry_later, _reason} =
-                 DisputeHandler.handle(with_object(event, dispute))
-      after
-        Application.put_env(:tymeslot, :stripe_provider, original_provider)
-      end
+      assert [%{path: "/v1/charges/ch_error"} | _retries] = StripeStub.requests(:retrieve_charge)
     end
 
     test "processes disputes even when evidence details are missing" do
       user = insert(:user)
-      setup_test_configs(user)
+      stub_recorded_subscription(user.id)
 
       _transaction =
         insert(:payment_transaction,
@@ -189,9 +194,10 @@ defmodule Tymeslot.Payments.Webhooks.StandaloneHandlerTest do
           subscription_id: nil
         )
 
-      expect(Tymeslot.Payments.StripeMock, :get_charge, fn "ch_123" ->
-        {:ok, %{"customer" => "cus_123"}}
-      end)
+      StripeStub.expect(
+        :retrieve_charge,
+        StripeFixtures.object("charge", %{"id" => "ch_123", "customer" => "cus_123"})
+      )
 
       dispute = %{
         "id" => "dp_456",
@@ -208,7 +214,7 @@ defmodule Tymeslot.Payments.Webhooks.StandaloneHandlerTest do
 
     test "processes disputes with invalid evidence due dates" do
       user = insert(:user)
-      setup_test_configs(user)
+      stub_recorded_subscription(user.id)
 
       _transaction =
         insert(:payment_transaction,
@@ -218,9 +224,10 @@ defmodule Tymeslot.Payments.Webhooks.StandaloneHandlerTest do
           subscription_id: nil
         )
 
-      expect(Tymeslot.Payments.StripeMock, :get_charge, fn "ch_456" ->
-        {:ok, %{"customer" => "cus_456"}}
-      end)
+      StripeStub.expect(
+        :retrieve_charge,
+        StripeFixtures.object("charge", %{"id" => "ch_456", "customer" => "cus_456"})
+      )
 
       dispute = %{
         "id" => "dp_789",

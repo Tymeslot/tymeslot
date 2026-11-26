@@ -177,6 +177,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                     locale={@locale}
                     rescheduling={@is_rescheduling}
                     count={@series_count}
+                    seats={SeriesSummary.seats(assigns)}
                     class="booking-submit-price"
                   />
 

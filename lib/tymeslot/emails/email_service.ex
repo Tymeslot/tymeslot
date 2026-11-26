@@ -104,6 +104,10 @@ defmodule Tymeslot.Emails.EmailService do
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_booking_email_verification(meeting, verify_url), to: AppointmentEmails
 
+  @doc "Asks a group booker to confirm their email address before their seat counts."
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_seat_email_verification(slot, seat, verify_url), to: AppointmentEmails
+
   @doc "Asks the host to approve or decline a booking request, or reminds them."
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_booking_approval_request(variant, meeting, urls, locale), to: AppointmentEmails

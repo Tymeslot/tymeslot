@@ -71,8 +71,14 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
       assert html =~ "90 days"
     end
 
-    test "gives each day of the chart a focusable readout", %{conn: conn, user: user} do
+    test "gives each day of the chart a focusable readout", %{
+      conn: conn,
+      user: user,
+      profile: profile
+    } do
       seed_visit(user, "linkedin", "hash-a")
+      # The chart buckets visits by the organiser's day, not UTC's.
+      today = profile.timezone |> DateTime.now!() |> DateTime.to_date()
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/analytics")
       doc = view |> render() |> LazyHTML.from_document()
@@ -88,13 +94,10 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
       assert has_element?(
                view,
                "#visits-chart-readout [role='tooltip']",
-               "#{Date.utc_today()}: 1 visit"
+               "#{today}: 1 visit"
              )
 
-      assert has_element?(
-               view,
-               "#visits-readout-#{Date.utc_today()}[aria-label='#{Date.utc_today()}: 1 visit']"
-             )
+      assert has_element?(view, "#visits-readout-#{today}[aria-label='#{today}: 1 visit']")
     end
 
     test "renders sources table with rows for each utm_source", %{conn: conn, user: user} do

@@ -13,16 +13,14 @@ defmodule TymeslotWeb.BookingPagePaymentTest do
   @moduletag :payments
   @moduletag :scheduling
 
-  import Mox
   import Phoenix.ConnTest
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
 
   alias Tymeslot.BookingPages
   alias Tymeslot.MeetingPayments.CheckoutSessions
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
-
-  setup :verify_on_exit!
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
   setup do
     user = insert(:user)
@@ -70,10 +68,14 @@ defmodule TymeslotWeb.BookingPagePaymentTest do
       insert(:connect_account, user: ctx.user, charges_enabled: true)
       meeting = paid_meeting(ctx, booking_page_id: ctx.page.id)
 
-      expect(StripeAdapterMock, :create_checkout_session, fn params, _opts ->
-        assert params.success_url =~ "/themes/rhythm/payment-processing/#{meeting.id}"
-        assert params.cancel_url =~ "/themes/rhythm/payment-cancelled/#{meeting.id}"
-        {:ok, %{id: "cs_PAGE", url: "https://checkout.stripe.com/cs_PAGE"}}
+      StripeStub.expect(:create_checkout_session, 1, fn request ->
+        assert request.form["success_url"] =~ "/themes/rhythm/payment-processing/#{meeting.id}"
+        assert request.form["cancel_url"] =~ "/themes/rhythm/payment-cancelled/#{meeting.id}"
+
+        StripeFixtures.object("checkout_session_payment", %{
+          "id" => "cs_PAGE",
+          "url" => "https://checkout.stripe.com/cs_PAGE"
+        })
       end)
 
       assert {:ok, %{booking_payment: payment}} =
@@ -86,9 +88,13 @@ defmodule TymeslotWeb.BookingPagePaymentTest do
       insert(:connect_account, user: ctx.user, charges_enabled: true)
       meeting = paid_meeting(ctx, booking_page_id: nil)
 
-      expect(StripeAdapterMock, :create_checkout_session, fn params, _opts ->
-        assert params.success_url =~ "/themes/quill/payment-processing/#{meeting.id}"
-        {:ok, %{id: "cs_PROFILE", url: "https://checkout.stripe.com/cs_PROFILE"}}
+      StripeStub.expect(:create_checkout_session, 1, fn request ->
+        assert request.form["success_url"] =~ "/themes/quill/payment-processing/#{meeting.id}"
+
+        StripeFixtures.object("checkout_session_payment", %{
+          "id" => "cs_PROFILE",
+          "url" => "https://checkout.stripe.com/cs_PROFILE"
+        })
       end)
 
       assert {:ok, %{booking_payment: %{booking_theme_id: "1"}}} =

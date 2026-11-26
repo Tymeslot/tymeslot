@@ -104,7 +104,6 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
   defp handle_successful_avatar_upload(updated_profile, socket) do
     send(self(), {:profile_updated, updated_profile})
     Flash.info(dgettext("dashboard_profile", "Avatar updated successfully"))
-    socket = push_event(socket, "upload-complete", %{})
     assign(socket, profile: updated_profile)
   end
 
@@ -127,7 +126,6 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
     <div
       id="avatar-upload-container"
       class="lg:col-span-1 space-y-8 text-center pt-4"
-      phx-hook="AutoUpload"
     >
       <.subsection_header
         size={:lg}

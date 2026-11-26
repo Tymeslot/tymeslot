@@ -175,14 +175,6 @@ msgstr "Наразі повернено %{amount}"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
 #, elixir-autogen, elixir-format
-msgid "%{count} session cancelled. Refund of %{amount} issued."
-msgid_plural "%{count} sessions cancelled. Refund of %{amount} issued."
-msgstr[0] "Скасовано %{count} сесію. Повернено %{amount}."
-msgstr[1] "Скасовано %{count} сесії. Повернено %{amount}."
-msgstr[2] "Скасовано %{count} сесій. Повернено %{amount}."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
-#, elixir-autogen, elixir-format
 msgid "%{count} session cancelled. The attendee has been told."
 msgid_plural "%{count} sessions cancelled. The attendee has been told."
 msgstr[0] "Скасовано %{count} сесію. Учасника повідомлено."
@@ -232,7 +224,7 @@ msgstr "Скасувати сесії"
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_series_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancelling..."
-msgstr "Скасування..."
+msgstr "Скасування…"
 
 #: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
 #, elixir-autogen, elixir-format
@@ -434,3 +426,26 @@ msgstr "Повернення коштів неможливе, оскільки �
 #, elixir-autogen, elixir-format
 msgid "No refund can be made: the series was not paid."
 msgstr "Повернення коштів неможливе, оскільки серію не оплачено."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} being processed"
+msgstr "%{amount} в обробці"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled. Refund of %{amount} is being processed."
+msgid_plural "%{count} sessions cancelled. Refund of %{amount} is being processed."
+msgstr[0] "Скасовано %{count} сесію. Повернення %{amount} обробляється."
+msgstr[1] "Скасовано %{count} сесії. Повернення %{amount} обробляється."
+msgstr[2] "Скасовано %{count} сесій. Повернення %{amount} обробляється."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{lost} lost in a dispute"
+msgstr "%{lost} втрачено внаслідок спору"
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{refunded} refunded so far, plus %{lost} lost in a dispute"
+msgstr "Наразі повернено %{refunded}, ще %{lost} втрачено внаслідок спору"

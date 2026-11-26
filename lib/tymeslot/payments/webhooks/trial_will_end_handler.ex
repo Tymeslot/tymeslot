@@ -47,7 +47,7 @@ defmodule Tymeslot.Payments.Webhooks.TrialWillEndHandler do
                stripe_subscription_id: subscription_id,
                trial_ends_at: trial_ends_at
              }) do
-          :ok -> notify_trial_ending(subscription_id, trial_ends_at)
+          :ok -> maybe_notify_trial_ending(event, subscription_id, trial_ends_at)
           {:error, reason} -> {:error, :retry_later, {:hand_off_failed, reason}}
         end
 
@@ -62,6 +62,25 @@ defmodule Tymeslot.Payments.Webhooks.TrialWillEndHandler do
   end
 
   def handle(_event), do: {:error, :permanent, :missing_fields}
+
+  # Stripe sends the event to a subscription cancelled during its trial too,
+  # and the reminder says it will continue and be charged. Cancelling sets
+  # `cancel_at_period_end`, or only `cancel_at` from the billing portal.
+  defp maybe_notify_trial_ending(event, subscription_id, trial_ends_at) do
+    if ending?(event["data"]["object"]) do
+      Logger.info("Trial ending - subscription set to end, no reminder sent",
+        subscription_id: subscription_id
+      )
+
+      {:ok, :trial_ending_subscription_cancelled}
+    else
+      notify_trial_ending(subscription_id, trial_ends_at)
+    end
+  end
+
+  defp ending?(%{"cancel_at_period_end" => true}), do: true
+  defp ending?(%{"cancel_at" => cancel_at}) when is_integer(cancel_at), do: true
+  defp ending?(_subscription), do: false
 
   defp notify_trial_ending(subscription_id, trial_ends_at) do
     # Find subscription in our database for local notifications

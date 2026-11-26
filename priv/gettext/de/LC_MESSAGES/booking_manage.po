@@ -745,6 +745,11 @@ msgstr "Diese Buchung ist nicht mehr verfügbar, daher wurde die Zeit freigegebe
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
+msgid "The booking was cancelled and your place released."
+msgstr "Die Buchung wurde storniert und Ihr Platz freigegeben."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen
 msgid "Cancelling…"
 msgstr "Wird abgesagt…"
 
@@ -792,3 +797,18 @@ msgstr[1] "Alle %{count} Termine ablehnen"
 #, elixir-autogen, elixir-format
 msgid "If you don't answer by %{deadline}, this request lapses and every session is released."
 msgstr "Wenn Sie bis %{deadline} nicht antworten, verfällt diese Anfrage und alle Termine werden wieder freigegeben."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "This booking is no longer available, so your place was released."
+msgstr "Diese Buchung ist nicht mehr verfügbar, daher wurde Ihr Platz freigegeben."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "This booking is no longer held"
+msgstr "Diese Buchung ist nicht mehr reserviert"
+
+#: lib/tymeslot_web/live/booking_verification_live.ex
+#, elixir-autogen, elixir-format
+msgid "The organiser is changing this meeting's time, so your booking cannot be confirmed for now. You can try again while your place is held."
+msgstr "Der Organisator verschiebt gerade diesen Termin, daher kann Ihre Buchung vorerst nicht bestätigt werden. Sie können es erneut versuchen, solange Ihr Platz reserviert ist."

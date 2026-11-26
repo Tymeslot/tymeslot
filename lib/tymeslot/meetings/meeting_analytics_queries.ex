@@ -17,6 +17,7 @@ defmodule Tymeslot.Meetings.MeetingAnalyticsQueries do
 
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Repo
 
@@ -29,7 +30,8 @@ defmodule Tymeslot.Meetings.MeetingAnalyticsQueries do
   it counts only once someone has signed up for it, and in the window its
   first live participant signed up in rather than the one the host planned
   it in: a slot a first booker creates is inserted when they book, and a
-  planned session counts the same way.
+  planned session counts the same way. A seat awaiting its booker's email
+  verification is not a sign-up yet (`ParticipantQueries.where_visible/1`).
   """
   @spec count_bookings(integer(), DateTime.t(), DateTime.t()) :: non_neg_integer()
   def count_bookings(organizer_user_id, %DateTime{} = from, %DateTime{} = to) do
@@ -41,19 +43,23 @@ defmodule Tymeslot.Meetings.MeetingAnalyticsQueries do
       (not m.planned and m.inserted_at >= ^from and m.inserted_at <= ^to) or
         (m.planned and
            exists(
-             from(p in ParticipantSchema,
-               where:
-                 p.meeting_id == parent_as(:meeting).id and is_nil(p.cancelled_at) and
-                   p.inserted_at >= ^from and p.inserted_at <= ^to,
-               select: 1
+             ParticipantQueries.where_visible(
+               from(p in ParticipantSchema,
+                 where:
+                   p.meeting_id == parent_as(:meeting).id and is_nil(p.cancelled_at) and
+                     p.inserted_at >= ^from and p.inserted_at <= ^to,
+                 select: 1
+               )
              )
            ) and
            not exists(
-             from(p in ParticipantSchema,
-               where:
-                 p.meeting_id == parent_as(:meeting).id and is_nil(p.cancelled_at) and
-                   p.inserted_at < ^from,
-               select: 1
+             ParticipantQueries.where_visible(
+               from(p in ParticipantSchema,
+                 where:
+                   p.meeting_id == parent_as(:meeting).id and is_nil(p.cancelled_at) and
+                     p.inserted_at < ^from,
+                 select: 1
+               )
              )
            ))
     )
@@ -148,11 +154,13 @@ defmodule Tymeslot.Meetings.MeetingAnalyticsQueries do
   end
 
   defp meetings_with_foreign_participant do
-    from(p in ParticipantSchema,
-      join: gm in Meeting,
-      on: gm.id == p.meeting_id,
-      where: is_nil(p.cancelled_at) and p.email != gm.organizer_email,
-      select: p.meeting_id
+    ParticipantQueries.where_visible(
+      from(p in ParticipantSchema,
+        join: gm in Meeting,
+        on: gm.id == p.meeting_id,
+        where: is_nil(p.cancelled_at) and p.email != gm.organizer_email,
+        select: p.meeting_id
+      )
     )
   end
 end

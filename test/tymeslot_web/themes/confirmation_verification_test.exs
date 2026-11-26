@@ -111,6 +111,23 @@ defmodule TymeslotWeb.Themes.ConfirmationVerificationTest do
       assert message =~ "Click it by 10 September 2026 at 10:00 AM UTC"
       refute message =~ "10:20"
     end
+
+    test "a one-to-one booking holds the time" do
+      message = ConfirmationText.check_inbox_message(verification_assigns())
+
+      assert message =~ "Until then the time is held for you."
+      refute message =~ "place"
+    end
+
+    # Other attendees may share the slot's time, so what is held is the
+    # booker's place, as the seat's verification email says.
+    test "a seat on a group meeting holds the booker's place, not the time" do
+      message = ConfirmationText.check_inbox_message(seat_assigns())
+
+      assert message =~ "Click it by 10 September 2026 at 09:30 AM UTC"
+      assert message =~ "Until then your place is held for you."
+      refute message =~ "the time is held"
+    end
   end
 
   for theme <- ThemeTestMatrix.all() do
@@ -138,6 +155,14 @@ defmodule TymeslotWeb.Themes.ConfirmationVerificationTest do
 
       # The page never holds the uid of a booking awaiting verification; were
       # it ever handed one, the step still offers no calendar file.
+      test "a seat on a group meeting says its place is held" do
+        html = render_theme(unquote(theme.id), seat_assigns())
+
+        assert [message] = find(html, "[data-testid='check-inbox']")
+        assert Floki.text(message) =~ "Until then your place is held for you."
+        refute Floki.text(message) =~ "the time is held"
+      end
+
       test "offers no calendar file even if a uid were known" do
         html =
           render_theme(unquote(theme.id), %{verification_assigns() | meeting_uid: "abc123"})
@@ -213,10 +238,19 @@ defmodule TymeslotWeb.Themes.ConfirmationVerificationTest do
       end
     end
 
+    test "keeps the button while the slot awaits a new time" do
+      html = render_resend(:awaiting_new_time)
+
+      assert find(html, "[data-testid='resend-verification']") != []
+      assert status(html) =~ "The organiser is changing this meeting's time"
+      assert status(html) =~ "You can try again while your place is held."
+    end
+
     test "hides the button once nothing more can be sent" do
       for {state, text} <- [
             limit_reached: "cannot send the email again",
             expired: "The time was released",
+            place_released: "Your place was released because the booking was not confirmed",
             used: "no longer waiting for your confirmation"
           ] do
         html = render_resend(state)
@@ -239,6 +273,13 @@ defmodule TymeslotWeb.Themes.ConfirmationVerificationTest do
   defp status(html), do: Floki.text(find(html, "[data-testid='resend-verification-status']"))
 
   defp gated_type, do: build(:meeting_type, requires_email_verification: true)
+
+  defp seat_assigns do
+    %{
+      verification_assigns()
+      | meeting_type: build(:meeting_type, requires_email_verification: true, max_participants: 3)
+    }
+  end
 
   defp verification_assigns do
     %{

@@ -4,8 +4,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules do
   group bookings on, and how the form explains it.
 
   The rules themselves belong to the domain: the meeting-type changeset
-  refuses a group type that is invitation-only, requires payment or
-  approval, offers more than one length, or whose location is not fixed in advance (`Tymeslot.MeetingTypes.GroupLocationRule`), and
+  refuses a group type that is invitation-only, requires approval, offers
+  more than one length, or whose location is not fixed in advance
+  (`Tymeslot.MeetingTypes.GroupLocationRule`), and
   `Tymeslot.MeetingTypes.FormValidation` refuses enabling group bookings
   without plan access. This module asks the same questions of the form's
   unsaved state, so the toggle can be disabled with a reason instead of
@@ -22,9 +23,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules do
   @type blocker ::
           :plan
           | :invitation_only
-          | :payment
           | :approval
-          | :email_verification
           | :lengths
           | :offered_times
           | :hidden_offered_times
@@ -44,17 +43,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupRules do
       match?(%{type: %{invitation_only: true}}, assigns) ->
         :invitation_only
 
-      # Hosts who lost charge capability cannot reach the payments toggle, so
-      # turning group bookings on clears `payment_required` for them instead.
-      assigns.payment_required and assigns.payments_charges_enabled ->
-        :payment
-
       assigns.requires_approval ->
         :approval
-
-      # Phase 1 only: seats are not verified yet.
-      assigns.requires_email_verification ->
-        :email_verification
 
       # A group type with fixed dates offers planned sessions, so a
       # one-to-one type's upcoming offered times would silently stop being

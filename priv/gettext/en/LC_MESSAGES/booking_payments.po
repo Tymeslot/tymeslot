@@ -38,12 +38,12 @@ msgstr ""
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
-msgid "If there's no answer by %{deadline}, the request lapses and you're refunded automatically."
+msgid "If there's no answer by %{by_deadline}, the request lapses and you're refunded automatically."
 msgstr ""
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
-msgid "If there's no answer by %{deadline}, the request lapses."
+msgid "If there's no answer by %{by_deadline}, the request lapses."
 msgstr ""
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
@@ -83,7 +83,7 @@ msgstr ""
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
-msgid "Thank you, your booking is confirmed for %{date}."
+msgid "Thank you, your booking is confirmed for %{for_date}."
 msgstr ""
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
@@ -135,7 +135,28 @@ msgstr[1] ""
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
-msgid "Thank you, your %{count} session is confirmed, the first on %{date}."
-msgid_plural "Thank you, your %{count} sessions are confirmed, the first on %{date}."
+msgid "Thank you, your %{count} session is confirmed, the first on %{on_date}."
+msgid_plural "Thank you, your %{count} sessions are confirmed, the first on %{on_date}."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "The payment wasn't completed in time, so the seat held for you was released. You can return and book again."
+msgid_plural "The payment wasn't completed in time, so the seats held for you were released. You can return and book again."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Your payment arrived after the seat held for you was released, and the session had no room left. Your payment is being refunded."
+msgid_plural "Your payment arrived after the seats held for you were released, and the session had no room left. Your payment is being refunded."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Your seat was released"
+msgid_plural "Your seats were released"
 msgstr[0] ""
 msgstr[1] ""

@@ -13,7 +13,9 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   alias Ecto.Changeset
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
+  alias Tymeslot.Meetings.UniqueSlot
   alias Tymeslot.Repo
 
   @doc """
@@ -145,14 +147,76 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   end
 
   @doc """
+  Confirms a group meeting a seat hold created (`:awaiting_payment`, see
+  `MeetingSchema.group_changeset/2`) once it gains its first real
+  participant. That one transition only, as a plain change as
+  `set_attendee_texts/2` is; the meeting enters the confirmed-slot unique
+  index here, so its constraint is declared. Call with the meeting row
+  locked.
+  """
+  @spec confirm_awaiting_payment(Meeting.t()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
+  def confirm_awaiting_payment(%Meeting{status: :awaiting_payment} = meeting) do
+    meeting
+    |> Changeset.change(status: :confirmed)
+    |> UniqueSlot.constrain()
+    |> Repo.update()
+  end
+
+  @doc """
+  Holds a group meeting a seat hold created (`:awaiting_payment`) for email
+  verification once a seat awaiting its booker's verification joins it, with
+  that seat's `deadline`, as a slot whose first seat is held is created
+  (`MeetingSchema.group_changeset/2`). The meeting enters the slot unique
+  index here, so its constraint is declared. Call with the meeting row
+  locked.
+  """
+  @spec hold_awaiting_payment_for_verification(Meeting.t(), DateTime.t()) ::
+          {:ok, Meeting.t()} | {:error, Changeset.t()}
+  def hold_awaiting_payment_for_verification(
+        %Meeting{status: :awaiting_payment} = meeting,
+        %DateTime{} = deadline
+      ) do
+    meeting
+    |> Changeset.change(status: :awaiting_verification, verification_deadline_at: deadline)
+    |> UniqueSlot.constrain()
+    |> Repo.update()
+  end
+
+  @doc """
+  Returns a group meeting held for verification
+  (`hold_awaiting_payment_for_verification/2`) to `:awaiting_payment` once
+  its last seat awaiting verification has gone while seat holds remain on
+  it, clearing the verification deadline a slot only holds take never
+  carries. The meeting leaves the slot unique index, so nothing can
+  conflict. Call with the meeting row locked.
+  """
+  @spec return_to_awaiting_payment(Meeting.t()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
+  def return_to_awaiting_payment(%Meeting{status: :awaiting_verification} = meeting) do
+    meeting
+    |> Changeset.change(status: :awaiting_payment, verification_deadline_at: nil)
+    |> Repo.update()
+  end
+
+  @doc """
   Sets `capacity` on a meeting type's future, live group meetings
   (`capacity > 1`, start time after `now`), returning how many were updated.
 
   A meeting never ends up with a capacity below the seats already taken on
-  it (live participants plus their guests who have not declined, the count
-  `ParticipantQueries.count_seats_taken/1` makes; the SQL below restates it,
-  because Ecto's `update/3` takes no subquery in `set:`): lowering the limit under
-  that leaves the slot exactly full, and nobody is cancelled. Solo meetings
+  it (live participants plus their guests who have not declined, including
+  seats awaiting email verification: the count
+  `ParticipantQueries.count_seats_held/1` makes, plus the seats held for
+  bookers still paying, `Tymeslot.Meetings.SeatHolds`; the SQL below
+  restates it, because Ecto's `update/3` takes no subquery in `set:`):
+  lowering the limit under that leaves the slot exactly full, and nobody is
+  cancelled.
+
+  Counting held seats here is deliberate, though it lets the organiser infer
+  them: lowered to 3 on a slot with 2 counted and 2 held seats, the slot's
+  capacity becomes 4, and the dashboard reads "2/4 seats taken". Stretching
+  only to the counted seats would leave held seats over capacity, to be
+  confirmed into a slot already full. The inference reveals no more than the
+  public page does, which offers a held seat's place to nobody (a held seat
+  takes capacity by design), and nothing about who holds it. Solo meetings
   (`capacity == 1`) are never touched, so a one-to-one booking stays private
   whatever the type becomes.
   """
@@ -170,15 +234,21 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
           capacity:
             fragment(
               """
+              -- held seats: unverified ones count against capacity too
               GREATEST(?::integer, (
                 SELECT count(DISTINCT p.id) + count(g.id)
                 FROM meeting_participants AS p
                 LEFT JOIN meeting_guests AS g
                   ON g.participant_id = p.id AND g.status <> 'declined'
                 WHERE p.meeting_id = ? AND p.cancelled_at IS NULL
+              )::integer + (
+                SELECT COALESCE(sum(h.seats), 0)
+                FROM seat_holds AS h
+                WHERE h.meeting_id = ? AND h.status = 'held'
               )::integer)
               """,
               ^capacity,
+              m.id,
               m.id
             ),
           updated_at: ^DateTime.truncate(now, :second)
@@ -252,9 +322,11 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
       [meeting: m],
       m.planned or
         exists(
-          from(p in Participant,
-            where: p.meeting_id == parent_as(:meeting).id and is_nil(p.cancelled_at),
-            select: 1
+          ParticipantQueries.where_visible(
+            from(p in Participant,
+              where: p.meeting_id == parent_as(:meeting).id and is_nil(p.cancelled_at),
+              select: 1
+            )
           )
         )
     )

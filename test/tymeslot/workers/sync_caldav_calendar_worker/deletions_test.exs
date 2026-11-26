@@ -179,4 +179,100 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.DeletionsTest do
       refute "deleted-on-server@test" in cached_uids
     end
   end
+
+  describe "perform/1 - deletion circuit breaker" do
+    defp seed_recently_confirmed(integration, path, uid) do
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        uid: uid,
+        provider: "caldav",
+        provider_calendar_id: path,
+        provider_event_id: "#{path}#{uid}.ics",
+        summary: "Cached #{uid}",
+        start_at: @future_start,
+        end_at: @future_end,
+        all_day: false,
+        synced_at:
+          DateTime.utc_now() |> DateTime.add(-3600, :second) |> DateTime.truncate(:microsecond)
+      )
+    end
+
+    defp report(conn, entries) do
+      conn
+      |> Conn.put_resp_header("content-type", "application/xml")
+      |> Conn.send_resp(207, caldav_report_xml(entries))
+    end
+
+    defp listing(path, uids), do: Enum.map(uids, &{"#{path}#{&1}.ics", future_ical(&1, &1)})
+
+    defp cached_uids(integration) do
+      Repo.all(
+        from e in ProviderCalendarEventSchema,
+          where: e.calendar_integration_id == ^integration.id,
+          select: e.uid,
+          order_by: e.uid
+      )
+    end
+
+    test "reconciles a series split that removes half the calendar's cached rows" do
+      # An Apple "all future events" edit ends the old series and moves the
+      # rest under a new UID: the old occurrences vanish from the listing in
+      # one sync, while the rest of the calendar comes back unchanged.
+      integration =
+        insert(:calendar_integration,
+          provider: "caldav",
+          is_active: true,
+          caldav_sync_tier: 3,
+          calendar_paths: [path1()]
+        )
+
+      kept = Enum.map(1..5, &"kept-#{&1}@test")
+      split = Enum.map(1..5, &"split-#{&1}@test")
+      for uid <- kept ++ split, do: seed_recently_confirmed(integration, path1(), uid)
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        report(conn, listing(path1(), kept ++ ["new-series@test"]))
+      end)
+
+      assert :ok =
+               perform_job(SyncCalDavCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert cached_uids(integration) == Enum.sort(kept ++ ["new-series@test"])
+    end
+
+    test "a refusal on one calendar still syncs the integration's other calendars" do
+      integration =
+        insert(:calendar_integration,
+          provider: "caldav",
+          is_active: true,
+          caldav_sync_tier: 3,
+          calendar_paths: [path1(), path2()]
+        )
+
+      refused = Enum.map(1..3, &"refused-#{&1}@test")
+      for uid <- refused, do: seed_recently_confirmed(integration, path1(), uid)
+
+      path_a = path1()
+      path_b = path2()
+
+      # path1 answers an empty listing over a cache confirmed an hour ago, which
+      # the breaker refuses; path2 comes after it and carries a new event.
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        case conn.request_path do
+          ^path_a -> report(conn, [])
+          ^path_b -> report(conn, listing(path_b, ["other-calendar@test"]))
+        end
+      end)
+
+      assert {:discard, reason} =
+               perform_job(SyncCalDavCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert reason =~ "circuit breaker"
+      assert cached_uids(integration) == Enum.sort(["other-calendar@test" | refused])
+    end
+  end
 end

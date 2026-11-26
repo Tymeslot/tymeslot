@@ -1,10 +1,11 @@
 defmodule Tymeslot.BookingSeries.CancelRefundTest do
   @moduledoc """
   "Cancel all remaining" on a paid series: the host refunds the remaining
-  sessions' share once, through a job outside the cancellation
-  (`Tymeslot.MeetingPayments.Workers.SeriesHostRefund`), or a custom amount,
-  or nothing; a payment that can no longer be refunded is said so up front;
-  and an open paid request is refunded in full.
+  sessions' share once, recorded with the cancellation and made by its
+  `ExecuteRefund` job outside it, or a custom amount, or nothing; a payment
+  that can no longer be refunded is said so up front; a refund Stripe will
+  not make is emailed to the host; and an open paid request is refunded in
+  full.
   """
 
   use Tymeslot.DataCase, async: false
@@ -14,6 +15,7 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
   @moduletag :payments
   @moduletag :integration
 
+  import Ecto.Query, only: [from: 2]
   import Mox
   import Tymeslot.BookingSeriesTestHelpers
   import Tymeslot.ConfigTestHelpers
@@ -22,15 +24,19 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
   alias Tymeslot.BookingSeries
   alias Tymeslot.CalendarMock
   alias Tymeslot.MeetingPayments
-  alias Tymeslot.MeetingPayments.Refunds
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.MeetingPayments.BookingPayments
+  alias Tymeslot.MeetingPayments.RefundQueries
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Webhooks.ChargeRefunded
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
-  alias Tymeslot.MeetingPayments.Workers.SeriesHostRefund
+  alias Tymeslot.MeetingPayments.Workers.ExecuteRefund
   alias Tymeslot.Meetings
   alias Tymeslot.PaidSeriesTestHelpers, as: Paid
   alias Tymeslot.Repo
-  alias Tymeslot.Workers.SendSeriesRefundFailed
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
+  alias Tymeslot.Workers.SendRefundFailed
 
   setup :verify_on_exit!
 
@@ -47,31 +53,39 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
     assert :ok = CheckoutSessionCompleted.handle(event)
   end
 
-  defp expect_refund(amount) do
-    expect(StripeAdapterMock, :create_refund, 1, fn params, _opts ->
-      assert params.charge == "ch_SERIES"
-      assert params.amount == amount
-      {:ok, %{id: "re_SERIES"}}
+  # `prior` is what Stripe has refunded on the charge before this refund.
+  defp expect_refund(amount, prior \\ 0) do
+    StripeStub.expect(:create_refund, 1, fn request ->
+      assert request.form["charge"] == "ch_SERIES"
+      assert request.form["amount"] == to_string(amount)
+      StripeStubResponses.refund(request, "re_SERIES_#{amount}", prior)
     end)
   end
 
-  # Stripe makes the refund, but its answer never comes back.
+  # Stripe makes the refund, but its answer never comes back: the client
+  # sends the lost call 3 times in all, under the same key.
   defp timeout_after_stripe_refunds(amount) do
-    expect(StripeAdapterMock, :create_refund, 1, fn %{amount: ^amount}, opts ->
-      send(self(), {:refund_key, opts[:idempotency_key]})
-      exit({:timeout, {GenServer, :call, []}})
+    StripeStub.expect(:create_refund, 3, fn request ->
+      assert request.form["amount"] == to_string(amount)
+      {:transport_error, :timeout}
     end)
   end
 
-  # Stripe answers a replayed key with the refund it made then, its charge
-  # showing the refunded total of that moment.
-  defp expect_replayed_refund(amount, charge_refunded) do
-    assert_received {:refund_key, first_key}
-
-    expect(StripeAdapterMock, :create_refund, 1, fn %{amount: ^amount}, opts ->
-      assert opts[:idempotency_key] == first_key
-      {:ok, %{id: "re_SERIES", amount: amount, charge: %{amount_refunded: charge_refunded}}}
-    end)
+  # The charge's refunds, as the next attempt or `charge.refunded` lists
+  # them: the one made for `refund`, its charge showing Stripe's refunded
+  # total.
+  defp expect_listed_refund(refund, charge_refunded) do
+    StripeStub.expect(
+      :list_refunds,
+      StripeFixtures.list([
+        StripeFixtures.object("refund_with_charge", %{
+          "id" => "re_SERIES_LISTED",
+          "amount" => refund.amount_cents,
+          "metadata" => %{"tymeslot_refund_id" => refund.id},
+          "charge" => %{"amount_refunded" => charge_refunded}
+        })
+      ])
+    )
   end
 
   defp charge_refunded_event(event_id, amount_refunded) do
@@ -97,23 +111,28 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
         [caller: :organizer, acting_user: host.user] ++ opts
       )
 
-  defp refund_jobs, do: all_enqueued(worker: SeriesHostRefund)
-  defp refund_failed_jobs, do: all_enqueued(worker: SendSeriesRefundFailed)
+  defp refunds(payment),
+    do: Repo.all(from(r in RefundSchema, where: r.booking_payment_id == ^payment.id))
 
-  # Runs the one refund job the cancellation inserted, as itself: its id is
-  # what a later run of it recognises its refund by.
+  defp refund_failed_jobs, do: all_enqueued(worker: SendRefundFailed)
+
+  # Runs the one refund the series' cancellation recorded, as its job would.
   defp run_refund_job(opts \\ []) do
-    assert [job] = refund_jobs()
+    assert [refund] =
+             Repo.all(
+               from(r in RefundSchema, where: r.source in [:series_host, :approval_release])
+             )
 
-    job
-    |> struct!(Keyword.merge([attempt: 1, attempted_at: DateTime.utc_now()], opts))
-    |> perform_job([])
+    perform_job(ExecuteRefund, %{refund_id: refund.id},
+      attempt: Keyword.get(opts, :attempt, 1),
+      max_attempts: 10
+    )
   end
 
   # The payment was taken outside the refund window.
   defp paid_long_ago!(series) do
     series.id
-    |> MeetingPayments.payment_for_series()
+    |> BookingPayments.payment_for_series()
     |> Changeset.change(paid_at: DateTime.add(DateTime.utc_now(:second), -61, :day))
     |> Repo.update!()
   end
@@ -126,9 +145,7 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       )
 
       # The completed webhook backfills the charge the refunds are made on.
-      stub(StripeAdapterMock, :retrieve_payment_intent, fn "pi_SERIES", _opts ->
-        {:ok, %{"latest_charge" => "ch_SERIES"}}
-      end)
+      Paid.stub_charge_backfill()
 
       host = Paid.paid_host()
       Paid.expect_checkout()
@@ -136,7 +153,7 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       assert {:ok, :payment_required, %{series: series}} =
                Paid.book(host, Paid.paid_series_type(host), 4)
 
-      %{host: host, series: series, payment: MeetingPayments.payment_for_series(series.id)}
+      %{host: host, series: series, payment: BookingPayments.payment_for_series(series.id)}
     end
 
     test "the host's default refund for a paid series is the remaining sessions' share", %{
@@ -151,7 +168,15 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
                cancel_as_host(series, host)
 
       assert statuses() == [:confirmed, :cancelled, :cancelled, :cancelled]
-      # Nothing is refunded until the job runs, outside the cancellation.
+
+      # Recorded with the cancellation; nothing is asked of Stripe until its
+      # job runs, outside it.
+      host_id = host.user.id
+
+      assert [%{source: :series_host, amount_cents: 15_000, requested_by_user_id: ^host_id}] =
+               refunds(payment)
+
+      assert StripeStub.requests(:create_refund) == []
       assert Repo.reload!(payment).refunded_amount_cents == 0
 
       expect_refund(15_000)
@@ -160,8 +185,8 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       assert %{refunded_amount_cents: 15_000, status: :partially_refunded} =
                Repo.reload!(payment)
 
-      # A retry after the refund was recorded asks Stripe for nothing more.
-      assert :ok = run_refund_job()
+      # A rerun of the settled refund asks Stripe for nothing more.
+      assert :ok = run_refund_job(attempt: 2)
       assert Repo.reload!(payment).refunded_amount_cents == 15_000
     end
 
@@ -181,7 +206,7 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       assert {:ok, %{cancelled: [_second, _third, _fourth], refund: {:scheduled, 4_000}}} =
                cancel_as_host(series, host)
 
-      expect_refund(4_000)
+      expect_refund(4_000, 16_000)
       assert :ok = run_refund_job()
       assert %{refunded_amount_cents: 20_000, status: :refunded} = Repo.reload!(payment)
     end
@@ -198,23 +223,19 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       assert {:ok, %{refund: {:scheduled, 2_000}}} =
                cancel_as_host(series, host, refund: {:amount, 2_000})
 
-      # The host refunds the past session after the cancellation scheduled
-      # its job: the total passes what the job will refund before it runs.
+      # The host refunds the past session after the cancellation recorded
+      # its refund: the total passes it before its job runs.
       expect_refund(5_000)
 
       assert {:ok, _refunded} =
-               Refunds.issue_host_refund(payment.id, host.user.id, 5_000, "host_refund:test:5000")
+               MeetingPayments.refund_now(payment, 5_000, :host, host_user_id: host.user.id)
 
-      expect_refund(2_000)
+      expect_refund(2_000, 5_000)
       assert :ok = run_refund_job()
-      assert Repo.reload!(payment).refunded_amount_cents == 7_000
-
-      # Its own refund made, a later run of the same job refunds nothing.
-      assert :ok = run_refund_job(attempt: 2)
       assert Repo.reload!(payment).refunded_amount_cents == 7_000
     end
 
-    test "a refund the webhook recorded before the retry is not recorded again", %{
+    test "a refund the webhook recorded before the retry is not asked for or recorded again", %{
       host: host,
       series: series,
       payment: payment
@@ -225,46 +246,27 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
                cancel_as_host(series, host, refund: {:amount, 2_000})
 
       timeout_after_stripe_refunds(2_000)
-      assert {:error, {:exit, _timeout}} = run_refund_job()
+      assert {:error, :pending} = run_refund_job()
 
-      # Stripe reports the refund it made, so the payment records it.
+      # Stripe reports the refund it made, and the webhook finds it among
+      # the charge's refunds and records it on its row, at Stripe's total.
+      [refund] = refunds(payment)
+      expect_listed_refund(refund, 2_000)
       assert :ok = ChargeRefunded.handle(charge_refunded_event("evt_REFUNDED", 2_000))
+      assert %{status: :succeeded} = RefundQueries.get(refund.id)
       assert Repo.reload!(payment).refunded_amount_cents == 2_000
 
-      # The 2,000 still fits what remains, so the retry asks Stripe again,
-      # which answers with the same refund under the same key.
-      expect_replayed_refund(2_000, 2_000)
+      # The retry finds the refund settled and asks Stripe for nothing.
       assert :ok = run_refund_job(attempt: 2)
 
+      assert length(StripeStub.requests(:create_refund)) == 3
+      assert length(StripeStub.requests(:list_refunds)) == 1
       assert %{refunded_amount_cents: 2_000, status: :partially_refunded} = Repo.reload!(payment)
+      assert %{status: :succeeded} = RefundQueries.get(refund.id)
       assert refund_failed_jobs() == []
     end
 
-    test "a refund the webhook recorded is no failure once the rest no longer covers it", %{
-      host: host,
-      series: series,
-      payment: payment
-    } do
-      pay(series, 4)
-
-      assert {:ok, %{refund: {:scheduled, 20_000}}} = cancel_as_host(series, host)
-
-      timeout_after_stripe_refunds(20_000)
-      assert {:error, {:exit, _timeout}} = run_refund_job()
-
-      assert :ok = ChargeRefunded.handle(charge_refunded_event("evt_REFUNDED", 20_000))
-      assert %{refunded_amount_cents: 20_000, status: :refunded} = Repo.reload!(payment)
-
-      # Nothing remains to refund, yet the refund is this job's own: Stripe
-      # answers the retry with it, and the host is told nothing failed.
-      expect_replayed_refund(20_000, 20_000)
-      assert :ok = run_refund_job(attempt: 2)
-
-      assert %{refunded_amount_cents: 20_000, status: :refunded} = Repo.reload!(payment)
-      assert refund_failed_jobs() == []
-    end
-
-    test "a refund the webhook recorded is no failure once the rest covers only part of it", %{
+    test "a refund Stripe made but the job failed to record is adopted, not made again", %{
       host: host,
       series: series,
       payment: payment
@@ -274,79 +276,22 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       into_the_past!(first)
 
       assert {:ok, %{refund: {:scheduled, 15_000}}} = cancel_as_host(series, host)
-
-      timeout_after_stripe_refunds(15_000)
-      assert {:error, {:exit, _timeout}} = run_refund_job()
-
-      assert :ok = ChargeRefunded.handle(charge_refunded_event("evt_REFUNDED", 15_000))
-      assert Repo.reload!(payment).refunded_amount_cents == 15_000
-
-      # 5,000 remains, less than the 15,000 the job refunds.
-      expect_replayed_refund(15_000, 15_000)
-      assert :ok = run_refund_job(attempt: 2)
-
-      assert %{refunded_amount_cents: 15_000, status: :partially_refunded} =
-               Repo.reload!(payment)
-
-      assert refund_failed_jobs() == []
-    end
-
-    test "an amount the rest no longer covers, and Stripe never refunded, is still a failure", %{
-      host: host,
-      series: series,
-      payment: payment
-    } do
-      pay(series, 4)
-
-      assert {:ok, %{refund: {:scheduled, 20_000}}} = cancel_as_host(series, host)
-
-      # Refunded elsewhere (the host's Stripe dashboard) before the job ran.
-      # The recorded 15,000 cannot hold a refund of 20,000, so Stripe is not
-      # asked whether this job made one (Mox fails any call).
-      assert :ok = ChargeRefunded.handle(charge_refunded_event("evt_REFUNDED", 15_000))
-
-      assert {:discard, :invalid_amount} = run_refund_job()
-      assert Repo.reload!(payment).refunded_amount_cents == 15_000
-      assert [%{args: %{"amount_cents" => 20_000}}] = refund_failed_jobs()
-    end
-
-    test "a refund Stripe made but the job failed to record is replayed, not made again", %{
-      host: host,
-      series: series,
-      payment: payment
-    } do
-      pay(series, 4)
-      [first | _rest] = meetings()
-      into_the_past!(first)
-
-      assert {:ok, %{refund: {:scheduled, 15_000}}} = cancel_as_host(series, host)
-      assert [%{id: job_id}] = refund_jobs()
 
       # Stripe makes the refund, but its answer never comes back: the
       # attempt fails and nothing of it is recorded.
-      expect(StripeAdapterMock, :create_refund, 1, fn %{amount: 15_000}, opts ->
-        send(self(), {:refund_key, opts[:idempotency_key]})
-        exit({:timeout, {GenServer, :call, []}})
-      end)
-
-      assert {:error, {:exit, _timeout}} = run_refund_job()
-      assert_received {:refund_key, first_key}
-      assert first_key == "series_refund:#{job_id}"
+      timeout_after_stripe_refunds(15_000)
+      assert {:error, :pending} = run_refund_job()
       assert Repo.reload!(payment).refunded_amount_cents == 0
 
-      # The host refunds the past session before the job runs again.
+      # The host refunds the past session before the job runs again; the
+      # pending refund holds its share, so only the rest is refundable.
       expect_refund(5_000)
 
       assert {:ok, _refunded} =
-               Refunds.issue_host_refund(payment.id, host.user.id, 5_000, "host_refund:test:5000")
+               MeetingPayments.refund_now(payment, 5_000, :host, host_user_id: host.user.id)
 
-      # The retry asks under the same key, so Stripe answers with the refund
-      # it already made, which is now recorded once.
-      expect(StripeAdapterMock, :create_refund, 1, fn %{amount: 15_000}, opts ->
-        assert opts[:idempotency_key] == first_key
-        {:ok, %{id: "re_SERIES"}}
-      end)
-
+      [refund | _host_refund] = Enum.filter(refunds(payment), &(&1.source == :series_host))
+      expect_listed_refund(refund, 20_000)
       assert :ok = run_refund_job(attempt: 2)
 
       assert %{refunded_amount_cents: 20_000, status: :refunded} = Repo.reload!(payment)
@@ -369,13 +314,14 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       assert {:ok, %{cancelled: [_first, _second, _third, _fourth], refund: :none}} =
                cancel_as_host(series, host, refund: :none)
 
-      assert refund_jobs() == []
+      assert refunds(payment) == []
       assert Repo.reload!(payment).refunded_amount_cents == 0
     end
 
     test "an amount above what remains is refused before anything is cancelled", %{
       host: host,
-      series: series
+      series: series,
+      payment: payment
     } do
       pay(series, 4)
 
@@ -384,12 +330,43 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
 
       assert statuses() == [:confirmed, :confirmed, :confirmed, :confirmed]
       assert email_jobs("send_series_cancellation") == []
-      assert refund_jobs() == []
+      assert refunds(payment) == []
+    end
+
+    # The amount fitted when the host chose it, but a refund recorded since
+    # holds part of it: the cancellation's transaction is rolled back whole.
+    test "an amount a pending refund no longer leaves cancels nothing", %{
+      host: host,
+      series: series,
+      payment: payment
+    } do
+      pay(series, 4)
+
+      insert(:booking_payment_refund,
+        booking_payment: Repo.reload!(payment),
+        amount_cents: 15_000,
+        source: :host
+      )
+
+      payment_for_choice = %{Repo.reload!(payment) | pending_refund_cents: 0}
+
+      assert {:ok, {:amount, 10_000} = choice} =
+               BookingSeries.resolve_refund_choice(payment_for_choice, %{
+                 "cancel_refund_choice" => "partial",
+                 "cancel_refund_amount" => "100"
+               })
+
+      assert {:error, :exceeds_remaining} = cancel_as_host(series, host, refund: choice)
+
+      assert statuses() == [:confirmed, :confirmed, :confirmed, :confirmed]
+      assert email_jobs("send_series_cancellation") == []
+      assert [%{amount_cents: 15_000}] = refunds(payment)
     end
 
     test "past the refund window, the default cancels without a refund and says why", %{
       host: host,
-      series: series
+      series: series,
+      payment: payment
     } do
       pay(series, 4)
       paid_long_ago!(series)
@@ -400,7 +377,7 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
                 refund: {:not_refunded, :outside_refund_window}
               }} = cancel_as_host(series, host)
 
-      assert refund_jobs() == []
+      assert refunds(payment) == []
     end
 
     test "past the refund window, an explicit amount is refused with nothing cancelled", %{
@@ -426,7 +403,7 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       assert {:ok, %{cancelled: [_first, _second, _third, _fourth], refund: :none}} =
                BookingSeries.cancel_remaining(series, caller: :attendee)
 
-      assert refund_jobs() == []
+      assert refunds(payment) == []
       assert %{refunded_amount_cents: 0, status: :paid} = Repo.reload!(payment)
     end
 
@@ -450,45 +427,44 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       assert is_nil(reload_series(series).cancelled_at)
     end
 
-    test "a refund failure leaves the sessions cancelled and reports it", %{
-      host: host,
-      series: series,
-      payment: payment
-    } do
+    test "a series cancellation refunds through the outbox and emails the host on final failure",
+         %{host: host, series: series, payment: payment} do
       pay(series, 4)
 
       assert {:ok, %{refund: {:scheduled, 20_000}}} = cancel_as_host(series, host)
       assert statuses() == [:cancelled, :cancelled, :cancelled, :cancelled]
       assert [_one] = email_jobs("send_series_cancellation")
 
-      expect(StripeAdapterMock, :create_refund, 2, fn _params, _opts -> {:error, :api_error} end)
+      # A failed attempt is retried quietly.
+      StripeStub.expect(:create_refund, 3, {:transport_error, :timeout})
+      assert {:error, :pending} = run_refund_job(attempt: 1)
+      assert refund_failed_jobs() == []
 
-      # A failed attempt is retried; a refusal no retry turns round is
-      # discarded. Either way the money stays on the payment.
-      # The host is emailed once the job gives up: on its last attempt, or
-      # on a refusal.
-      assert {:error, :api_error} = run_refund_job(attempt: 1)
-      refute_enqueued(worker: SendSeriesRefundFailed)
-      assert {:error, :api_error} = run_refund_job(attempt: 10)
-      assert [%{args: %{"amount_cents" => 20_000}}] = refund_failed_jobs()
-      paid_long_ago!(series)
-      assert {:discard, :outside_refund_window} = run_refund_job(attempt: 2)
-      assert [_still_one] = refund_failed_jobs()
+      # The last attempt only looks for a refund an earlier one made; with
+      # none, the refund fails for good and the host is emailed.
+      StripeStub.expect(:list_refunds, StripeFixtures.list([]))
+      assert {:cancel, :refund_failed} = run_refund_job(attempt: 10)
 
+      [refund] = refunds(payment)
+      assert %{status: :failed, failure_code: "retries_exhausted"} = refund
+      refund_id = refund.id
+      assert [%{args: %{"refund_id" => ^refund_id}}] = refund_failed_jobs()
       assert Repo.reload!(payment).refunded_amount_cents == 0
     end
 
-    test "a last attempt that exits still tells the host", %{host: host, series: series} do
+    test "a refund Stripe declines emails the host at once", %{
+      host: host,
+      series: series,
+      payment: payment
+    } do
       pay(series, 4)
       assert {:ok, %{refund: {:scheduled, 20_000}}} = cancel_as_host(series, host)
 
-      # A call that timed out exits rather than raising.
-      expect(StripeAdapterMock, :create_refund, fn _params, _opts ->
-        exit({:timeout, {GenServer, :call, []}})
-      end)
+      StripeStub.expect(:create_refund, {:error_fixture, "invalid_request_error"})
+      assert {:cancel, :refund_failed} = run_refund_job()
 
-      assert {:error, {:exit, {:timeout, _call}}} = run_refund_job(attempt: 10)
-      assert [%{args: %{"amount_cents" => 20_000}}] = refund_failed_jobs()
+      assert [%{args: %{"refund_id" => _id}}] = refund_failed_jobs()
+      assert Repo.reload!(payment).refunded_amount_cents == 0
     end
   end
 
@@ -499,9 +475,7 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
         meeting_payments_enabled: true
       )
 
-      stub(StripeAdapterMock, :retrieve_payment_intent, fn "pi_SERIES", _opts ->
-        {:ok, %{"latest_charge" => "ch_SERIES"}}
-      end)
+      Paid.stub_charge_backfill()
 
       host = Paid.paid_host()
 
@@ -516,13 +490,18 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       pay(series, 3)
       assert statuses() == [:awaiting_approval, :awaiting_approval, :awaiting_approval]
 
-      expect_refund(15_000)
-
       assert {:ok, %{cancelled: [_first, _second, _third], refund: {:refunded, 15_000}}} =
                cancel_as_host(series, host, refund: :none)
 
       assert statuses() == [:cancelled, :cancelled, :cancelled]
-      assert refund_jobs() == []
+      assert StripeStub.requests(:create_refund) == []
+
+      payment = BookingPayments.payment_for_series(series.id)
+      assert [%{source: :approval_release, amount_cents: 15_000}] = refunds(payment)
+
+      expect_refund(15_000)
+      assert :ok = run_refund_job()
+      assert %{refunded_amount_cents: 15_000, status: :refunded} = Repo.reload!(payment)
 
       assert [%{args: %{"cancelled_by" => "organizer"}}] =
                email_jobs("send_series_cancellation")

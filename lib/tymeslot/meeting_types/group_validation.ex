@@ -9,13 +9,14 @@ defmodule Tymeslot.MeetingTypes.GroupValidation do
   Everyone in a group slot shares one meeting row, so nothing about that row
   may be decided per booker:
 
-    * payment: per-seat payment is out of scope;
     * approval: the approval flow answers one booker's request for a whole
       meeting, and a shared slot has no single booker to answer;
-    * email verification: a held seat has no group flow yet;
     * the location: see `Tymeslot.MeetingTypes.GroupLocationRule`;
     * further lengths: see `Tymeslot.MeetingTypes.Lengths.validate_changeset/1`;
     * invitation-only: an invitation link books one person into one slot.
+
+  Payment is not on that list: a group type may require it, and charges the
+  price per seat, so each booker pays the price times the seats they take.
 
   Read with `get_field/2` so a change to either side (the limit, or the other
   setting) is caught.
@@ -70,16 +71,8 @@ defmodule Tymeslot.MeetingTypes.GroupValidation do
     if group_limit?(get_field(changeset, :max_participants)) do
       changeset
       |> refuse_for_group(
-        :payment_required,
-        dgettext_noop("errors", "group bookings cannot require payment")
-      )
-      |> refuse_for_group(
         :requires_approval,
         dgettext_noop("errors", "group bookings cannot require approval")
-      )
-      |> refuse_for_group(
-        :requires_email_verification,
-        dgettext_noop("errors", "group bookings cannot require email confirmation")
       )
       |> validate_group_location()
     else

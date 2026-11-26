@@ -14,9 +14,9 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.Cancelled do
 
   The invitation's token is offered only to the guest: a visitor whose
   `return_token` (the signed proof Stripe's cancel URL carries,
-  `MeetingPayments.returned_from_checkout?/2`) matches the meeting. For that
+  `Checkout.returned_from_checkout?/2`) matches the meeting. For that
   visitor the page also ends the checkout they left
-  (`MeetingPayments.abandon_checkout/1`), so the booking's hold, and the
+  (`Checkout.abandon_checkout/1`), so the booking's hold, and the
   invitation's, ends within moments rather than at the checkout's timeout.
   Anyone else holding only the meeting id sees the page without the token.
   The page carries the organiser's customisation
@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.Cancelled do
 
   alias Phoenix.PubSub
   alias Tymeslot.Infrastructure.Tasks
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.Checkout
   alias TymeslotWeb.Themes.Shared.PaymentReturn
 
   @impl Phoenix.LiveView
@@ -37,7 +37,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.Cancelled do
       {:ok, socket} ->
         path = PaymentReturn.page_path(slug, "payment-cancelled", meeting_id)
         return_token = params["return_token"]
-        guest? = MeetingPayments.returned_from_checkout?(meeting_id, return_token)
+        guest? = Checkout.returned_from_checkout?(meeting_id, return_token)
         query = if guest?, do: %{"return_token" => return_token}, else: %{}
 
         socket =
@@ -48,7 +48,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.Cancelled do
         # Subscribed before the read, so an `:expired` landing between the
         # two is not missed.
         if connected?(socket),
-          do: PubSub.subscribe(Tymeslot.PubSub, MeetingPayments.payment_topic(meeting_id))
+          do: PubSub.subscribe(Tymeslot.PubSub, Checkout.payment_topic(meeting_id))
 
         {:ok, socket |> load(meeting_id, slug) |> abandon_checkout()}
 
@@ -113,7 +113,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.Cancelled do
       start_async(
         socket,
         :abandon_checkout,
-        Tasks.with_context(fn -> MeetingPayments.abandon_checkout(meeting_id) end)
+        Tasks.with_context(fn -> Checkout.abandon_checkout(meeting_id) end)
       )
     else
       socket

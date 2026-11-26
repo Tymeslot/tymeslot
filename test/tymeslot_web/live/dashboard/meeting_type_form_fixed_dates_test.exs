@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesTest do
 
   alias Tymeslot.Bookings.Create
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
@@ -206,10 +207,68 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesTest do
 
     assert Repo.get!(MeetingSchema, session.id).status == :confirmed
     assert render(view) =~ "1 person is booked and will be told"
+    refute has_element?(view, "[data-testid='cancel-session-refunds']")
 
     view |> element("[data-testid='confirm-cancel-session']") |> render_click()
 
     assert Repo.get!(MeetingSchema, session.id).status == :cancelled
+  end
+
+  # The booker's seat on the date at `starts_at`, paid at €20.00.
+  defp pay_for_seat(user, session) do
+    participant = Repo.get_by!(ParticipantSchema, meeting_id: session.id)
+
+    insert(:paid_booking_payment,
+      meeting_id: session.id,
+      participant: participant,
+      seat_payment: true,
+      amount_cents: 2_000,
+      currency: "eur",
+      host_user_id: user.id
+    )
+  end
+
+  test "asking to cancel a date with paid seats says they are refunded in full", %{
+    conn: conn,
+    user: user
+  } do
+    meeting_type = group_type(user, fixed_dates: true)
+    starts_at = Date.utc_today() |> Date.add(10) |> DateTime.new!(~T[18:00:00], "Etc/UTC")
+    {:ok, session} = PlannedSessions.add(meeting_type, meeting_type.user_id, starts_at)
+    book_seat(user, meeting_type, starts_at)
+    pay_for_seat(user, session)
+
+    view = edit(conn, meeting_type)
+    view |> element("[data-testid='remove-session']") |> render_click()
+
+    assert has_element?(
+             view,
+             "[data-testid='cancel-session-refunds']",
+             "€20.00 paid by 1 person is refunded in full."
+           )
+  end
+
+  test "deleting a type with paid seats says they are refunded in full", %{
+    conn: conn,
+    user: user
+  } do
+    meeting_type = group_type(user, fixed_dates: true)
+    starts_at = Date.utc_today() |> Date.add(10) |> DateTime.new!(~T[18:00:00], "Etc/UTC")
+    {:ok, session} = PlannedSessions.add(meeting_type, meeting_type.user_id, starts_at)
+    book_seat(user, meeting_type, starts_at)
+    pay_for_seat(user, session)
+
+    {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+    view
+    |> element("[phx-click='show_delete_modal'][phx-value-id='#{meeting_type.id}']")
+    |> render_click()
+
+    assert has_element?(
+             view,
+             "[data-testid='delete-refunds-seats']",
+             "€20.00 paid by 1 person is refunded in full."
+           )
   end
 
   defp book_seat(user, meeting_type, starts_at) do
@@ -293,6 +352,8 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesTest do
              "[data-testid='delete-cancels-dates']",
              "The 1 person who signed up is told by email."
            )
+
+    refute has_element?(view, "[data-testid='delete-refunds-seats']")
 
     view
     |> element("#delete-meeting-type-modal button", "Delete Meeting Type")

@@ -3,7 +3,8 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
   Finds and scrubs the personal data invitees give a host, across every table
   that holds it: meetings, group seats, guests, poll participants, the
   invitees a draft poll holds, invitation links, booking payments, booking
-  series and the outgoing delivery logs.
+  series and the outgoing delivery logs. Seat holds are cleared by
+  `Tymeslot.InviteeData.SeatHoldErasureQueries`.
 
   Pure data access. Which rows are scrubbed, and when, is decided by
   `Tymeslot.InviteeData`.
@@ -22,11 +23,13 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
 
   alias Tymeslot.BookingSeries.SeriesSchema, as: Series
   alias Tymeslot.Invitations.InvitationSchema, as: Invitation
+  alias Tymeslot.InviteeData.SeatHoldErasureQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Meetings.GuestSchema, as: Guest
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
+  alias Tymeslot.Meetings.SeatHoldSchema, as: SeatHold
   alias Tymeslot.Polls.PollParticipantSchema, as: PollParticipant
   alias Tymeslot.Polls.PollSchema, as: Poll
   alias Tymeslot.Polls.PollTimeSlotSchema, as: PollTimeSlot
@@ -36,6 +39,13 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
   alias Tymeslot.Webhooks.WebhookDeliverySchema
 
   @erased_suffix "@erased.invalid"
+
+  @doc """
+  The domain of the placeholder address a scrubbed row takes, the reserved
+  `.invalid` one.
+  """
+  @spec erased_suffix() :: String.t()
+  def erased_suffix, do: @erased_suffix
 
   # The title a booking is given names the invitee ("Intro call with Ada"), so
   # a scrubbed meeting falls back to its meeting type's name.
@@ -50,19 +60,30 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
 
   @doc """
   The uids of meetings still to take place that `email` is booked into, as
-  the booker, a group seat or a guest.
+  the booker, a group seat or a guest, or is named on, as booker or guest, a
+  held seat hold still inside its window (an open checkout): one whose
+  `expires_at` is not before `hold_cutoff`
+  (`Tymeslot.Meetings.SeatHolds.overdue_cutoff/1`). A hold held past it is
+  one whose payment outcome never reached it, which must not keep the
+  person's data until the meeting ends;
+  `SeatHoldErasureQueries.scrub_held_for_email/3` clears it.
 
-  A booking still held for email confirmation is left out: the organiser
-  must not learn of it before it is confirmed, and it may never be.
+  A booking still held for email confirmation is left out, whether a
+  one-to-one booking or a group seat, on a held slot or a live one: the
+  organiser must not learn of it before it is confirmed, and it may never be.
+  An open checkout counts on any slot it holds, a slot held for another
+  booker's confirmation included.
   """
-  @spec upcoming_meeting_uids(String.t(), scope(), DateTime.t()) :: [String.t()]
-  def upcoming_meeting_uids(email, scope, %DateTime{} = now) do
+  @spec upcoming_meeting_uids(String.t(), scope(), DateTime.t(), DateTime.t()) :: [String.t()]
+  def upcoming_meeting_uids(email, scope, %DateTime{} = now, %DateTime{} = hold_cutoff) do
     booked = from(m in Meeting, where: fragment("lower(?)", m.attendee_email) == ^email)
 
     seated =
       from(m in Meeting,
         join: p in Participant,
-        on: p.meeting_id == m.id and is_nil(p.cancelled_at),
+        on:
+          p.meeting_id == m.id and is_nil(p.cancelled_at) and
+            (is_nil(p.verification_deadline_at) or not is_nil(p.email_verified_at)),
         where: fragment("lower(?)", p.email) == ^email
       )
 
@@ -73,12 +94,21 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
         where: fragment("lower(?)", g.email) == ^email
       )
 
+    paying =
+      from(m in Meeting,
+        join: h in SeatHold,
+        as: :hold,
+        on: h.meeting_id == m.id and h.status == :held and h.expires_at >= ^hold_cutoff,
+        where: ^SeatHoldErasureQueries.hold_names_email(email)
+      )
+
     [booked, seated, invited]
+    |> Enum.map(&MeetingState.where_not_awaiting_verification/1)
+    |> Enum.concat([paying])
     |> Enum.flat_map(fn query ->
       query
       |> where([m], m.end_time > ^now)
       |> MeetingState.where_not_released()
-      |> MeetingState.where_not_awaiting_verification()
       |> scope_meetings(scope)
       |> select([m], m.uid)
       |> Repo.all()
@@ -92,6 +122,25 @@ defmodule Tymeslot.InviteeData.InviteeDataQueries do
     from(m in Meeting, where: fragment("lower(?)", m.attendee_email) == ^email)
     |> MeetingState.where_awaiting_verification()
     |> scope_meetings(scope)
+    |> Repo.all()
+  end
+
+  @doc """
+  The group seats taken under `email` that are still held for email
+  confirmation, ordered by slot so that releasing them locks the slots in a
+  stable order.
+  """
+  @spec held_seats_for_email(String.t(), scope()) :: [Participant.t()]
+  def held_seats_for_email(email, scope) do
+    from(p in Participant,
+      join: m in assoc(p, :meeting),
+      as: :meeting,
+      where:
+        fragment("lower(?)", p.email) == ^email and is_nil(p.cancelled_at) and
+          not is_nil(p.verification_deadline_at) and is_nil(p.email_verified_at),
+      order_by: [p.meeting_id, p.id]
+    )
+    |> scope_joined_meeting(scope)
     |> Repo.all()
   end
 

@@ -212,6 +212,46 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
     end
   end
 
+  describe "perform/1 - the event's description" do
+    # Graph returns only the fields the request's `$select` names, as the
+    # stub does.
+    test "caches the description of an event edited in Outlook" do
+      integration = outlook_integration()
+
+      graph_event = %{
+        "id" => "outlook-described-1",
+        "iCalUId" => "described-uid@outlook.com",
+        "subject" => "Quarterly review",
+        "body" => %{"contentType" => "text", "content" => "Agenda: budget"},
+        "isAllDay" => false,
+        "start" => %{"dateTime" => "2026-04-10T07:00:00.0000000", "timeZone" => "UTC"},
+        "end" => %{"dateTime" => "2026-04-10T08:00:00.0000000", "timeZone" => "UTC"},
+        "showAs" => "busy",
+        "type" => "singleInstance"
+      }
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, url, _body, _headers, _opts ->
+        select = URI.decode_query(URI.parse(url).query || "")["$select"]
+        selected = Map.take(graph_event, String.split(select || "", ","))
+        {:ok, %{status: 200, body: Jason.encode!(selected)}}
+      end)
+
+      assert :ok =
+               perform_job(SyncOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "graph_resource_id" => "outlook-described-1"
+               })
+
+      cached =
+        Repo.get_by(
+          Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema,
+          provider_event_id: "outlook-described-1"
+        )
+
+      assert cached.description == "Agenda: budget"
+    end
+  end
+
   describe "perform/1 - nil default_booking_calendar_id" do
     test "caches event with provider_calendar_id 'primary' when default_booking_calendar_id is nil" do
       integration = outlook_integration(default_booking_calendar_id: nil)

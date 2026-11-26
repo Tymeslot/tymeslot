@@ -38,6 +38,7 @@ defmodule Tymeslot.Meetings.PlannedSessions do
   alias Tymeslot.Clock
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.Meetings.Cancellation
   alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -88,6 +89,23 @@ defmodule Tymeslot.Meetings.PlannedSessions do
   @doc "How many people are booked on `session`: its live participants, not their guests."
   @spec participant_count(Meeting.t()) :: non_neg_integer()
   def participant_count(%Meeting{id: id}), do: ParticipantQueries.count_live_for_meeting(id)
+
+  @doc """
+  The paid seats that cancelling `sessions` refunds in full (`cancel/2`):
+  how many payments, and each currency's total
+  (`BookingPayments.seat_money_summary/1`). A seat paid outside the refund
+  window is left out: the cancellation leaves it to the host's Stripe
+  dashboard, and its email to the host says so.
+  """
+  @spec seat_refunds([Meeting.t()]) :: BookingPayments.outstanding_refunds_summary()
+  def seat_refunds(sessions) when is_list(sessions) do
+    {refundable, _outside_window} =
+      sessions
+      |> Enum.flat_map(&BookingPayments.seat_payments_for_meeting(&1.id, &1.organizer_user_id))
+      |> BookingPayments.split_by_refund_window()
+
+    BookingPayments.seat_money_summary(refundable)
+  end
 
   @doc """
   When registration for `session` closes: its `registration_closes_at`, or
@@ -210,11 +228,20 @@ defmodule Tymeslot.Meetings.PlannedSessions do
 
   @doc """
   Cancels a planned session the host owns, through the host's own cancel
-  path, which tells everyone booked on it.
+  path, which tells everyone booked on it. Every paid seat is refunded in
+  full (`:refund_seats`, the host's default), as for any group session the
+  host cancels.
   """
   @spec cancel(Meeting.t(), integer()) :: {:ok, Meeting.t()} | {:error, term()}
-  def cancel(%Meeting{planned: true, organizer_user_id: user_id} = session, user_id),
-    do: Cancellation.cancel(session, user_id, :none)
+  def cancel(%Meeting{planned: true, organizer_user_id: user_id} = session, user_id) do
+    # A group session's seat refunds are recorded and made in the background,
+    # so none is left pending here (`{:ok, cancelled, :refund_pending}` is
+    # never returned).
+    case Cancellation.cancel(session, user_id, :refund_seats) do
+      {:ok, %Meeting{} = cancelled} -> {:ok, cancelled}
+      {:error, reason} -> {:error, reason}
+    end
+  end
 
   def cancel(_session, _user_id), do: {:error, :not_found}
 

@@ -116,11 +116,84 @@ defmodule Tymeslot.Bookings.CreateGroupBookingTest do
     )
   end
 
+  test "a free booker joining a slot only a payer holds confirms it and schedules its effects",
+       ctx do
+    start_time = DateTime.new!(ctx.meeting_params.date, ~T[10:00:00], "Etc/UTC")
+
+    held_slot =
+      insert(:group_meeting,
+        organizer_user: ctx.user,
+        meeting_type_ref: ctx.meeting_type,
+        start_time: start_time,
+        end_time: DateTime.add(start_time, 30, :minute),
+        capacity: 2,
+        status: :awaiting_payment
+      )
+
+    insert(:seat_hold, meeting: held_slot, seats: 1, email: "payer@example.com")
+
+    assert {:ok, meeting} = execute(ctx, "free@example.com")
+    assert meeting.id == held_slot.id
+    assert Repo.get!(MeetingSchema, held_slot.id).status == :confirmed
+
+    assert_enqueued(
+      worker: CalendarEventWorker,
+      args: %{"action" => "create", "meeting_id" => meeting.id}
+    )
+
+    refute_enqueued(
+      worker: CalendarEventWorker,
+      args: %{"action" => "update", "meeting_id" => meeting.id}
+    )
+
+    assert_enqueued(
+      worker: EmailWorker,
+      args: %{"action" => "send_reminder_emails", "meeting_id" => meeting.id}
+    )
+  end
+
+  # The held slot is outside the confirmed-slot unique index until a seat
+  # confirms it; the organiser's confirmed one-to-one at the same start
+  # collides with it then, and the seat is refused rather than double-booked.
+  test "a free booker cannot confirm a held slot the organiser has booked meanwhile", ctx do
+    start_time = DateTime.new!(ctx.meeting_params.date, ~T[10:00:00], "Etc/UTC")
+
+    held_slot =
+      insert(:group_meeting,
+        organizer_user: ctx.user,
+        meeting_type_ref: ctx.meeting_type,
+        start_time: start_time,
+        end_time: DateTime.add(start_time, 30, :minute),
+        capacity: 2,
+        status: :awaiting_payment
+      )
+
+    insert(:seat_hold, meeting: held_slot, seats: 1, email: "payer@example.com")
+
+    insert(:meeting,
+      organizer_user: ctx.user,
+      start_time: start_time,
+      end_time: DateTime.add(start_time, 30, :minute),
+      status: :confirmed
+    )
+
+    assert {:error, :slot_taken} = execute(ctx, "free@example.com")
+    assert Repo.get!(MeetingSchema, held_slot.id).status == :awaiting_payment
+    assert ParticipantQueries.list_live_for_meeting(held_slot.id) == []
+  end
+
   test "a full slot surfaces as :slot_taken", ctx do
     {:ok, _meeting} = execute(ctx, "one@example.com")
     {:ok, _joined} = execute(ctx, "two@example.com")
 
     assert {:error, :slot_taken} = execute(ctx, "three@example.com")
+  end
+
+  test "a booker already seated on the slot is told :already_booked", ctx do
+    {:ok, meeting} = execute(ctx, "one@example.com")
+
+    assert {:error, :already_booked} = execute(ctx, "ONE@example.com")
+    assert length(ParticipantQueries.list_live_for_meeting(meeting.id)) == 1
   end
 
   test "guests consume seats and are linked to the participant", ctx do

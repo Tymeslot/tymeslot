@@ -19,7 +19,6 @@ defmodule Tymeslot.Bookings.CreateInvitationTest do
   alias Tymeslot.Bookings.Create
   alias Tymeslot.Invitations
   alias Tymeslot.MeetingPayments.HeldMeetings
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
@@ -28,6 +27,8 @@ defmodule Tymeslot.Bookings.CreateInvitationTest do
   alias Tymeslot.Meetings.UniqueInvitation
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.TestMocks
 
   setup :verify_on_exit!
@@ -281,9 +282,14 @@ defmodule Tymeslot.Bookings.CreateInvitationTest do
     end
 
     test "a paid invitation-only booking holds the invitation while awaiting payment", ctx do
-      expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
-        {:ok, %{id: "cs_INVITED", url: "https://checkout.stripe.com/cs_INVITED"}}
-      end)
+      StripeStub.expect(
+        :create_checkout_session,
+        1,
+        StripeStubResponses.checkout_session(
+          "cs_INVITED",
+          "https://checkout.stripe.com/cs_INVITED"
+        )
+      )
 
       invitation = invite(ctx)
 

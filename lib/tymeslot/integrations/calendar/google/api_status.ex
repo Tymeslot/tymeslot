@@ -2,8 +2,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.ApiStatus do
   @moduledoc """
   The statuses Google Calendar answers differently from the shared response
   envelope (`Shared.ApiResponse`): a 403 carrying its classification in
-  `error.errors[].reason`, and a 410 marking a sync token the caller must
-  discard. `Google.CalendarAPI` hands every response through `classify/1`.
+  `error.errors[].reason`, a 400 refusing an event's conference, and a 410
+  marking a sync token the caller must discard. `Google.CalendarAPI` hands
+  every response through `classify/1`.
 
   A 403 that is neither throttling nor an authorisation failure, such as a
   write to a calendar the account may only read, is `:refused`, as any other
@@ -23,11 +24,33 @@ defmodule Tymeslot.Integrations.Calendar.Google.ApiStatus do
     end)
   end
 
+  # Google decides per calendar which conferences an event may carry, and
+  # refuses a write asking for one it does not allow with a plain 400 ("Invalid
+  # conference type value."), worded only in its message. It is told apart
+  # from any other 400 because the event itself can still be written, without
+  # the conference; every other 400 is left to the shared envelope.
+  def classify({:ok, %Req.Response{status: 400, body: body}}) when is_binary(body) do
+    with {:ok, %{"error" => %{} = error}} <- Jason.decode(body),
+         message when is_binary(message) <- conference_refusal(error) do
+      {:error, :conference_refused, message}
+    else
+      _other -> :default
+    end
+  end
+
   def classify({:ok, %Req.Response{status: 410}}) do
     {:error, :gone, "Resource no longer available"}
   end
 
   def classify(_response), do: :default
+
+  defp conference_refusal(error) do
+    details = for %{"message" => message} <- List.wrap(error["errors"]), do: message
+
+    Enum.find([error["message"] | details], fn message ->
+      is_binary(message) and String.contains?(String.downcase(message), "conference")
+    end)
+  end
 
   defp classify_403(error_msg, reasons) do
     reason_strings =

@@ -476,8 +476,7 @@ if config_env() == :prod do
   stripe_secret_key = System.get_env("STRIPE_SECRET_KEY")
 
   if stripe_secret_key do
-    config :stripity_stripe,
-      api_key: stripe_secret_key
+    config :tymeslot, :stripe_secret_key, stripe_secret_key
 
     # Stripe webhook secret (optional)
     stripe_webhook_secret = System.get_env("STRIPE_WEBHOOK_SECRET")
@@ -567,8 +566,7 @@ end
 
 # Development/test environment Stripe configuration
 if config_env() in [:dev, :test] do
-  config :stripity_stripe,
-    api_key: System.get_env("STRIPE_SECRET_KEY", "sk_test_fake")
+  config :tymeslot, :stripe_secret_key, System.get_env("STRIPE_SECRET_KEY", "sk_test_fake")
 
   config :tymeslot, :stripe_webhook_secret, System.get_env("STRIPE_WEBHOOK_SECRET")
 

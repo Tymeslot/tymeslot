@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingActions
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingStatusBadge
+  alias TymeslotWeb.Components.Dashboard.Meetings.ParticipantPaymentPill
   alias TymeslotWeb.Components.Dashboard.Meetings.RemindersSection
 
   attr :meeting, :map, required: true
@@ -225,7 +226,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
           <%!-- Participants panel, group meetings only. The preload keeps to
                live participants, except on a cancelled meeting, where it also
                brings those who left the slot (released or moved their seat),
-               marked as such. --%>
+               marked as such. A paid seat says what its payment stands at. --%>
           <.sub_panel
             :if={@participants != []}
             icon="hero-users"
@@ -234,6 +235,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
             <ul class="space-y-2.5">
               <li
                 :for={participant <- @participants}
+                data-participant-id={participant.id}
                 class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2"
               >
                 <span class="flex items-center gap-2.5 min-w-[10rem] flex-1">
@@ -250,6 +252,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
                   >
                     {dgettext("dashboard_bookings", "Left this slot")}
                   </Feedback.pill>
+                  <ParticipantPaymentPill.participant_payment_pill payment={
+                    participant.booking_payment
+                  } />
                 </span>
                 <span class="flex flex-wrap items-center gap-x-3 gap-y-2 min-w-0">
                   <a
@@ -486,7 +491,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingCard do
   # Seats, not headcount. A booker who brings a guest occupies two of the
   # slot's seats, which is what the public booking page counts down and what
   # the organiser needs to read here: a card saying "1/4" beside a slot
-  # advertising "2 seats left" is two answers to the same question.
+  # advertising "2 seats left" is two answers to the same question. The one
+  # exception is a seat still awaiting its booker's email confirmation: it
+  # takes a place on the public page but is not counted here until it is
+  # confirmed, as the organiser is not told of it before then.
   defp seats_label(meeting, guests) do
     dgettext("dashboard_bookings", "%{count}/%{capacity} seats taken",
       count: Seats.seats_taken(Helpers.participants(meeting), guests),

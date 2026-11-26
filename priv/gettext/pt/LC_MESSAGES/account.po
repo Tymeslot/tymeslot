@@ -334,13 +334,13 @@ msgstr "Sua conta foi excluída."
 
 #: lib/tymeslot_web/live/account_live/delete_account_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Your account will be deleted on %{date}."
-msgstr "Sua conta será excluída em %{date}."
+msgid "Your account will be deleted on %{on_date}."
+msgstr "Sua conta será excluída em %{on_date}."
 
 #: lib/tymeslot_web/live/account_live/handlers.ex
 #, elixir-autogen, elixir-format
-msgid "Your account will be deleted on %{date}. Sign in before then if you change your mind."
-msgstr "Sua conta será excluída em %{date}. Entre antes disso se mudar de ideia."
+msgid "Your account will be deleted on %{on_date}. Sign in before then if you change your mind."
+msgstr "Sua conta será excluída em %{on_date}. Entre antes disso se mudar de ideia."
 
 #: lib/tymeslot_web/live/account_live/delete_account_modal.ex
 #, elixir-autogen, elixir-format

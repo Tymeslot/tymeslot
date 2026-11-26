@@ -39,9 +39,9 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTimeoutTest do
     end
   end
 
-  # `MeetingProvisioning.booking_online_meeting/1` counts on a run recording
-  # nothing once `attempt_timeout_ms/0` has passed: a create still running
-  # after it could record an event carrying a Teams meeting after the Teams
+  # `MeetingProvisioning.booking_event_video_fields/1` counts on a run
+  # recording nothing once `attempt_timeout_ms/0` has passed: a create still
+  # running after it could record an event carrying a room after the video
   # job has made one of its own.
   describe "attempt_timeout_ms/0 bounds a run" do
     test "a run's calendar work is stopped at the deadline, not left running" do

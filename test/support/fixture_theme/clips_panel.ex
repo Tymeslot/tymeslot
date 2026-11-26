@@ -1,8 +1,8 @@
 defmodule TymeslotWeb.Test.FixtureTheme.ClipsPanel do
   @moduledoc """
   The fixture theme's dashboard panel for its `Clips` group: one upload form
-  per clip and one for the intro's captions, each sending `upload_asset` with
-  its field, as the emblem's upload does. It keeps no UI state, so the
+  per clip and one for the intro's captions, each saved into its field by the
+  upload's progress callback, as the emblem's upload is. It keeps no UI state, so the
   `Panel` defaults stand.
   """
   use Phoenix.Component
@@ -22,13 +22,9 @@ defmodule TymeslotWeb.Test.FixtureTheme.ClipsPanel do
         novalidate
         id={"fixture-clip-upload-#{field}"}
         phx-change="upload_asset"
-        phx-submit="upload_asset"
         phx-target={@myself}
-        data-auto-upload="true"
       >
-        <input type="hidden" name="asset_field" value={field} />
         <.live_file_input upload={@uploads[field]} />
-        <button type="submit" class="hidden">Upload</button>
       </form>
     </div>
     """

@@ -12,18 +12,20 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
   @moduletag :auth
   @moduletag :integration
 
-  import Mox, only: [expect: 3, stub: 3, verify_on_exit!: 1]
+  import Ecto.Query, only: [from: 2]
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
 
   alias Tymeslot.Auth
   alias Tymeslot.Auth.AccountDeletion
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
-  alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.Workers.AccountDeletionCheckoutsWorker
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.SendBookingPaymentRefunded
@@ -31,8 +33,6 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
   @account "acct_PENDING_HOST"
   @password "Password123!"
   @opts [ip: "203.0.113.9", user_agent: "ExUnit"]
-
-  setup :verify_on_exit!
 
   setup do
     RateLimiter.clear_all()
@@ -79,15 +79,18 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
   end
 
   defp expect_full_refund(payment, suffix) do
-    stub(StripeAdapterMock, :retrieve_payment_intent, fn _id, _opts ->
-      {:ok, %{"latest_charge" => "ch_#{suffix}"}}
-    end)
+    StripeStub.stub(
+      :retrieve_payment_intent,
+      StripeFixtures.object("payment_intent_with_latest_charge", %{
+        "latest_charge" => %{"id" => "ch_#{suffix}"}
+      })
+    )
 
-    expect(StripeAdapterMock, :create_refund, fn params, opts ->
-      assert params.charge == "ch_#{suffix}"
-      assert params.amount == payment.amount_cents
-      assert opts[:connect_account] == @account
-      {:ok, %{"id" => "re_#{suffix}"}}
+    StripeStub.expect(:create_refund, 1, fn request ->
+      assert request.form["charge"] == "ch_#{suffix}"
+      assert request.form["amount"] == Integer.to_string(payment.amount_cents)
+      assert request.headers["stripe-account"] == @account
+      StripeStubResponses.refund(request, "re_#{suffix}")
     end)
   end
 
@@ -115,12 +118,16 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
     assert_enqueued(worker: AccountDeletionCheckoutsWorker, args: %{user_id: host.id})
     assert Repo.reload!(payment).status == :pending
 
-    expect(StripeAdapterMock, :expire_checkout_session, fn "cs_REQ_EXPIRE", _opts ->
-      {:ok, %{"id" => "cs_REQ_EXPIRE", "status" => "expired"}}
-    end)
+    StripeStub.expect(
+      :expire_checkout_session,
+      StripeFixtures.object("checkout_session_expired", %{"id" => "cs_REQ_EXPIRE"})
+    )
 
     assert %{success: 1} = Oban.drain_queue(queue: :payments)
     assert_cancelled(meeting, payment)
+
+    assert [%{path: "/v1/checkout/sessions/cs_REQ_EXPIRE/expire"}] =
+             StripeStub.requests(:expire_checkout_session)
   end
 
   test "every booking is cancelled even when expiring one checkout raises" do
@@ -130,9 +137,9 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
 
     request_deletion(host)
 
-    stub(StripeAdapterMock, :expire_checkout_session, fn
-      "cs_REQ_RAISES", _opts -> raise "Stripe is down"
-      session, _opts -> {:ok, %{"id" => session, "status" => "expired"}}
+    StripeStub.stub(:expire_checkout_session, fn
+      %{path: "/v1/checkout/sessions/cs_REQ_RAISES/expire"} -> raise "Stripe is down"
+      _request -> StripeFixtures.object("checkout_session_expired")
     end)
 
     assert %{success: 1} = Oban.drain_queue(queue: :payments)
@@ -147,13 +154,13 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
     pending = request_deletion(host)
     assert {:ok, _restored} = AccountDeletion.restore_account(pending)
 
-    # Mox fails on any call to the adapter that is not expected.
+    # No Stripe stub: any request fails the test.
     assert %{success: 1} = Oban.drain_queue(queue: :payments)
     assert Repo.reload!(payment).status == :pending
 
     assert :ok = CheckoutSessionCompleted.handle(completed("RESTORED", meeting))
     assert {:ok, %{status: :confirmed}} = MeetingQueries.get_meeting(meeting.id)
-    refute_enqueued(worker: RefundLatePayment)
+    assert refunds(payment) == []
   end
 
   # The guest is mid-payment when the host asks to leave, so Stripe will not
@@ -164,19 +171,20 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
 
     request_deletion(host)
 
-    expect(StripeAdapterMock, :expire_checkout_session, fn "cs_JOURNEY", _opts ->
-      {:error, :session_in_payment}
-    end)
+    StripeStub.expect(:expire_checkout_session, {:error_fixture, "invalid_request_error"})
 
     assert %{success: 1} = Oban.drain_queue(queue: :payments)
+
+    assert [%{path: "/v1/checkout/sessions/cs_JOURNEY/expire"}] =
+             StripeStub.requests(:expire_checkout_session)
 
     expect_full_refund(payment, "JOURNEY")
 
     assert :ok = CheckoutSessionCompleted.handle(completed("JOURNEY", meeting))
     assert {:ok, %{status: :expired}} = MeetingQueries.get_meeting(meeting.id)
-    assert_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: payment.id})
+    assert [%{source: :late_payment}] = refunds(payment)
 
-    assert %{success: 1} = Oban.drain_queue(queue: :payments)
+    assert %{success: 1} = Oban.drain_queue(queue: :payments, with_scheduled: true)
 
     refunded = Repo.reload!(payment)
     assert refunded.status == :refunded
@@ -193,9 +201,7 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
     host = insert(:user)
     {meeting, payment} = open_checkout(host, "GONE")
 
-    stub(StripeAdapterMock, :expire_checkout_session, fn _session, _opts ->
-      {:error, :session_in_payment}
-    end)
+    StripeStub.stub(:expire_checkout_session, {:error_fixture, "invalid_request_error"})
 
     request_deletion(host)
     Oban.drain_queue(queue: :default, with_scheduled: true)
@@ -214,10 +220,9 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
                | "id" => "reconcile:cs_GONE"
              })
 
-    assert [_one] =
-             all_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: payment.id})
+    assert [_one] = refunds(payment)
 
-    Oban.drain_queue(queue: :payments)
+    Oban.drain_queue(queue: :payments, with_scheduled: true)
 
     refunded = Repo.reload!(payment)
     assert refunded.status == :refunded
@@ -249,7 +254,9 @@ defmodule Tymeslot.MeetingPayments.PendingDeletionCheckoutTest do
                | "id" => "reconcile:cs_AWAITING"
              })
 
-    assert [_one] =
-             all_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: payment.id})
+    assert [_one] = refunds(payment)
   end
+
+  defp refunds(payment),
+    do: Repo.all(from(r in RefundSchema, where: r.booking_payment_id == ^payment.id))
 end

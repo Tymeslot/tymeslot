@@ -70,6 +70,22 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.OneOffEventsListTest do
     assert link =~ "/trainer/introduction-to-x"
   end
 
+  test "counts the people signed up, not the seats held for bookers still paying", %{
+    conn: conn,
+    event: event
+  } do
+    [session] = PlannedSessions.list(event)
+    insert(:participant, meeting: session, email: "ada@example.com")
+    insert(:seat_hold, meeting: session, seats: 2, email: "paying@example.com")
+
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+    [row] =
+      lv |> render() |> Floki.parse_document!() |> Floki.find(~s{[data-testid="event-row"]})
+
+    assert Floki.text(row) =~ "1/12 seats taken"
+  end
+
   test "deleting the event cancels its session and tells who signed up", %{
     conn: conn,
     event: event

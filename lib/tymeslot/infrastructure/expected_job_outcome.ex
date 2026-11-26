@@ -24,4 +24,15 @@ defmodule Tymeslot.Infrastructure.ExpectedJobOutcome do
   `nil` stands for a bare `:discard`.
   """
   @callback expected_outcome?(reason :: term()) :: boolean()
+
+  @doc """
+  Returns `true` when `reason`, returned as `{:error, reason}` by an attempt
+  Oban will retry, is an expected wait rather than a failure: the attempt is
+  then not recorded in ErrorTracker. Oban retries it as any other, and the
+  job's last attempt is judged by `expected_outcome?/1`. Optional; a worker
+  without it has every retryable attempt recorded.
+  """
+  @callback expected_retry?(reason :: term()) :: boolean()
+
+  @optional_callbacks expected_retry?: 1
 end

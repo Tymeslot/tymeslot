@@ -719,3 +719,8 @@ msgstr "sesja %{position}, %{when}"
 #, elixir-autogen, elixir-format
 msgid "The host answered your request in the meantime, so nothing was withdrawn. The list shows where each session now stands."
 msgstr "Gospodarz w międzyczasie odpowiedział na Twoją prośbę, więc nic nie zostało wycofane. Lista pokazuje aktualny stan każdej sesji."
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Your payment is still open"
+msgstr "Masz niedokończoną płatność"

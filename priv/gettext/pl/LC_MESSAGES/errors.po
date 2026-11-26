@@ -392,11 +392,6 @@ msgstr "rozmowa wideo grupowego typu spotkania musi korzystać z dokładnie jedn
 msgid "group bookings cannot require approval"
 msgstr "rezerwacje grupowe nie mogą wymagać zatwierdzenia"
 
-#: lib/tymeslot/meeting_types/group_validation.ex
-#, elixir-autogen, elixir-format
-msgid "group bookings cannot require payment"
-msgstr "rezerwacje grupowe nie mogą wymagać płatności"
-
 #: lib/tymeslot/meeting_types/meeting_type_schema.ex
 #, elixir-autogen, elixir-format
 msgid "You already have a meeting type with this name"
@@ -537,9 +532,9 @@ msgid "is not a supported language"
 msgstr "nie jest obsługiwanym językiem"
 
 #: lib/tymeslot/auth/user_schema.ex
+#: lib/tymeslot/meetings/booker_contact.ex
 #: lib/tymeslot/meetings/guest_schema.ex
 #: lib/tymeslot/meetings/meeting_rules.ex
-#: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a supported locale"
 msgstr "nie jest obsługiwanym językiem"
@@ -924,11 +919,6 @@ msgstr "Ten termin nie jest już dostępny. Wybierz inny."
 msgid "email confirmation cannot be combined with payment"
 msgstr "potwierdzenia adresu e-mail nie można łączyć z płatnością"
 
-#: lib/tymeslot/meeting_types/group_validation.ex
-#, elixir-autogen, elixir-format
-msgid "group bookings cannot require email confirmation"
-msgstr "rezerwacje grupowe nie mogą wymagać potwierdzenia adresu e-mail"
-
 #: lib/tymeslot/meeting_types/meeting_type_schema.ex
 #, elixir-autogen, elixir-format
 msgid "would give a reserved booking link; choose another name or set a custom link"
@@ -943,3 +933,13 @@ msgstr "nie może być większe niż %{max} przy tym odstępie, aby każda sesja
 #, elixir-autogen, elixir-format
 msgid "Meeting types that ask invitees to confirm their email cannot be booked as a series."
 msgstr "Typów spotkań, które proszą zaproszonych o potwierdzenie adresu e-mail, nie można rezerwować jako serii."
+
+#: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe account checks"
+msgstr "sprawdzeń konta Stripe"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Paid group meeting types cannot be booked as a series."
+msgstr "Płatnych grupowych typów spotkań nie można rezerwować jako serii."

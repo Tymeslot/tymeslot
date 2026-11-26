@@ -43,6 +43,7 @@ defmodule Tymeslot.BookingSeries.Automation do
   alias Tymeslot.Notifications.ChannelFanout
   alias Tymeslot.Notifications.EventTypes
   alias Tymeslot.Notifications.Recipients
+  alias Tymeslot.Notifications.Relevance
   alias Tymeslot.Workers.SeriesAutomationWorker
 
   # Integrations read English, as their messages are.
@@ -133,7 +134,8 @@ defmodule Tymeslot.BookingSeries.Automation do
 
         event_type
         |> ChannelFanout.dispatch(meeting,
-          series: summary(series, meeting, sessions, occurrences)
+          series: summary(series, meeting, sessions, occurrences),
+          relevant_until: relevant_until(event_type, meeting, sessions)
         )
         |> retry_only_unchecked()
     end
@@ -177,6 +179,17 @@ defmodule Tymeslot.BookingSeries.Automation do
 
   defp live?(%Participant{meeting: meeting} = seat),
     do: Participant.live?(seat) and MeetingState.expects_calendar_event?(meeting)
+
+  # When a series event stops being worth a Telegram or Slack message, as for
+  # its email (`Tymeslot.Notifications.Relevance`): this job can run late.
+  # Only an expiry reads every session, and turning a group seat into a
+  # booking costs a query, so only an expiry does it for all of them.
+  defp relevant_until(@requested, first, _sessions), do: Relevance.approval_request(first)
+
+  defp relevant_until(@expired, _first, sessions),
+    do: sessions |> Enum.map(&as_booking/1) |> Relevance.series_expiry()
+
+  defp relevant_until(_event_type, _first, _sessions), do: nil
 
   defp as_booking(%Meeting{} = meeting), do: meeting
   defp as_booking(%Participant{meeting: meeting} = seat), do: SeatView.at_event(meeting, seat)

@@ -55,7 +55,14 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlowTest do
   describe "planning a file" do
     test "counts its events, the repeating ones and the cancelled ones left out" do
       assert {:ok, plan} = IcsImportFlow.plan(@three_events, "Etc/UTC")
-      assert IcsImportFlow.summary(plan) == %{events: 2, series: 1, cancelled: 1}
+
+      assert IcsImportFlow.summary(plan) == %{
+               events: 2,
+               series: 1,
+               cancelled: 1,
+               from: nil,
+               left_out: 0
+             }
     end
 
     test "refuses a file that is not a calendar" do
@@ -66,7 +73,7 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlowTest do
   describe "refusals" do
     test "name the upload's limit or the accepted type" do
       assert IcsImportFlow.upload_error(:too_large) ==
-               "The file is too large. Files up to 5 MB can be imported."
+               "The file is too large. Files up to 5 MB can be imported. Export a shorter date range from your calendar app and try again."
 
       assert IcsImportFlow.upload_error(:not_accepted) ==
                "Only .ics calendar files can be imported."
@@ -82,7 +89,7 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlowTest do
       assert IcsImportFlow.plan_error(:no_events) == "This file contains no events to import."
 
       assert IcsImportFlow.plan_error(:too_many_events) ==
-               "This file contains more than 1000 events. Please split it into smaller files."
+               "This file contains more than 20,000 events, too many to read. Export a shorter date range from your calendar app, or subscribe to the calendar by URL instead."
 
       assert IcsImportFlow.plan_error(:too_large) == IcsImportFlow.upload_error(:too_large)
     end

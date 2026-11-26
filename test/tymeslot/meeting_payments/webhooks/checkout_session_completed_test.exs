@@ -10,19 +10,15 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
   @account "acct_TEST_HOST"
   @paid_session %{"payment_status" => "paid", "amount_total" => 5000, "currency" => "eur"}
 
-  import Mox, only: [verify_on_exit!: 1]
   import Tymeslot.Factory
 
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Repo
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
-
-  setup :verify_on_exit!
 
   describe "handle/1" do
     test "marks the booking_payment paid and the meeting confirmed" do
@@ -302,39 +298,6 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       assert reloaded_meeting.status == :awaiting_payment
 
       refute_enqueued(worker: CalendarEventWorker)
-    end
-
-    test "backfills stripe_charge_id from an atom-keyed payment intent (real adapter shape)" do
-      meeting = insert(:meeting, status: :awaiting_payment)
-
-      bp =
-        insert_payment(
-          meeting: meeting,
-          status: :pending,
-          stripe_checkout_session_id: "cs_CHARGE"
-        )
-
-      # The real Stripity adapter returns an atom-keyed %Stripe.PaymentIntent{}
-      # whose expanded latest_charge is a %Stripe.Charge{} struct — unlike the
-      # string-keyed webhook events. The handler must read the charge id from
-      # this shape too, otherwise stripe_charge_id stays blank and every
-      # downstream refund/dispute lookup (keyed on it) fails.
-      Mox.expect(
-        StripeAdapterMock,
-        :retrieve_payment_intent,
-        fn "pi_CHARGE", _opts -> {:ok, %{latest_charge: %{id: "ch_REAL"}}} end
-      )
-
-      event =
-        completed_event("evt_CHARGE", %{
-          "id" => "cs_CHARGE",
-          "client_reference_id" => meeting.id,
-          "payment_intent" => "pi_CHARGE"
-        })
-
-      assert :ok = CheckoutSessionCompleted.handle(event)
-
-      assert Repo.reload!(bp).stripe_charge_id == "ch_REAL"
     end
 
     test "a paid booking on a meeting type requiring approval moves into the gate, not confirmed" do

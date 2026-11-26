@@ -21,40 +21,48 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
   `attendee_receipt/1` calls Stripe to resolve the hosted receipt URL. Keeping
   that here leaves the template itself a pure rendering module.
 
-  Internal to `Tymeslot.Emails.Templates.AppointmentConfirmation`; nothing else
-  should call it.
+  Internal to `Tymeslot.Emails.Templates.AppointmentConfirmation` and
+  `Tymeslot.Emails.Templates.SeatUpdateForOrganizer` (the payout of a paid
+  seat); nothing else should call it.
   """
 
   alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Shared.{Formatting, Sanitise, Stack, Styles, Text}
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
 
   require Logger
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  # Payment states that are settled enough to show the booker a receipt and the
-  # host a payout summary. A refunded payment still gets both: the money did
-  # change hands, and the refund is announced by its own email.
+  # Payment states that are settled enough to show the host a payout summary.
+  # A refunded payment still gets one: the money did change hands, and the
+  # refund is announced by its own email.
   @paid_like [:paid, :partially_refunded, :refunded]
+
+  # The booker's receipt also covers a disputed payment: they did pay, and the
+  # dispute is between them and their bank. The host's payout summary leaves it
+  # out, since Stripe holds the funds until the dispute closes.
+  @receipt_statuses [:disputed | @paid_like]
 
   @typedoc "Attendee-facing receipt, or `nil` when there is nothing to show."
   @type receipt ::
           %{
-            amount: String.t(),
-            paid_at: String.t() | nil,
-            reference: String.t() | nil,
-            receipt_url: String.t() | nil
+            required(:amount) => String.t(),
+            required(:paid_at) => String.t() | nil,
+            required(:reference) => String.t() | nil,
+            required(:receipt_url) => String.t() | nil,
+            optional(:seats) => pos_integer()
           }
           | nil
 
   @typedoc "Organiser-facing payout summary, or `nil` when there is none."
   @type organizer_summary ::
           %{
-            attendee_paid: String.t(),
-            platform_fee: String.t(),
-            net_received: String.t()
+            required(:attendee_paid) => String.t(),
+            required(:platform_fee) => String.t(),
+            required(:net_received) => String.t(),
+            optional(:seats) => pos_integer()
           }
           | nil
 
@@ -62,21 +70,24 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
   Builds the attendee-facing payment receipt from the `:booking_payment`
   snapshot in `appointment_details`.
 
-  Returns `nil` when the booking is free or the payment is not in a paid-like
-  state. Resolves the Stripe-hosted receipt URL, so this performs a network
+  Returns `nil` when the booking is free or the payment was never taken.
+  Resolves the Stripe-hosted receipt URL, so this performs a network
   call for payments that carry a charge and a connected account.
   """
   @spec attendee_receipt(map()) :: receipt()
   def attendee_receipt(appointment_details) do
     case Map.get(appointment_details, :booking_payment) do
       %{status: status, amount_cents: amount, currency: currency} = bp
-      when status in @paid_like and is_integer(amount) ->
-        %{
-          amount: Formatting.format_currency(amount, currency),
-          paid_at: format_paid_at(bp, appointment_details),
-          reference: Map.get(bp, :stripe_charge_id),
-          receipt_url: web_url(receipt_url_for(bp))
-        }
+      when status in @receipt_statuses and is_integer(amount) ->
+        Map.merge(
+          %{
+            amount: Formatting.format_currency(amount, currency),
+            paid_at: format_paid_at(bp, appointment_details),
+            reference: Map.get(bp, :stripe_charge_id),
+            receipt_url: web_url(receipt_url_for(bp))
+          },
+          seats_of(bp)
+        )
 
       _other ->
         nil
@@ -100,11 +111,14 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
         application_fee = Map.get(bp, :application_fee_cents) || 0
         net = max(amount - application_fee, 0)
 
-        %{
-          attendee_paid: Formatting.format_currency(amount, currency),
-          platform_fee: Formatting.format_currency(application_fee, currency),
-          net_received: Formatting.format_currency(net, currency)
-        }
+        Map.merge(
+          %{
+            attendee_paid: Formatting.format_currency(amount, currency),
+            platform_fee: Formatting.format_currency(application_fee, currency),
+            net_received: Formatting.format_currency(net, currency)
+          },
+          seats_of(bp)
+        )
 
       _other ->
         nil
@@ -121,6 +135,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
         amount: Sanitise.sanitize_for_email(receipt.amount)
       )
 
+    seats_line = seats_line(receipt)
+
     date_line =
       if receipt.paid_at do
         dgettext("emails_booking", "Date: %{date}",
@@ -136,7 +152,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
       end
 
     body_lines =
-      [amount_line, date_line, reference_line]
+      [amount_line, seats_line, date_line, reference_line]
       |> Enum.reject(&is_nil/1)
       |> Enum.join("<br/>\n")
 
@@ -175,6 +191,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
     date_line =
       if receipt.paid_at, do: dgettext("emails_booking", "Date: %{date}", date: receipt.paid_at)
 
+    seats_line = seats_line(receipt)
+
     reference_line =
       if receipt.reference,
         do: dgettext("emails_booking", "Reference: %{ref}", ref: receipt.reference)
@@ -184,7 +202,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
         dgettext("emails_booking", "View receipt: %{url}", url: receipt.receipt_url)
       end
 
-    [header, amount_line, date_line, reference_line, link_line]
+    [header, amount_line, seats_line, date_line, reference_line, link_line]
     |> Enum.reject(&is_nil/1)
     |> Enum.join("\n")
   end
@@ -197,17 +215,21 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
 
     body_lines =
       Enum.join(
-        [
-          dgettext("emails_booking", "Attendee paid: %{amount}",
-            amount: strong(payment.attendee_paid)
-          ),
-          dgettext("emails_booking", "Tymeslot platform fee: %{amount}",
-            amount: strong(payment.platform_fee)
-          ),
-          dgettext("emails_booking", "You received: %{amount} (before Stripe processing fees)",
-            amount: strong(payment.net_received)
-          )
-        ],
+        Enum.reject(
+          [
+            dgettext("emails_booking", "Attendee paid: %{amount}",
+              amount: strong(payment.attendee_paid)
+            ),
+            seats_line(payment),
+            dgettext("emails_booking", "Tymeslot platform fee: %{amount}",
+              amount: strong(payment.platform_fee)
+            ),
+            dgettext("emails_booking", "You received: %{amount} (before Stripe processing fees)",
+              amount: strong(payment.net_received)
+            )
+          ],
+          &is_nil/1
+        ),
         "<br/>\n"
       )
 
@@ -254,6 +276,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
       dgettext("emails_booking", "PAYMENT RECEIVED:"),
       dgettext("emails_booking", "You received %{amount}", amount: payment.net_received),
       dgettext("emails_booking", "Attendee paid: %{amount}", amount: payment.attendee_paid),
+      seats_line(payment),
       dgettext("emails_booking", "Tymeslot platform fee: %{amount}",
         amount: payment.platform_fee
       ),
@@ -263,9 +286,21 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
       "",
       dgettext("emails_booking", "Funds will arrive on your usual Stripe payout schedule.")
     ]
+    |> Enum.reject(&is_nil/1)
     |> Enum.join("\n")
     |> String.trim_trailing()
   end
+
+  # A group seat's payment pays for the booker and their guests; a
+  # one-to-one booking (one seat) shows no seat count at all.
+  defp seats_of(%{seats: seats}) when is_integer(seats) and seats > 1, do: %{seats: seats}
+  defp seats_of(_bp), do: %{}
+
+  defp seats_line(%{seats: seats}) do
+    dngettext("emails_booking", "For %{count} seat", "For %{count} seats", seats, count: seats)
+  end
+
+  defp seats_line(_summary), do: nil
 
   # The bold markup rides in on the placeholder rather than living inside the
   # msgid, so the HTML and plain-text summaries share one translation each.
@@ -306,7 +341,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
   defp receipt_url_for(%{stripe_charge_id: charge_id, stripe_account_id: account_id})
        when is_binary(charge_id) and charge_id != "" and is_binary(account_id) and
               account_id != "" do
-    case MeetingPayments.retrieve_charge_receipt_url(charge_id, account_id) do
+    case BookingPayments.retrieve_charge_receipt_url(charge_id, account_id) do
       {:ok, url} ->
         url
 

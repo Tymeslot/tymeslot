@@ -26,7 +26,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PeriodLabels do
     do: LocaleFormat.format_month_year(date.month, date.year, locale)
 
   def title(:agenda, date, _days, locale),
-    do: from(LocaleFormat.format_short_weekday_date(date, locale))
+    do: from(LocaleFormat.format_short_weekday_date(date, locale), locale)
 
   def title(_view, _date, days, locale) do
     first = List.first(days)
@@ -65,7 +65,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.PeriodLabels do
       )
 
   def short_title(:agenda, date, _days, locale),
-    do: from(LocaleFormat.format_short_date(date, locale))
+    do: from(LocaleFormat.format_short_date(date, locale), locale)
 
   def short_title(_view, _date, days, locale) do
     {first, last} = day_range(days, locale)
@@ -123,7 +123,15 @@ defmodule TymeslotWeb.Dashboard.Calendar.PeriodLabels do
     {first_text, LocaleFormat.format_short_date(last, locale)}
   end
 
-  defp from(date), do: dgettext("dashboard_calendar_views", "From %{date}", date: date)
+  # Italian has no word for "from" here: the article merged with "da" opens
+  # the title ("Dall'8 ott"), so the result is capitalised.
+  defp from(date, locale) do
+    from_date = LocaleFormat.with_article(date, :da, locale)
+
+    LocaleFormat.capitalize_first(
+      dgettext("dashboard_calendar_views", "From %{from_date}", from_date: from_date)
+    )
+  end
 
   defp range_title(first, last),
     do: dgettext("dashboard_calendar", "%{first} – %{last}", first: first, last: last)

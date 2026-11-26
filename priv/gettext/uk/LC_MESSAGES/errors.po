@@ -388,11 +388,6 @@ msgstr "відеодзвінок групового типу зустрічі м
 msgid "group bookings cannot require approval"
 msgstr "групові бронювання не можуть вимагати підтвердження"
 
-#: lib/tymeslot/meeting_types/group_validation.ex
-#, elixir-autogen, elixir-format
-msgid "group bookings cannot require payment"
-msgstr "групові бронювання не можуть вимагати оплати"
-
 #: lib/tymeslot/meeting_types/meeting_type_schema.ex
 #, elixir-autogen, elixir-format
 msgid "You already have a meeting type with this name"
@@ -533,9 +528,9 @@ msgid "is not a supported language"
 msgstr "не є підтримуваною мовою"
 
 #: lib/tymeslot/auth/user_schema.ex
+#: lib/tymeslot/meetings/booker_contact.ex
 #: lib/tymeslot/meetings/guest_schema.ex
 #: lib/tymeslot/meetings/meeting_rules.ex
-#: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a supported locale"
 msgstr "не є підтримуваною мовою"
@@ -920,11 +915,6 @@ msgstr "Цей час більше недоступний. Виберіть ін
 msgid "email confirmation cannot be combined with payment"
 msgstr "підтвердження електронної пошти не можна поєднувати з оплатою"
 
-#: lib/tymeslot/meeting_types/group_validation.ex
-#, elixir-autogen, elixir-format
-msgid "group bookings cannot require email confirmation"
-msgstr "групові бронювання не можуть вимагати підтвердження електронної пошти"
-
 #: lib/tymeslot/meeting_types/meeting_type_schema.ex
 #, elixir-autogen, elixir-format
 msgid "would give a reserved booking link; choose another name or set a custom link"
@@ -939,3 +929,13 @@ msgstr "має бути не більше %{max} за такого ритму, �
 #, elixir-autogen, elixir-format
 msgid "Meeting types that ask invitees to confirm their email cannot be booked as a series."
 msgstr "Типи зустрічей, які просять запрошених підтвердити електронну пошту, не можна бронювати як серію."
+
+#: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe account checks"
+msgstr "перевірок облікового запису Stripe"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Paid group meeting types cannot be booked as a series."
+msgstr "Платні групові типи зустрічей не можна бронювати як серію."

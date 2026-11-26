@@ -79,19 +79,28 @@ defmodule TymeslotWeb.E2E.BookerLayoutAssertions do
 
   An embedded booker has one scroll region, the host page: an inner scroller
   keeps content out of sight inside an iframe that should have grown instead.
+
+  `:except` names, as a CSS selector, a region a theme scrolls on purpose
+  (Paper's three-column times, capped at the calendar's height).
   """
-  @spec assert_no_inner_scroll_region(Wallaby.Session.t(), String.t()) :: Wallaby.Session.t()
-  def assert_no_inner_scroll_region(session, context) do
+  @spec assert_no_inner_scroll_region(Wallaby.Session.t(), String.t(), keyword()) ::
+          Wallaby.Session.t()
+  def assert_no_inner_scroll_region(session, context, opts \\ []) do
     scrolling =
-      evaluate_script(session, """
-      return [...document.querySelectorAll("[data-booker-root] *")]
-        .filter((el) => {
-          const overflowY = getComputedStyle(el).overflowY;
-          return (overflowY === "auto" || overflowY === "scroll") &&
-            el.scrollHeight > el.clientHeight + 1;
-        })
-        .map((el) => `${el.className} (${el.clientHeight}px showing ${el.scrollHeight}px)`);
-      """)
+      evaluate_script(
+        session,
+        """
+        const except = #{Jason.encode!(Keyword.get(opts, :except))};
+        return [...document.querySelectorAll("[data-booker-root] *")]
+          .filter((el) => {
+            const overflowY = getComputedStyle(el).overflowY;
+            return (overflowY === "auto" || overflowY === "scroll") &&
+              el.scrollHeight > el.clientHeight + 1 &&
+              !(except && el.matches(except));
+          })
+          .map((el) => `${el.className} (${el.clientHeight}px showing ${el.scrollHeight}px)`);
+        """
+      )
 
     assert scrolling == [],
            "#{context}: the booker scrolls inside itself instead of growing the " <>
@@ -201,14 +210,19 @@ defmodule TymeslotWeb.E2E.BookerLayoutAssertions do
   end
 
   @doc """
-  The first element matching `selector` lives inside the scrollable page (its
-  document bottom within the scroll height), not clipped beyond it.
+  The first element matching `selector`, or with `last: true` the last, lives
+  inside the scrollable page (its document bottom within the scroll height),
+  not clipped beyond it. The last of a list is the one a short frame cuts off.
   """
-  @spec assert_reachable(Wallaby.Session.t(), String.t(), String.t()) :: Wallaby.Session.t()
-  def assert_reachable(session, selector, context) do
+  @spec assert_reachable(Wallaby.Session.t(), String.t(), String.t(), keyword()) ::
+          Wallaby.Session.t()
+  def assert_reachable(session, selector, context, opts \\ []) do
+    pick = if Keyword.get(opts, :last, false), do: "all[all.length - 1]", else: "all[0]"
+
     value =
       evaluate_script(session, """
-      const el = document.querySelector(#{Jason.encode!(selector)});
+      const all = document.querySelectorAll(#{Jason.encode!(selector)});
+      const el = #{pick};
       if (!el) return null;
       const r = el.getBoundingClientRect();
       return [Math.round(r.bottom + window.scrollY), r.height, document.documentElement.scrollHeight];

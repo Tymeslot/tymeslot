@@ -21,9 +21,10 @@ defmodule Tymeslot.Meetings.CancellationTest do
   import Tymeslot.MeetingTestHelpers
 
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.SendBookingPaymentRefunded
@@ -56,10 +57,10 @@ defmodule Tymeslot.Meetings.CancellationTest do
       meeting: meeting,
       payment: payment
     } do
-      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
-        assert params.charge == payment.stripe_charge_id
-        assert params.amount == 2000
-        {:ok, %{id: "re_host_cancel"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["charge"] == payment.stripe_charge_id
+        assert request.form["amount"] == "2000"
+        StripeStubResponses.refund(request, "re_host_cancel")
       end)
 
       assert {:ok, cancelled} =
@@ -82,9 +83,9 @@ defmodule Tymeslot.Meetings.CancellationTest do
     @cancellation_email [worker: EmailWorker, args: %{action: "send_cancellation_emails"}]
 
     test "is only queued once the refund has gone through", %{host: host, meeting: meeting} do
-      expect(StripeAdapterMock, :create_refund, fn _params, _opts ->
+      StripeStub.expect(:create_refund, 1, fn request ->
         refute_enqueued(@cancellation_email)
-        {:ok, %{id: "re_before_email"}}
+        StripeStubResponses.refund(request, "re_before_email")
       end)
 
       assert {:ok, _cancelled} =
@@ -94,9 +95,7 @@ defmodule Tymeslot.Meetings.CancellationTest do
     end
 
     test "is still queued when the refund fails", %{host: host, meeting: meeting} do
-      expect(StripeAdapterMock, :create_refund, fn _params, _opts ->
-        {:error, %{message: "card_declined"}}
-      end)
+      StripeStub.expect(:create_refund, 1, {:error_fixture, "card_error"})
 
       assert {:error, {:refund_failed, _reason}} =
                Meetings.cancel_meeting_with_refund(meeting, host.id, {:refund, 5000})
@@ -113,10 +112,11 @@ defmodule Tymeslot.Meetings.CancellationTest do
       payment: payment
     } do
       # Stubbed to succeed, so a refund that does not land was refused by the
-      # rule and not by a missing mock.
-      stub(StripeAdapterMock, :create_refund, fn _params, _opts ->
-        {:ok, %{id: "re_should_not_happen"}}
-      end)
+      # rule and not by a missing stub.
+      StripeStub.stub(
+        :create_refund,
+        StripeStubResponses.refund("re_should_not_happen")
+      )
 
       assert {:error, :not_found} =
                Meetings.cancel_meeting_with_refund(meeting, attendee.id, {:refund, 5000})
@@ -126,6 +126,7 @@ defmodule Tymeslot.Meetings.CancellationTest do
       reloaded = BookingPaymentQueries.get(payment.id)
       assert reloaded.refunded_amount_cents == 0
       assert reloaded.status == :paid
+      assert StripeStub.requests(:create_refund) == []
 
       refute_enqueued(worker: SendBookingPaymentRefunded)
     end

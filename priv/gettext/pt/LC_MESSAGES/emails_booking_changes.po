@@ -226,8 +226,8 @@ msgstr "Olá, %{name}. Nosso compromisso foi cancelado. Desculpe pelo transtorno
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex
 #, elixir-autogen, elixir-format
-msgid "Hi %{name} - you've given up your spot in %{meeting} on %{date}."
-msgstr "Olá, %{name}. Você liberou sua vaga em %{meeting}, em %{date}."
+msgid "Hi %{name} - you've given up your spot in %{meeting} on %{on_date}."
+msgstr "Olá, %{name}. Você liberou sua vaga em %{meeting}, em %{on_date}."
 
 #: lib/tymeslot/emails/templates/booking_payment_refunded.ex
 #, elixir-autogen, elixir-format
@@ -707,3 +707,79 @@ msgstr "Seus convidados foram avisados do cancelamento."
 #, elixir-autogen, elixir-format
 msgid "Video call"
 msgstr "Chamada de vídeo"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} cancelled their spot. No one else has confirmed a spot on this slot, so the meeting has been cancelled."
+msgstr "%{name} cancelou a vaga. Ninguém mais tem vaga confirmada neste horário, então a reunião foi cancelada."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting cancelled: %{name} cancelled - %{date}"
+msgstr "Reunião cancelada: %{name} cancelou - %{date}"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "No one else has confirmed a spot at the earlier time, so that meeting has been cancelled."
+msgstr "Ninguém mais tem vaga confirmada no horário anterior, então aquela reunião foi cancelada."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} took a spot on this slot, so the meeting you were told had been cancelled goes ahead after all."
+msgstr "%{name} reservou uma vaga neste horário, então a reunião que tinha sido dada como cancelada vai acontecer, afinal."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Back on"
+msgstr "Reativada"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting back on: %{name} - %{date}"
+msgstr "Reunião reativada: %{name} - %{date}"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Your group meeting is on again"
+msgstr "Sua reunião em grupo está confirmada de novo"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} is being refunded to %{count} participant. They get an email once the refund is issued."
+msgid_plural "%{amount} is being refunded to %{count} participants. Each gets an email once their refund is issued."
+msgstr[0] "%{amount} está sendo reembolsado a %{count} participante, que receberá um e-mail assim que o reembolso for feito."
+msgstr[1] "%{amount} está sendo reembolsado a %{count} participantes. Cada um receberá um e-mail assim que o seu reembolso for feito."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "REFUNDS ON THEIR WAY:"
+msgstr "REEMBOLSOS A CAMINHO:"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "REFUNDS OUTSTANDING:"
+msgstr "REEMBOLSOS EM ABERTO:"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Refunds on their way"
+msgstr "Reembolsos a caminho"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Refunds outstanding"
+msgstr "Reembolsos em aberto"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "You still hold %{amount} from %{count} participant. Refund it under Payments in your dashboard if you need to."
+msgid_plural "You still hold %{amount} from %{count} participants. Refund them under Payments in your dashboard if you need to."
+msgstr[0] "Você ainda está com %{amount} de %{count} participante. Se precisar, faça o reembolso em Pagamentos, no seu painel."
+msgstr[1] "Você ainda está com %{amount} de %{count} participantes. Se precisar, faça os reembolsos em Pagamentos, no seu painel."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} from %{count} participant can't be refunded automatically: the payment is older than the 60-day refund window. Refund it from your Stripe dashboard."
+msgid_plural "%{amount} from %{count} participants can't be refunded automatically: their payments are older than the 60-day refund window. Refund them from your Stripe dashboard."
+msgstr[0] "Não é possível reembolsar automaticamente %{amount} de %{count} participante, pois o pagamento já passou do prazo de reembolso de 60 dias. Faça o reembolso pelo painel do Stripe."
+msgstr[1] "Não é possível reembolsar automaticamente %{amount} de %{count} participantes, pois os pagamentos já passaram do prazo de reembolso de 60 dias. Faça os reembolsos pelo painel do Stripe."

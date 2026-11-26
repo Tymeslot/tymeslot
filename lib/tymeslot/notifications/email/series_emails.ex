@@ -19,7 +19,7 @@ defmodule Tymeslot.Notifications.Email.SeriesEmails do
   alias Tymeslot.BookingSeries.SeriesQueries
   alias Tymeslot.Emails.SeriesBuilder
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.ApprovalToken
   alias Tymeslot.Meetings.MeetingState
@@ -223,7 +223,7 @@ defmodule Tymeslot.Notifications.Email.SeriesEmails do
   # A paid series shows the total it was paid, in the currency its one
   # payment took.
   defp paid_currency(series) do
-    case MeetingPayments.payment_for_series(series.id) do
+    case BookingPayments.payment_for_series(series.id) do
       %{paid_at: %DateTime{}, currency: currency} -> currency
       _unpaid_or_free -> nil
     end

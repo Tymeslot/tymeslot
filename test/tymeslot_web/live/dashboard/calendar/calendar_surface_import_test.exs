@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
   import Mox
   import Phoenix.LiveView, only: [send_update: 3]
   import Tymeslot.TestHelpers.Eventually
+  import TymeslotWeb.CalendarImportHelpers
   import TymeslotWeb.CalendarSurfaceHelpers
   alias TymeslotWeb.Dashboard.Calendar.CalendarSurface
 
@@ -26,9 +27,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
 
   setup :set_mox_global
   setup :verify_on_exit!
-
-  # The import writes from a background task; allow for a busy test machine.
-  @task_timeout 5_000
 
   @two_events """
   BEGIN:VCALENDAR\r
@@ -51,35 +49,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
 
   defp busy_message,
     do: "An import is still running. Please wait for it to finish before importing another file."
-
-  defp open_import(lv) do
-    lv |> element("#calendar-display-options > button") |> render_click()
-    lv |> element("#calendar-import-ics") |> render_click()
-  end
-
-  # The file is planned in an async task once uploaded; `render_async/1`
-  # waits for it.
-  defp upload(lv, content, name \\ "calendar.ics") do
-    lv
-    |> file_input("#calendar-ics-upload", :ics_file, [
-      %{name: name, content: content, type: "text/calendar"}
-    ])
-    |> render_upload(name)
-
-    render_async(lv)
-  end
-
-  defp start_import(lv), do: lv |> element("#calendar-import-start") |> render_click()
-
-  # The result reaches the surface in two hops, each a message to the
-  # LiveView (the task's result, then the surface's `send_update/2`); one
-  # render per hop lets both land, and one more is spare.
-  defp settle(lv), do: Enum.reduce(1..3, nil, fn _hop, _html -> render(lv) end)
-
-  defp await_task(task) do
-    ref = Process.monitor(task)
-    assert_receive {:DOWN, ^ref, :process, ^task, _reason}, @task_timeout
-  end
 
   setup %{conn: conn} do
     owner(conn)
@@ -175,8 +144,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
       upload(lv, @two_events)
       start_import(lv)
 
-      assert_receive {:written, %{summary: "Dentist"}, context, task}, @task_timeout
-      assert_receive {:written, %{summary: "Standup"} = standup, ^context, ^task}, @task_timeout
+      assert_receive {:written, %{summary: "Dentist"}, context, task}, task_timeout()
+      assert_receive {:written, %{summary: "Standup"} = standup, ^context, ^task}, task_timeout()
       assert context == {integration.id, user.id}
       assert standup.recurrence_rule == "FREQ=WEEKLY;COUNT=4"
       await_task(task)
@@ -209,7 +178,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
 
       start_import(lv)
 
-      assert_receive {:written, "family", context, task}, @task_timeout
+      assert_receive {:written, "family", context, task}, task_timeout()
       assert context == {integration.id, user.id}
       await_task(task)
     end
@@ -238,7 +207,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
       start_import(lv)
 
       # The import still goes to the organiser's own default calendar.
-      assert_receive {:written, "work", {integration_id, user_id}, task}, @task_timeout
+      assert_receive {:written, "work", {integration_id, user_id}, task}, task_timeout()
       assert {integration_id, user_id} == {integration.id, user.id}
       await_task(task)
     end
@@ -281,7 +250,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
       open_import(lv)
       upload(lv, @two_events)
       start_import(lv)
-      assert_receive {:writing, task}, @task_timeout
+      assert_receive {:writing, task}, task_timeout()
 
       lv |> element("#calendar-import-close") |> render_click()
       refute has_element?(lv, "#calendar-import")
@@ -291,7 +260,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
       lv |> element("#calendar-import-close") |> render_click()
 
       send(task, :continue)
-      assert_receive {:writing, ^task}, @task_timeout
+      assert_receive {:writing, ^task}, task_timeout()
       send(task, :continue)
       await_task(task)
 
@@ -313,7 +282,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
       upload(lv, @two_events)
       start_import(lv)
 
-      assert_receive {:task, task}, @task_timeout
+      assert_receive {:task, task}, task_timeout()
       await_task(task)
 
       settle(lv)
@@ -376,7 +345,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
       open_import(first)
       upload(first, @two_events)
       start_import(first)
-      assert_receive {:writing, task}, @task_timeout
+      assert_receive {:writing, task}, task_timeout()
 
       {:ok, second, _html} = live(conn, ~p"/dashboard/calendar")
       upload(second, @two_events, "second.ics")
@@ -387,7 +356,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
       refute has_element?(second, ~s([data-testid="calendar-import-summary"]))
 
       send(task, :continue)
-      assert_receive {:writing, ^task}, @task_timeout
+      assert_receive {:writing, ^task}, task_timeout()
       send(task, :continue)
       await_task(task)
     end
@@ -429,7 +398,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
       open_import(lv)
       upload(lv, @two_events)
       start_import(lv)
-      assert_receive {:writing, task}, @task_timeout
+      assert_receive {:writing, task}, task_timeout()
 
       upload(lv, @two_events, "again.ics")
 
@@ -442,7 +411,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
       refute has_element?(lv, ~s([data-testid="calendar-import-summary"]))
 
       send(task, :continue)
-      assert_receive {:writing, ^task}, @task_timeout
+      assert_receive {:writing, ^task}, task_timeout()
       send(task, :continue)
       await_task(task)
     end

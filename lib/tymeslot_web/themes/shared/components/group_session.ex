@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.GroupSession do
 
   use TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
+  alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   attr :meeting_type, :any, required: true
@@ -98,8 +99,11 @@ defmodule TymeslotWeb.Themes.Shared.Components.GroupSession do
     >
       <.icon name="hero-arrows-right-left-mini" class="group-session-line-icon" />
       <span>
-        {dgettext("booking", "Moving your spot on %{datetime}. Pick a new time below.",
-          datetime: LocalizationHelpers.format_meeting_datetime(@from, @timezone)
+        {dgettext("booking", "Moving your spot on %{on_datetime}. Pick a new time below.",
+          on_datetime:
+            @from
+            |> LocalizationHelpers.format_meeting_datetime(@timezone)
+            |> LocaleFormat.with_article(:di, Gettext.get_locale(TymeslotWeb.Gettext))
         )}
       </span>
     </div>

@@ -18,9 +18,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
 
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Repo
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
 
   @moduletag :payments
   @moduletag :live
@@ -216,9 +217,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
     end
   end
 
-  # Declining a paid request refunds it there and then, so the card only
-  # meets a declined booking whose automatic refund failed, and must not tell
-  # the host that cancelling never refunds.
+  # Declining a paid request records its refund, made at once by its job,
+  # so the card only meets a declined booking whose automatic refund failed
+  # (or is still being made), and must not tell the host that cancelling
+  # never refunds.
   describe "a declined request" do
     defp declined_paid_request(host, meeting_attrs \\ %{}) do
       meeting =
@@ -244,6 +246,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
 
       capture_log(fn ->
         assert {:ok, _declined} = Approval.decline(meeting, "Double-booked")
+        Oban.drain_queue(queue: :payments, with_scheduled: true)
       end)
 
       payment
@@ -251,7 +254,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
 
     test "explains a row whose automatic refund failed as a decline", %{conn: conn} do
       host = connected_host()
-      Mox.stub(StripeAdapterMock, :create_refund, fn _params, _opts -> {:error, :api_error} end)
+      StripeStub.stub(:create_refund, {:error_fixture, "invalid_request_error"})
 
       payment = declined_paid_request(host)
 
@@ -267,7 +270,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
 
     test "lists nothing once the automatic refund has gone through", %{conn: conn} do
       host = connected_host()
-      Mox.stub(StripeAdapterMock, :create_refund, fn _params, _opts -> {:ok, %{id: "re_OK"}} end)
+      StripeStub.stub(:create_refund, StripeStubResponses.refund("re_OK"))
 
       declined_paid_request(host)
 
@@ -313,9 +316,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
       host = connected_host()
       payment = cancelled_payment_for(host, %{meeting: insert(:meeting, status: :expired)})
 
-      Mox.stub(StripeAdapterMock, :create_refund, fn params, _opts ->
-        assert params.amount == 5000
-        {:ok, %{id: "re_EXPIRED"}}
+      StripeStub.stub(:create_refund, fn request ->
+        assert request.form["amount"] == "5000"
+        StripeStubResponses.refund(request, "re_EXPIRED")
       end)
 
       {view, _html} = open_payments(conn, host)
@@ -326,8 +329,41 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
       |> form("#refund-form", %{"refund_type" => "full"})
       |> render_submit()
 
+      render_async(view, 5_000)
+
       assert Repo.reload!(payment).status == :refunded
       refute has_element?(view, refund_button(payment))
+    end
+
+    # Part of the balance is still left to refund beside the pending part.
+    test "a row with part of its balance being processed still offers the rest", %{
+      conn: conn
+    } do
+      host = connected_host()
+      payment = cancelled_payment_for(host)
+      insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2000)
+
+      {view, _html} = open_payments(conn, host)
+
+      assert has_element?(view, "#outstanding-refund-#{payment.id}", "€20.00 being processed")
+      assert has_element?(view, refund_button(payment))
+      refute has_element?(view, "#outstanding-refund-#{payment.id}", "Refund processing")
+    end
+
+    # Tymeslot is still making it: the host is not offered a second one.
+    test "a row whose refund is still being processed says so in place of the button", %{
+      conn: conn
+    } do
+      host = connected_host()
+      payment = cancelled_payment_for(host)
+      insert(:booking_payment_refund, booking_payment: payment, amount_cents: 5000)
+
+      {view, _html} = open_payments(conn, host)
+
+      assert has_element?(view, "#outstanding-refund-#{payment.id}", "Refund processing")
+      assert has_element?(view, "#outstanding-refund-#{payment.id}", "€50.00")
+      refute has_element?(view, refund_button(payment))
+      refute has_element?(view, "#outstanding-refund-#{payment.id}", "Refund in Stripe")
     end
 
     # Past 60 days only the host's Stripe dashboard can settle it, so the row
@@ -344,6 +380,49 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
 
       assert html =~ "Refunds outstanding"
       assert html =~ "Refund in Stripe"
+      refute has_element?(view, refund_button(payment))
+    end
+  end
+
+  # Only the part not already pending is left for the host to settle, and
+  # Tymeslot cannot refund it here, so the row points at Stripe for it while
+  # still noting what is pending.
+  describe "a row partly being processed that cannot be refunded here" do
+    test "points at Stripe once the refund window has passed", %{conn: conn} do
+      host = connected_host()
+
+      payment =
+        cancelled_payment_for(host, %{
+          paid_at: DateTime.add(DateTime.utc_now(:second), -61, :day)
+        })
+
+      insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2000)
+
+      {view, _html} = open_payments(conn, host)
+
+      assert has_element?(view, "#outstanding-refund-#{payment.id}", "Refund in Stripe")
+      assert has_element?(view, "#outstanding-refund-#{payment.id}", "€20.00 being processed")
+      refute has_element?(view, "#outstanding-refund-#{payment.id}", "Refund processing")
+      refute has_element?(view, refund_button(payment))
+    end
+
+    test "points at Stripe once Stripe is disconnected", %{conn: conn} do
+      host = connected_host()
+      payment = cancelled_payment_for(host)
+      insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2000)
+
+      {view, _html} = open_payments(conn, host)
+      assert has_element?(view, refund_button(payment))
+
+      view |> element("button[phx-click='open_disconnect_modal']") |> render_click()
+
+      view
+      |> element("#disconnect-modal [data-testid='confirm-disconnect-stripe']")
+      |> render_click()
+
+      assert has_element?(view, "#outstanding-refund-#{payment.id}", "Refund in Stripe")
+      assert has_element?(view, "#outstanding-refund-#{payment.id}", "€20.00 being processed")
+      refute has_element?(view, "#outstanding-refund-#{payment.id}", "Refund processing")
       refute has_element?(view, refund_button(payment))
     end
   end

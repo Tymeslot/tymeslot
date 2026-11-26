@@ -756,3 +756,11 @@ msgstr "Zapisy zostały zamknięte"
 #, elixir-autogen, elixir-format
 msgid "The list is also attached as a CSV file for a spreadsheet."
 msgstr "Lista jest też załączona jako plik CSV do arkusza kalkulacyjnego."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "For %{count} seat"
+msgid_plural "For %{count} seats"
+msgstr[0] "Za %{count} miejsce"
+msgstr[1] "Za %{count} miejsca"
+msgstr[2] "Za %{count} miejsc"

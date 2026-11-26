@@ -175,12 +175,22 @@ defmodule Tymeslot.Test.MigrationRunner do
   end
 
   defp migrate(direction, version, opts) do
+    fire_deferred_checks(opts)
+
     apply(Migrator, direction, [
       repo(opts),
       version,
       module(version, opts),
       migrator_opts(opts)
     ])
+  end
+
+  # The sandbox never commits, so a row the test inserted leaves any deferred
+  # foreign-key check (`booking_payments_seat_hold_id_fkey`) pending, and
+  # Postgres refuses to ALTER a table with pending trigger events. Running the
+  # checks now empties that queue before the migration's DDL.
+  defp fire_deferred_checks(opts) do
+    SQL.query!(Keyword.get(opts, :dynamic_repo, repo(opts)), "SET CONSTRAINTS ALL IMMEDIATE")
   end
 
   # `migration_lock: false` is the load-bearing option; see the moduledoc.

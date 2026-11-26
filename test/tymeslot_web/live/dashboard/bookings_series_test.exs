@@ -18,29 +18,29 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
 
   import Ecto.Query, only: [from: 2]
   import Mox
-  import Tymeslot.AuthTestHelpers
   import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.ConfigTestHelpers
+  import Tymeslot.DashboardTestHelpers, only: [meetings_dashboard: 2, open_series_modal: 2]
   import Tymeslot.Factory
 
   alias Ecto.Changeset
-  alias Plug.Test
   alias Tymeslot.BookingSeries
   alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.CalendarMock
-  alias Tymeslot.MeetingPayments
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
+
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
-  alias Tymeslot.MeetingPayments.Workers.SeriesHostRefund
+  alias Tymeslot.MeetingPayments.Workers.ExecuteRefund
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.ApprovalToken
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.PaidSeriesTestHelpers, as: Paid
   alias Tymeslot.Repo
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.Workers.EmailWorker
 
-  setup :set_mox_global
   setup :verify_on_exit!
 
   setup do
@@ -98,22 +98,6 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
 
   defp statuses, do: Enum.map(meetings(), & &1.status)
 
-  defp dashboard(conn, host) do
-    host.user
-    |> Changeset.change(onboarding_completed_at: DateTime.utc_now(:second))
-    |> Repo.update!()
-
-    conn = conn |> Test.init_test_session(%{}) |> fetch_session() |> log_in_user(host.user)
-    {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
-    view
-  end
-
-  defp open_series(view, meeting) do
-    view |> element("#view-series-#{meeting.id}") |> render_click()
-    assert has_element?(view, "#series-modal [data-testid=series-modal]")
-    view
-  end
-
   defp confirm_cancel_remaining(view, params \\ %{}) do
     view |> element("[data-testid=cancel-remaining-sessions]") |> render_click()
     view |> form("#cancel-series-form", params) |> render_submit()
@@ -123,7 +107,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
     setup %{conn: conn} do
       host = host()
       assert {:ok, %{series: series}} = book(host, series_type(host), 4)
-      %{host: host, series: series, view: dashboard(conn, host)}
+      %{host: host, series: series, view: meetings_dashboard(conn, host.user)}
     end
 
     test "a series member shows its position", %{view: view} do
@@ -140,7 +124,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
 
     test "the series modal lists every session", %{view: view, host: host} do
       [first | _rest] = sessions = meetings()
-      open_series(view, first)
+      open_series_modal(view, first)
 
       assert has_element?(view, "#series-modal", "Series with Ada Lovelace")
       assert has_element?(view, "#series-modal", "Every week on")
@@ -172,7 +156,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
 
     test "cancel remaining from the dashboard", %{view: view, series: series} do
       [first | _rest] = meetings()
-      open_series(view, first)
+      open_series_modal(view, first)
 
       confirm_cancel_remaining(view)
       html = render(view)
@@ -199,7 +183,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
       |> Repo.update!()
 
       [_cancelled, second | _rest] = meetings()
-      open_series(view, second)
+      open_series_modal(view, second)
       view |> element("[data-testid=cancel-remaining-sessions]") |> render_click()
 
       assert has_element?(
@@ -227,9 +211,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
         meeting_payments_enabled: true
       )
 
-      stub(StripeAdapterMock, :retrieve_payment_intent, fn "pi_SERIES", _opts ->
-        {:ok, %{"latest_charge" => "ch_SERIES"}}
-      end)
+      Paid.stub_charge_backfill()
 
       host = Paid.paid_host()
       Paid.expect_checkout()
@@ -243,16 +225,17 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
       %{
         host: host,
         series: series,
-        payment: MeetingPayments.payment_for_series(series.id),
-        view: dashboard(conn, host)
+        payment: BookingPayments.payment_for_series(series.id),
+        view: meetings_dashboard(conn, host.user)
       }
     end
 
     defp expect_refund(amount) do
-      expect(StripeAdapterMock, :create_refund, 1, fn params, _opts ->
-        assert params.charge == "ch_SERIES"
-        assert params.amount == amount
-        {:ok, %{id: "re_SERIES_#{System.unique_integer([:positive])}"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["charge"] == "ch_SERIES"
+        assert request.form["amount"] == to_string(amount)
+
+        StripeStubResponses.refund(request, "re_SERIES_#{System.unique_integer([:positive])}")
       end)
     end
 
@@ -261,7 +244,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
       payment: payment
     } do
       [first | _rest] = meetings()
-      open_series(view, first)
+      open_series_modal(view, first)
 
       assert has_element?(view, "[data-testid=series-payment]", "€200.00 paid")
       assert has_element?(view, "[data-testid=series-payment]", "€0.00 refunded so far")
@@ -281,10 +264,24 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
       assert html =~ "Refund of €200.00 is being processed. We&#39;ll email you if it fails."
 
       expect_refund(20_000)
-      assert [%{args: args}] = all_enqueued(worker: SeriesHostRefund)
-      assert :ok = perform_job(SeriesHostRefund, args)
+      assert [%{args: args}] = all_enqueued(worker: ExecuteRefund)
+      assert :ok = perform_job(ExecuteRefund, args)
 
       assert %{refunded_amount_cents: 20_000, status: :refunded} = Repo.reload!(payment)
+    end
+
+    test "the series shows a refund still being processed", %{view: view, payment: payment} do
+      insert(:booking_payment_refund, booking_payment: payment, amount_cents: 5_000)
+      [first | _rest] = meetings()
+      open_series_modal(view, first)
+
+      assert has_element?(
+               view,
+               "[data-testid=series-payment-pending-refund]",
+               "€50.00 being processed"
+             )
+
+      assert has_element?(view, "[data-testid=series-payment]", "€0.00 refunded so far")
     end
 
     test "a partial refund on cancel remaining refunds that amount", %{
@@ -292,7 +289,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
       payment: payment
     } do
       [first | _rest] = meetings()
-      open_series(view, first)
+      open_series_modal(view, first)
 
       confirm_cancel_remaining(view, %{
         "cancel_refund_choice" => "partial",
@@ -300,8 +297,8 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
       })
 
       expect_refund(3_000)
-      assert [%{args: args}] = all_enqueued(worker: SeriesHostRefund)
-      assert :ok = perform_job(SeriesHostRefund, args)
+      assert [%{args: args}] = all_enqueued(worker: ExecuteRefund)
+      assert :ok = perform_job(ExecuteRefund, args)
       assert Repo.reload!(payment).refunded_amount_cents == 3_000
     end
 
@@ -314,7 +311,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
       |> Repo.update!()
 
       [first | _rest] = meetings()
-      open_series(view, first)
+      open_series_modal(view, first)
       view |> element("[data-testid=cancel-remaining-sessions]") |> render_click()
 
       # Nothing can be refunded, so there is nothing to choose, and the
@@ -330,7 +327,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
       view |> form("#cancel-series-form") |> render_submit()
 
       assert statuses() == [:cancelled, :cancelled, :cancelled, :cancelled]
-      assert all_enqueued(worker: SeriesHostRefund) == []
+      assert all_enqueued(worker: ExecuteRefund) == []
 
       assert render(view) =~
                "4 sessions cancelled without a refund: the payment is older than the 60-day refund window."
@@ -343,7 +340,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
       payment |> Changeset.change(status: :disputed) |> Repo.update!()
 
       [first | _rest] = meetings()
-      open_series(view, first)
+      open_series_modal(view, first)
       view |> element("[data-testid=cancel-remaining-sessions]") |> render_click()
 
       assert has_element?(
@@ -355,7 +352,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
 
     test "a refundable payment carries no no-refund warning", %{view: view} do
       [first | _rest] = meetings()
-      open_series(view, first)
+      open_series_modal(view, first)
       view |> element("[data-testid=cancel-remaining-sessions]") |> render_click()
 
       assert has_element?(view, "#cancel-series-form input[name=cancel_refund_choice]")
@@ -364,7 +361,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
 
     test "a refused amount keeps the dialog open with nothing cancelled", %{view: view} do
       [first | _rest] = meetings()
-      open_series(view, first)
+      open_series_modal(view, first)
 
       confirm_cancel_remaining(view, %{
         "cancel_refund_choice" => "partial",
@@ -374,7 +371,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
       assert has_element?(view, "input[name=cancel_refund_choice][value=partial][checked]")
       assert has_element?(view, "#cancel-series-form [role=alert]", "exceeds the remaining")
       assert statuses() == [:confirmed, :confirmed, :confirmed, :confirmed]
-      assert all_enqueued(worker: SeriesHostRefund) == []
+      assert all_enqueued(worker: ExecuteRefund) == []
     end
 
     test "cancelling one paid session defaults to one session's refund", %{
@@ -408,7 +405,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
     end
 
     defp open_requests(conn, host) do
-      view = dashboard(conn, host)
+      view = meetings_dashboard(conn, host.user)
       render_click(element(view, "button", "Requests"))
       view
     end
@@ -478,7 +475,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
 
       assert Meetings.count_awaiting_approval_for_organizer(host.user.id) == 2
 
-      view = dashboard(conn, host)
+      view = meetings_dashboard(conn, host.user)
       assert view |> element("#meetings-filter button", "Requests") |> render() =~ ~r/>\s*2\s*</
     end
 
@@ -531,7 +528,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
       host = host()
       type = series_type(host, max_participants: 3)
       assert {:ok, %{series: series}} = book(host, type, 3)
-      %{host: host, series: series, view: dashboard(conn, host)}
+      %{host: host, series: series, view: meetings_dashboard(conn, host.user)}
     end
 
     defp seats,

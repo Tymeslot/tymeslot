@@ -1,0 +1,142 @@
+name: Browser suite
+
+# The Wallaby browser suite (`test/tymeslot_web/e2e/`, run by `mix test.e2e`)
+# is excluded from `mix test`, from `mix precommit` and from `verify.yml`: a
+# full run is serial (BrowserCase sets Mox global, so every module is
+# `async: false`) and takes the better part of a quarter of an hour. Left to
+# be run by hand, it was not run at all, and features rotted for weeks before
+# anyone noticed. It is the only thing that exercises the JavaScript hooks,
+# the embed scripts and the theme CSS in a real browser, so this workflow gives
+# it a schedule of its own.
+#
+# A workflow of its own rather than a job in `excluded-suites.yml`, so that a
+# red browser run, which is the likeliest of all of them to go red, does not
+# turn that run red and hide a rotted suite behind it.
+on:
+  schedule:
+    # Nightly at 04:41 UTC: clear of the 03:17 excluded-suites slot and the
+    # 23:11 flake hunt, and off the hour, where GitHub's scheduler is most
+    # contended and queued jobs are the ones that get dropped.
+    - cron: "41 4 * * *"
+  # Manual trigger, so the suite can be run before cutting a release rather
+  # than trusting the last nightly.
+  workflow_dispatch:
+  # Pull requests that touch what only a browser sees break. Advisory, like
+  # the nightly: it is not meant to become a required check, because the suite
+  # is slow and a pull request outside these paths cannot affect it.
+  pull_request:
+    paths:
+      - "assets/js/**"
+      - "assets/css/**"
+      - "lib/tymeslot_web/themes/**"
+      - "lib/tymeslot_web/live/**"
+      - "lib/tymeslot_web/components/**"
+      - "test/tymeslot_web/e2e/**"
+      - "test/support/e2e/**"
+      - ".github/workflows/e2e.yml"
+
+permissions:
+  contents: read
+
+# A newer push to the same pull request makes the run in flight worthless.
+# Scheduled and manual runs each get a group of their own and are never
+# cancelled.
+concurrency:
+  group: e2e-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    # Only run on GitHub, not Gitea
+    if: github.server_url == 'https://github.com'
+    # Roughly three times a serial run on a developer machine, so a slow
+    # runner finishes while a wedged browser session is still cut off long
+    # before the 360-minute platform default.
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    env:
+      MIX_ENV: test
+      TEST_DB_POOL_SIZE: "10"
+      ELIXIR_VERSION: "1.20.4"
+      OTP_VERSION: "28.5.0.7"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+      # Restore-only, for the reason excluded-suites.yml gives: verify.yml
+      # saves this cache on every push to main, and a job that goes red never
+      # saves its own. The path list must match verify.yml's exactly, because
+      # it is part of the cache version.
+      - uses: actions/cache/restore@v5
+        with:
+          path: |
+            deps
+            _build
+            priv/plts
+          key: ${{ runner.os }}-elixir-${{ env.ELIXIR_VERSION }}-otp-${{ env.OTP_VERSION }}-mix-${{ hashFiles('mix.lock') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-elixir-${{ env.ELIXIR_VERSION }}-otp-${{ env.OTP_VERSION }}-mix-${{ hashFiles('mix.lock') }}-
+      - run: mix deps.get
+      # `mix test.e2e` builds the assets itself, but only with the Tailwind
+      # and esbuild binaries already in place; on a cold cache nothing else
+      # downloads them.
+      - run: mix assets.setup
+      # test/support/e2e/fonts.conf maps the generic families to Liberation
+      # Sans so layout checks measure the same text on every machine. The
+      # runner image does not guarantee the package; Chrome for Testing,
+      # unlike google-chrome-stable, does not pull it in.
+      - name: Install fonts
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-liberation
+      # Chrome for Testing with the chromedriver built for it. The runner
+      # image ships a Chrome and a chromedriver of its own, which drift apart
+      # whenever one updates before the other, and Wallaby refuses to start
+      # on a version mismatch.
+      - id: chrome
+        uses: browser-actions/setup-chrome@v2
+        with:
+          chrome-version: stable
+          install-chromedriver: true
+      # config/test.exs reads the browser from CHROME_BINARY. Wallaby looks
+      # chromedriver up on PATH, so the matching one goes in front of the
+      # runner image's.
+      - name: Point Wallaby at the installed browser
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+          CHROMEDRIVER_PATH: ${{ steps.chrome.outputs.chromedriver-path }}
+        run: |
+          echo "CHROME_BINARY=${CHROME_PATH}" >> "$GITHUB_ENV"
+          dirname "${CHROMEDRIVER_PATH}" >> "$GITHUB_PATH"
+      - name: Show browser versions
+        run: |
+          "${CHROME_BINARY}" --version
+          command -v chromedriver
+          chromedriver --version
+      # Runs `assets.build`, `ecto.create` and `ecto.migrate` before the
+      # suite, so no step above repeats them.
+      - run: mix test.e2e
+      # Wallaby writes a screenshot per failed feature, and test_helper.exs
+      # sends the browser console to a file rather than stdout; both are the
+      # first things to read when a run goes red.
+      - name: Upload failure artefacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            /tmp/tymeslot-screenshots/
+            /tmp/tymeslot-e2e-console.log
+          if-no-files-found: ignore
+          retention-days: 14

@@ -335,3 +335,8 @@ msgstr "Les invités ne peuvent être ajoutés qu’à une réservation unique. 
 #, elixir-autogen, elixir-format
 msgid "The request to pick a new time for this meeting has lapsed, so it is no longer booked. You're welcome to book a new time."
 msgstr "La demande de choix d’un nouveau créneau pour cette réunion a expiré, la réunion n’est donc plus réservée. Vous pouvez réserver un nouveau créneau."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "A payment for this email is still open for this time. Finish that payment, or try again in about half an hour."
+msgstr "Un paiement associé à cette adresse e-mail est toujours en cours pour cet horaire. Finalisez-le, ou réessayez dans une demi-heure environ."

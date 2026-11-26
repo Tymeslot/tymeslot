@@ -382,6 +382,8 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
             module={PaymentsSettingsComponent}
             id="payments-settings"
             current_user={@current_user}
+            profile={@profile}
+            time_format={@time_format}
             connect_account={@connect_account}
           />
         </div>

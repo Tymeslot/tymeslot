@@ -641,3 +641,10 @@ msgstr "Affichage des 100 invitations les plus récentes."
 #, elixir-autogen, elixir-format
 msgid "This link has expired, so it can't be reopened. Create a new one instead."
 msgstr "Ce lien a expiré et ne peut donc pas être rouvert. Créez-en plutôt un nouveau."
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} paid by %{count} person is refunded in full."
+msgid_plural "%{amount} paid by %{count} people is refunded in full."
+msgstr[0] "Le montant de %{amount} payé par %{count} personne est intégralement remboursé."
+msgstr[1] "Le montant de %{amount} payé par %{count} personnes est intégralement remboursé."

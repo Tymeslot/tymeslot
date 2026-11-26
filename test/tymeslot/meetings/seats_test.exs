@@ -9,6 +9,7 @@ defmodule Tymeslot.Meetings.SeatsTest do
 
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.GuestSchema
+  alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Meetings.Seats
 
   describe "display/3" do
@@ -159,6 +160,111 @@ defmodule Tymeslot.Meetings.SeatsTest do
         )
 
       assert %{^start_time => 1} = counts
+    end
+  end
+
+  describe "seat holds" do
+    defp held_meeting(attrs \\ []) do
+      user = insert(:user)
+      meeting_type = insert(:meeting_type, user: user)
+      start_time = DateTime.add(DateTime.utc_now(:second), 1, :day)
+
+      insert(
+        :group_meeting,
+        [
+          organizer_user: user,
+          meeting_type_ref: meeting_type,
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 30, :minute),
+          status: :awaiting_payment
+        ] ++ attrs
+      )
+    end
+
+    test "seats_occupied counts held seats, seats_taken does not" do
+      meeting = held_meeting(capacity: 5)
+      insert(:participant, meeting: meeting)
+      insert(:seat_hold, meeting: meeting, seats: 2, email: "ann@example.com")
+
+      assert Seats.seats_occupied(meeting.id) == 3
+      assert Seats.seats_taken(meeting.id) == 1
+      assert Seats.seats_left(meeting, 5) == 2
+    end
+
+    test "counts_by_meeting counts people, not holds, as seats_taken/1 does" do
+      held_only = held_meeting()
+      insert(:seat_hold, meeting: held_only, seats: 2, email: "ann@example.com")
+
+      mixed = held_meeting()
+      insert(:participant, meeting: mixed)
+      insert(:seat_hold, meeting: mixed, seats: 2, email: "bob@example.com")
+
+      assert Seats.counts_by_meeting([held_only.id, mixed.id]) == %{
+               held_only.id => %{participants: 0, seats_taken: 0},
+               mixed.id => %{participants: 1, seats_taken: 1}
+             }
+
+      assert Seats.seats_taken(mixed.id) == 1
+
+      # What the slots still take counts the holds.
+      assert Seats.seats_left_by_meeting([%{held_only | capacity: 3}, %{mixed | capacity: 4}]) ==
+               %{held_only.id => 1, mixed.id => 1}
+    end
+
+    test "seat_counts_for_range includes a hold-only slot and adds holds to seats" do
+      held_only = held_meeting()
+      insert(:seat_hold, meeting: held_only, seats: 2, email: "ann@example.com")
+
+      start = DateTime.add(held_only.start_time, 1, :hour)
+
+      mixed =
+        insert(:group_meeting,
+          organizer_user_id: held_only.organizer_user_id,
+          meeting_type_id: held_only.meeting_type_id,
+          start_time: start,
+          end_time: DateTime.add(start, 30, :minute)
+        )
+
+      insert(:participant, meeting: mixed)
+      insert(:seat_hold, meeting: mixed, seats: 1, email: "bob@example.com")
+
+      counts =
+        Seats.seat_counts_for_range(
+          held_only.meeting_type_id,
+          DateTime.add(held_only.start_time, -1, :hour),
+          DateTime.add(held_only.start_time, 3, :hour)
+        )
+
+      assert counts == %{held_only.start_time => 2, mixed.start_time => 2}
+    end
+
+    test "a released hold is not counted" do
+      meeting = held_meeting()
+      hold = insert(:seat_hold, meeting: meeting, seats: 2, email: "ann@example.com")
+      {:ok, _released} = SeatHolds.release(hold, :expired)
+
+      assert Seats.seats_occupied(meeting.id) == 0
+
+      assert Seats.counts_by_meeting([meeting.id]) == %{
+               meeting.id => %{participants: 0, seats_taken: 0}
+             }
+
+      assert Seats.seat_counts_for_range(
+               meeting.meeting_type_id,
+               DateTime.add(meeting.start_time, -1, :hour),
+               DateTime.add(meeting.start_time, 1, :hour)
+             ) == %{}
+    end
+
+    test "seat_counts_for_range leaves out a hold on a cancelled meeting" do
+      meeting = held_meeting(status: :cancelled)
+      insert(:seat_hold, meeting: meeting, seats: 2, email: "ann@example.com")
+
+      assert Seats.seat_counts_for_range(
+               meeting.meeting_type_id,
+               DateTime.add(meeting.start_time, -1, :hour),
+               DateTime.add(meeting.start_time, 1, :hour)
+             ) == %{}
     end
   end
 end

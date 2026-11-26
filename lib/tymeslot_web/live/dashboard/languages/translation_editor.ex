@@ -22,7 +22,10 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
     * `:only_open` - show only the texts still missing or outdated;
     * `:notify` - `{module, id}` of a component told
       `translation_saved: entity` after each save, so it can refresh what it
-      shows from the saved record.
+      shows from the saved record;
+    * `:leave_target` - the component (`@myself`) sent `"leave"` when the
+      organiser follows a link elsewhere with unsaved texts here (the
+      `UnsavedChanges` hook); it calls `leave/2` and then lets the link go.
 
   Only the texts the organiser changed are sent as texts on save; an
   outdated one left as it was is confirmed rather than rewritten (below).
@@ -34,7 +37,9 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
   review page) goes through `leave/2`, so what was typed is not lost: the
   changed texts are saved first, as the autosaving forms save theirs, and
   only then does the caller carry on. When that save fails the editor stays,
-  showing why; asking to leave again leaves without saving.
+  showing why; asking to leave again leaves without saving. A link to
+  another dashboard section is held by the form's `UnsavedChanges` hook
+  until that save is done.
 
   An outdated translation is hidden from invitees, who see the original
   instead, until it is updated or confirmed as still correct (`Catalogue.confirm/4`),
@@ -50,6 +55,7 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
   alias Tymeslot.ContentTranslations
   alias Tymeslot.ContentTranslations.Catalogue
   alias TymeslotWeb.Components.CoreComponents.Forms
+  alias TymeslotWeb.Components.Dashboard.Autosave
   alias TymeslotWeb.Dashboard.Languages.Labels
 
   @impl Phoenix.LiveComponent
@@ -62,7 +68,8 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
        paths: nil,
        original: nil,
        only_open: false,
-       notify: nil
+       notify: nil,
+       leave_target: nil
      )}
   end
 
@@ -172,7 +179,7 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
 
     if changed == %{} and kept == [] do
       Flash.info(dgettext("dashboard_languages", "Nothing to save: no translation changed."))
-      {:noreply, assign(socket, :draft, typed)}
+      {:noreply, socket |> assign(:draft, typed) |> Autosave.clean(form_id(socket))}
     else
       save(socket, changed, typed, kept)
     end
@@ -250,7 +257,8 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
            errors: %{},
            leave_unsaved: false
          )
-         |> assign_fields()}
+         |> assign_fields()
+         |> Autosave.clean(form_id(socket))}
 
       {:error, :not_found} ->
         {:error, assign(socket, draft: typed, errors: %{base: [not_found_message()]})}
@@ -259,6 +267,8 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
         {:error, assign(socket, draft: typed, errors: errors_by_path(changeset))}
     end
   end
+
+  defp form_id(socket), do: "#{socket.assigns.id}-form"
 
   defp not_found_message, do: dgettext("dashboard_languages", "This item no longer exists.")
 
@@ -318,6 +328,9 @@ defmodule TymeslotWeb.Dashboard.Languages.TranslationEditor do
           phx-change="draft"
           phx-submit="save"
           phx-target={@myself}
+          phx-hook="UnsavedChanges"
+          data-leave-event="leave"
+          data-leave-target={@leave_target}
           class="space-y-6"
         >
           <.translation_field

@@ -13,7 +13,7 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
   already went out. Instead, the meeting-level job here is a dispatcher: it
   enqueues one independently-retryable per-seat job per participant (unique
   per seat and per logical email, see
-  `Tymeslot.Emails.EmailScheduler.MeetingScheduler.schedule_seat_email/5`)
+  `Tymeslot.Emails.EmailScheduler.SeatScheduler.schedule_seat_email/5`)
   plus sends the single organiser email inline, and returns `:ok`. A failed
   organiser send retries the whole dispatch, which is safe because
   re-enqueuing an already-unique per-seat job is a no-op.
@@ -37,12 +37,15 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.Cancellation
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.Recipient
   alias Tymeslot.Notifications.Email.DeliveryOutcome
+  alias Tymeslot.Notifications.Email.RescheduleRequestEmails
   alias Tymeslot.Notifications.Email.SeatJobs
   alias Tymeslot.Notifications.GuestNotifications
+  alias Tymeslot.Notifications.Relevance
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Workers.DeliveryClaims
 
@@ -130,7 +133,8 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
   @doc """
   One live participant's reschedule request. Dispatched by
   `send_group_reschedule_requests/2` so a failure sending to one participant
-  cannot block or discard the rest.
+  cannot block or discard the rest, and sent only while the request can
+  still be answered (`RescheduleRequestEmails.check_answerable/1`).
   """
   @spec handle_seat_reschedule_request(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
@@ -143,7 +147,10 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
       participant_id,
       "seat reschedule request",
       {:not_cancelled, :live},
-      &send_seat_reschedule_request/2
+      fn meeting, participant ->
+        with :ok <- RescheduleRequestEmails.check_answerable(meeting),
+             do: send_seat_reschedule_request(meeting, participant)
+      end
     )
   end
 
@@ -173,10 +180,19 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
   Dispatches one cancellation job per live participant plus one organiser
   email sent inline (there is only ever one organiser, so a job buys it no
   independent retry benefit).
+
+  `seat_refund` is what the host's cancellation did with the money of the
+  seats that were paid for (`Tymeslot.Meetings.Cancellation.seat_refund/0`,
+  fixed when it settled them), or `nil` when no seat was paid: the
+  organiser's copy says so, and only the organiser's. A participant is never
+  told of a refund, which the host may yet decline.
   """
-  @spec send_group_cancellation_emails(MeetingSchema.t(), [Recipient.t()]) ::
-          :ok | {:error, term()}
-  def send_group_cancellation_emails(meeting, participants) do
+  @spec send_group_cancellation_emails(
+          MeetingSchema.t(),
+          [Recipient.t()],
+          Cancellation.seat_refund() | nil
+        ) :: :ok | {:error, term()}
+  def send_group_cancellation_emails(meeting, participants, seat_refund) do
     with :ok <-
            dispatch_seat_jobs(participants, fn recipient ->
              EmailScheduler.schedule_seat_meeting_cancellation_email(
@@ -185,7 +201,9 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
              )
            end) do
       organizer_details =
-        AppointmentBuilder.for_organizer_of_group(meeting, length(participants))
+        meeting
+        |> AppointmentBuilder.for_organizer_of_group(length(participants))
+        |> Map.put(:seat_money, seat_refund)
 
       meeting.organizer_email
       |> Config.email_service_module().send_cancellation_email_to_organizer(organizer_details)
@@ -210,7 +228,8 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
                meeting.id,
                recipient.participant_id,
                reminder_value,
-               reminder_unit
+               reminder_unit,
+               Relevance.meeting_start(meeting)
              )
            end) do
       reminder = %{value: reminder_value, unit: reminder_unit}

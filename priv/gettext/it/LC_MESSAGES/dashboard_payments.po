@@ -130,6 +130,7 @@ msgstr "Scollegare il tuo account Stripe da Tymeslot? I pagamenti esistenti rest
 msgid "Disconnected"
 msgstr "Scollegato"
 
+#: lib/tymeslot_web/components/dashboard/meetings/participant_payment_pill.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Disputed"
@@ -262,6 +263,7 @@ msgstr "Rimborsa il pagamento"
 msgid "Refund type"
 msgstr "Tipo di rimborso"
 
+#: lib/tymeslot_web/components/dashboard/meetings/participant_payment_pill.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/lifetime_stats.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
@@ -411,8 +413,8 @@ msgstr "Il tuo account Stripe non è collegato, quindi questi rimborsi vanno eme
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Cancelled %{date}"
-msgstr "Annullata il %{date}"
+msgid "Cancelled %{on_date}"
+msgstr "Annullata %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
@@ -421,8 +423,8 @@ msgstr "Scaduta"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Expired, paid %{date}"
-msgstr "Scaduta, pagata il %{date}"
+msgid "Expired, paid %{on_date}"
+msgstr "Scaduta, pagata %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
@@ -431,8 +433,8 @@ msgstr "Le prenotazioni scadute sono state pagate ma mai confermate, ad esempio 
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
-msgid "Declined %{date}"
-msgstr "Rifiutata il %{date}"
+msgid "Declined %{on_date}"
+msgstr "Rifiutata %{on_date}"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
@@ -521,11 +523,6 @@ msgstr "Troppe richieste. Riprova più tardi."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
-msgid "Your Stripe account is connected, but Stripe still needs some details before it can take payments. Finish setup in Stripe, then reload this page."
-msgstr "Il tuo account Stripe è collegato, ma Stripe ha ancora bisogno di alcune informazioni prima di poter accettare pagamenti. Completa la configurazione in Stripe, poi ricarica questa pagina."
-
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
-#, elixir-autogen, elixir-format
 msgid "Your Stripe account is not connected yet. Connect it to start accepting payments."
 msgstr "Il tuo account Stripe non è ancora collegato. Collegalo per iniziare ad accettare pagamenti."
 
@@ -540,3 +537,81 @@ msgstr[1] "%{count} pagamenti in corso verranno annullati quando scolleghi l'acc
 #, elixir-autogen, elixir-format
 msgid "A checkout is in progress in your current currency. Try again in a few minutes."
 msgstr "C'è un pagamento in corso nella tua valuta attuale. Riprova tra qualche minuto."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} being processed"
+msgstr "%{amount} in corso di rimborso"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "A refund for this payment is already being processed."
+msgstr "Per questo pagamento c'è già un rimborso in corso."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Refund processing"
+msgstr "Rimborso in corso"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Refund submitted. Stripe has not confirmed it yet; Tymeslot keeps trying and emails the attendee once it goes through."
+msgstr "Rimborso inviato. Stripe non l'ha ancora confermato; Tymeslot continua a riprovare e avviserà il partecipante via email quando andrà a buon fine."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe declined this refund. Check the payment in your Stripe dashboard."
+msgstr "Stripe ha rifiutato questo rimborso. Controlla il pagamento nella dashboard di Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Lost in a dispute:"
+msgstr "Perso in una contestazione:"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Check again"
+msgstr "Verifica di nuovo"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Checking…"
+msgstr "Verifica in corso…"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not reach Stripe to check your account. Please try again."
+msgstr "Impossibile contattare Stripe per verificare il tuo account. Riprova."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe still needs some details. Finish setup in Stripe, then check again."
+msgstr "Stripe ha ancora bisogno di alcune informazioni. Completa la configurazione in Stripe, poi verifica di nuovo."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account is connected, but Stripe still needs some details before it can take payments. Finish setup in Stripe, then choose Check again."
+msgstr "Il tuo account Stripe è collegato, ma Stripe ha ancora bisogno di alcune informazioni prima di poter accettare pagamenti. Completa la configurazione in Stripe, poi scegli «Verifica di nuovo»."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} seat"
+msgid_plural "%{count} seats"
+msgstr[0] "%{count} posto"
+msgstr[1] "%{count} posti"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
+#, elixir-autogen, elixir-format
+msgid "%{type} · %{date}"
+msgstr "%{type} · %{date}"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Left %{on_date}"
+msgstr "Posto lasciato il %{on_date}"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Not booked, paid %{on_date}"
+msgstr "Nessuna prenotazione, pagamento del %{on_date}"

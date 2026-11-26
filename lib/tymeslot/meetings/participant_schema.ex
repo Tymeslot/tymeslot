@@ -13,8 +13,7 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Tymeslot.ChangesetValidators.Email, as: EmailChangeset
-  alias Tymeslot.Locales
+  alias Tymeslot.Meetings.BookerContact
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Security.EncryptedString
   alias Tymeslot.Security.Token
@@ -39,6 +38,9 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
           confirmation_sent_at: DateTime.t() | nil,
           organizer_notified_at: DateTime.t() | nil,
           cancelled_at: DateTime.t() | nil,
+          verification_deadline_at: DateTime.t() | nil,
+          email_verified_at: DateTime.t() | nil,
+          verification_emails_sent: pos_integer() | nil,
           meeting: MeetingSchema.t() | Ecto.Association.NotLoaded.t() | nil,
           guests: [Tymeslot.Meetings.GuestSchema.t()] | Ecto.Association.NotLoaded.t(),
           inserted_at: DateTime.t() | nil,
@@ -72,6 +74,13 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
     field(:confirmation_sent_at, :utc_datetime)
     field(:organizer_notified_at, :utc_datetime)
     field(:cancelled_at, :utc_datetime)
+    # Both nil is an ungated seat. A deadline with no verification time is a
+    # seat held until its booker confirms their address.
+    field(:verification_deadline_at, :utc_datetime)
+    field(:email_verified_at, :utc_datetime)
+    # Verification emails sent to a held seat, `nil` meaning only the one
+    # sent with the booking. Written only by `ParticipantQueries.count_verification_email/3`.
+    field(:verification_emails_sent, :integer)
 
     belongs_to(:meeting, MeetingSchema, type: :binary_id)
 
@@ -83,6 +92,12 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
     has_many(:guests, Tymeslot.Meetings.GuestSchema,
       foreign_key: :participant_id,
       preload_order: [asc: :inserted_at]
+    )
+
+    # The payment of a paid seat (`seat_payment: true`); none for a free one.
+    # It follows a moved seat to its new participant.
+    has_one(:booking_payment, Tymeslot.MeetingPayments.BookingPaymentSchema,
+      foreign_key: :participant_id
     )
 
     timestamps(type: :utc_datetime)
@@ -113,15 +128,13 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
       :locale,
       :custom_field_answers,
       :management_token,
+      :verification_deadline_at,
+      :email_verified_at,
       :series_id,
       :series_position
     ])
-    |> update_change(:email, &normalize_email/1)
-    |> validate_required([:meeting_id, :name, :email, :timezone, :locale])
-    |> EmailChangeset.validate_email(:email)
-    |> validate_inclusion(:locale, supported_locale_codes(),
-      message: dgettext_noop("errors", "is not a supported locale")
-    )
+    |> validate_required([:meeting_id])
+    |> BookerContact.validate()
     |> ensure_management_token()
     |> Token.put_hash(:management_token, :management_token_hash)
     |> unique_constraint(:management_token_hash)
@@ -190,6 +203,12 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
   def live?(%__MODULE__{cancelled_at: nil}), do: true
   def live?(%__MODULE__{}), do: false
 
+  @doc "True while the seat is held for its booker to verify their email address."
+  @spec unverified?(t()) :: boolean()
+  def unverified?(%__MODULE__{verification_deadline_at: nil}), do: false
+  def unverified?(%__MODULE__{email_verified_at: nil}), do: true
+  def unverified?(%__MODULE__{}), do: false
+
   defp ensure_management_token(changeset) do
     case get_field(changeset, :management_token) do
       nil -> put_change(changeset, :management_token, Token.generate(@token_bytes))
@@ -199,11 +218,5 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
 
   @doc "An email address as a participant row stores it: trimmed and lower-cased."
   @spec normalize_email(String.t() | nil) :: String.t() | nil
-  def normalize_email(nil), do: nil
-
-  def normalize_email(email) when is_binary(email) do
-    email |> String.trim() |> String.downcase()
-  end
-
-  defp supported_locale_codes, do: Locales.supported_codes()
+  defdelegate normalize_email(email), to: BookerContact
 end

@@ -1,0 +1,13 @@
+{
+  "status": 402,
+  "body": {
+    "error": {
+      "charge": "ch_test1",
+      "code": "card_declined",
+      "decline_code": "generic_decline",
+      "doc_url": "https://stripe.com/docs/error-codes/card-declined",
+      "message": "Your card was declined.",
+      "type": "card_error"
+    }
+  }
+}

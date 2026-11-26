@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Live.Themes.MeetingIdorTest do
       victim_meeting = future_meeting(organizer_user: victim_user)
 
       # The attacker visits their own username URL but injects the victim's meeting UID.
-      assert {:error, {:redirect, %{to: "/", flash: flash}}} =
+      assert {:error, {:redirect, %{to: "/attacker", flash: flash}}} =
                live(conn, ~p"/#{attacker_profile.username}/meeting/#{victim_meeting.uid}/cancel")
 
       assert flash["error"] =~ "could not be found"
@@ -76,7 +76,7 @@ defmodule TymeslotWeb.Live.Themes.MeetingIdorTest do
       victim_user = insert(:user)
       victim_meeting = future_meeting(organizer_user: victim_user)
 
-      assert {:error, {:redirect, %{to: "/", flash: flash}}} =
+      assert {:error, {:redirect, %{to: "/attacker2", flash: flash}}} =
                live(
                  conn,
                  ~p"/#{attacker_profile.username}/meeting/#{victim_meeting.uid}/reschedule"
@@ -113,7 +113,7 @@ defmodule TymeslotWeb.Live.Themes.MeetingIdorTest do
       victim_user = insert(:user)
       victim_meeting = future_meeting(organizer_user: victim_user)
 
-      assert {:error, {:redirect, %{to: "/", flash: flash}}} =
+      assert {:error, {:redirect, %{to: "/attacker3", flash: flash}}} =
                live(
                  conn,
                  ~p"/#{attacker_profile.username}/meeting/#{victim_meeting.uid}/cancel-confirmed"
@@ -143,7 +143,7 @@ defmodule TymeslotWeb.Live.Themes.MeetingIdorTest do
           end_time: DateTime.utc_now() |> DateTime.add(7200) |> DateTime.truncate(:second)
         )
 
-      assert {:error, {:redirect, %{to: "/", flash: flash}}} =
+      assert {:error, {:redirect, %{to: "/owner3", flash: flash}}} =
                live(
                  conn,
                  ~p"/#{owner_profile.username}/meeting/#{cancelled_meeting.uid}/cancel"
@@ -167,7 +167,7 @@ defmodule TymeslotWeb.Live.Themes.MeetingIdorTest do
           end_time: DateTime.utc_now() |> DateTime.add(-3600) |> DateTime.truncate(:second)
         )
 
-      assert {:error, {:redirect, %{to: "/", flash: flash}}} =
+      assert {:error, {:redirect, %{to: "/owner4", flash: flash}}} =
                live(
                  conn,
                  ~p"/#{owner_profile.username}/meeting/#{past_meeting.uid}/reschedule"

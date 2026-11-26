@@ -31,7 +31,13 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Themes.Shared.Components.MeetingPageBodies
   alias TymeslotWeb.Themes.Shared.Components.SeriesPage
-  alias TymeslotWeb.Themes.Shared.{PaymentReturn, PaymentReturnComponents, PollVotingComponents}
+
+  alias TymeslotWeb.Themes.Shared.{
+    PathHandlers,
+    PaymentReturn,
+    PaymentReturnComponents,
+    PollVotingComponents
+  }
 
   @type shell :: (map() -> Phoenix.LiveView.Rendered.t())
 
@@ -67,6 +73,7 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
         loading: assigns[:loading] || false,
         meeting_kept: assigns[:meeting_kept] || false,
         meeting_uid: assigns[:meeting_uid],
+        booking_path: PathHandlers.booking_path(assigns),
         organizer_profile: assigns[:organizer_profile],
         participant: assigns[:participant],
         link_request: assigns[:link_request],
@@ -122,7 +129,7 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
   end
 
   defp body(%{page: :payment_processing} = assigns) do
-    outcome = PaymentReturn.outcome(assigns.loading, assigns.payment, assigns.meeting)
+    outcome = PaymentReturn.page_outcome(assigns)
     assigns = assign(assigns, :status, payment_status(PaymentReturn.progress(outcome)))
 
     ~H"""
@@ -133,6 +140,8 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
       payment={@payment}
       meeting={@meeting}
       rebook_path={@rebook_path}
+      outcome={assigns[:outcome]}
+      seat_hold={assigns[:seat_hold]}
     />
     """
   end

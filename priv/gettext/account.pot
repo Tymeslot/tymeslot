@@ -334,12 +334,12 @@ msgstr ""
 
 #: lib/tymeslot_web/live/account_live/delete_account_modal.ex
 #, elixir-autogen, elixir-format
-msgid "Your account will be deleted on %{date}."
+msgid "Your account will be deleted on %{on_date}."
 msgstr ""
 
 #: lib/tymeslot_web/live/account_live/handlers.ex
 #, elixir-autogen, elixir-format
-msgid "Your account will be deleted on %{date}. Sign in before then if you change your mind."
+msgid "Your account will be deleted on %{on_date}. Sign in before then if you change your mind."
 msgstr ""
 
 #: lib/tymeslot_web/live/account_live/delete_account_modal.ex

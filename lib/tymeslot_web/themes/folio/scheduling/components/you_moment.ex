@@ -253,6 +253,7 @@ defmodule TymeslotWeb.Themes.Folio.Scheduling.Components.YouMoment do
           locale={@locale}
           rescheduling={@is_rescheduling}
           count={@series_count}
+          seats={SeriesSummary.seats(assigns)}
           class="folio-booking__price"
         />
         <button

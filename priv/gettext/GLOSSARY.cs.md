@@ -67,6 +67,7 @@ Genitive singular and genitive plural are given wherever a translator will need 
 | backups (of data) | **zálohování dat** **[DECIDED]**, never bare *zálohy*, which on our site always means deposits: *aktualizace a zálohování dat*, *s automatickým zálohováním dat* | n. | zálohování dat | n/a | n/a |
 | payment | **platba** | f. | platby | platby | plateb |
 | refund | **vrácení platby**; *Refunded* → **Vráceno** | n. | vrácení | n/a | n/a |
+| dispute / chargeback (a cardholder contesting a payment) | **spor** **[DECIDED]**, never *reklamace* (a complaint to the seller) and never the verb *sporovat*: *Byl zahájen spor*, *Držitel karty zahájil spor o …*; *Disputed* (status) → **Ve sporu**, as an adjective **sporný** (*Sporná částka*); *under dispute* → *k platbě probíhá spor*; *lost in a dispute* → *strženo po prohraném sporu* (in a sentence); as a label, *Lost in a dispute:* → **Strženo po prohraném sporu:** | m.i. | sporu | spory | sporů |
 | subscription | **předplatné** (adjectival declension: gen. **předplatného**, dat. předplatnému) | n. | předplatného | n/a | n/a |
 | plan (pricing tier) | **tarif** | m.i. | tarifu | tarify | tarifů |
 | trial | **zkušební období** | n. | zkušebního období | n/a | n/a |

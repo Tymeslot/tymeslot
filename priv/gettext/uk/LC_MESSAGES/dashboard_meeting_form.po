@@ -186,7 +186,7 @@ msgstr "Перепідключити"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
 msgid "Refreshing calendars..."
-msgstr "Оновлення календарів..."
+msgstr "Оновлення календарів…"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_tabs.ex
 #, elixir-autogen, elixir-format
@@ -529,16 +529,6 @@ msgstr "Ліміт учасників має бути дійсним число�
 #, elixir-autogen, elixir-format
 msgid "Participant limit must be at least %{min}"
 msgstr "Ліміт учасників має бути щонайменше %{min}"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off group bookings to require payment."
-msgstr "Вимкніть групові бронювання, щоб вимагати оплату."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off payments to enable group bookings."
-msgstr "Вимкніть оплату, щоб увімкнути групові бронювання."
 
 #: lib/tymeslot_web/helpers/context_errors.ex
 #, elixir-autogen, elixir-format
@@ -916,11 +906,6 @@ msgstr "Підтвердження електронної пошти"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
-msgid "Turn off group bookings to ask invitees to confirm their email."
-msgstr "Вимкніть групові бронювання, щоб просити запрошених підтвердити електронну пошту."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
-#, elixir-autogen, elixir-format
 msgid "Turn off payments to ask invitees to confirm their email. Paying already confirms who they are."
 msgstr "Вимкніть оплату, щоб просити запрошених підтвердити електронну пошту. Оплата вже підтверджує, хто вони."
 
@@ -931,11 +916,6 @@ msgid_plural "Bookings count only once the invitee clicks the link we email them
 msgstr[0] "Бронювання зараховується лише після того, як запрошений натисне посилання з нашого листа. Доти час зарезервовано щонайбільше на %{count} хвилину, і ви не отримуєте сповіщення."
 msgstr[1] "Бронювання зараховується лише після того, як запрошений натисне посилання з нашого листа. Доти час зарезервовано щонайбільше на %{count} хвилини, і ви не отримуєте сповіщення."
 msgstr[2] "Бронювання зараховується лише після того, як запрошений натисне посилання з нашого листа. Доти час зарезервовано щонайбільше на %{count} хвилин, і ви не отримуєте сповіщення."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off email confirmation to enable group bookings."
-msgstr "Вимкніть підтвердження електронної пошти, щоб увімкнути групові бронювання."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
@@ -951,3 +931,13 @@ msgstr "Повторювані бронювання не входять до в�
 #, elixir-autogen, elixir-format
 msgid "Turn off series booking to ask invitees to confirm their email. A series confirms all its sessions at once."
 msgstr "Вимкніть бронювання серій, щоб просити запрошених підтвердити електронну пошту. Серія підтверджує всі свої сесії одразу."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
+#, elixir-autogen, elixir-format
+msgid "Each booker pays this for every seat they take, guests included."
+msgstr "Кожен, хто бронює, сплачує цю суму за кожне місце, яке займає, зокрема й за гостей."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
+#, elixir-autogen, elixir-format
+msgid "Price per seat (%{currency})"
+msgstr "Ціна за місце (%{currency})"

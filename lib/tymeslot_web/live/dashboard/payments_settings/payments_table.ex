@@ -4,7 +4,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.PaymentsTable do
 
   Stateless function component rendered by `PaymentsSettingsComponent`. Lists
   the host's payments with amount and status, and shows a Refund button for
-  each refundable payment while the connect account is not soft-deleted. The
+  each refundable payment while the connect account is not soft-deleted. A
+  seat payment of a group session names the session, and how many seats it
+  paid for when more than one. The
   button dispatches `open_refund_modal` back to the parent component
   (`@myself`). Owns the status-label formatting and the refund-visibility
   predicates.
@@ -14,12 +16,16 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.PaymentsTable do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.Meetings.MeetingSchema
+  alias TymeslotWeb.Dashboard.DashboardFormat
   alias TymeslotWeb.Helpers.LocaleFormat
 
   import TymeslotWeb.Components.PaymentHelpers, only: [format_amount: 2]
 
   attr :payments, :list, required: true
   attr :account, :map, required: true
+  attr :timezone, :string, default: "Etc/UTC", doc: "the host's, for a session's start"
+  attr :time_format, :string, default: "24h", doc: "the host's clock format"
   attr :myself, :any, required: true
 
   @spec payments_table(map()) :: Phoenix.LiveView.Rendered.t()
@@ -45,9 +51,16 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.PaymentsTable do
             <tr :for={p <- @payments} class="border-b border-tymeslot-50">
               <td class="p-2 text-token-sm">{format_payment_date(p.inserted_at)}</td>
               <td class="p-2 text-token-sm">{p.attendee_email}</td>
-              <td class="p-2 text-token-sm">{p.meeting_type_name}</td>
+              <td class="p-2 text-token-sm">{meeting_type_cell(p, @timezone, @time_format)}</td>
               <td class="p-2 text-token-sm text-right">
                 {format_amount(p.amount_cents, p.currency)}
+                <span
+                  :if={seats(p) > 1}
+                  class="block text-token-xs text-tymeslot-500"
+                  data-testid="payment-seats"
+                >
+                  {dngettext("dashboard_payments", "%{count} seat", "%{count} seats", seats(p))}
+                </span>
               </td>
               <td class="p-2 text-token-sm">{format_status(p.status)}</td>
               <td class="p-2 text-right">
@@ -69,6 +82,30 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.PaymentsTable do
     </.detail_card>
     """
   end
+
+  # A seat payment is one of several for a group session, so its row names
+  # the session too: its meeting type and when it starts, in the host's zone
+  # and clock. A session since deleted leaves the type alone.
+  defp meeting_type_cell(
+         %{seat_payment: true, meeting: %MeetingSchema{start_time: start_time}} = payment,
+         timezone,
+         time_format
+       ) do
+    dgettext("dashboard_payments", "%{type} · %{date}",
+      type: payment.meeting_type_name,
+      date: session_start(start_time, timezone, time_format)
+    )
+  end
+
+  defp meeting_type_cell(payment, _timezone, _time_format), do: payment.meeting_type_name
+
+  defp session_start(start_time, timezone, time_format) do
+    date = start_time |> DashboardFormat.local_date(timezone) |> DashboardFormat.short_date()
+    "#{date}, #{DashboardFormat.clock(start_time, timezone, time_format)}"
+  end
+
+  defp seats(%{seat_payment: true, seats: seats}) when is_integer(seats), do: seats
+  defp seats(_payment), do: 1
 
   defp connect_account_deleted?(%{deleted_at: %DateTime{}}), do: true
   defp connect_account_deleted?(_account), do: false

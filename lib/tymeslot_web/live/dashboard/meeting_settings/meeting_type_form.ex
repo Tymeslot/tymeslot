@@ -286,9 +286,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   def handle_event("toggle_payment_required", _params, socket) do
     # Guard: hosts who cannot accept charges must not flip the toggle even
     # if a stale/forged event arrives — the control renders disabled. The
-    # same applies while group bookings is enabled (mutual exclusion).
+    # same applies while email confirmation is on (mutual exclusion).
     if socket.assigns.payments_charges_enabled and
-         not socket.assigns.group_bookings_enabled and
          (socket.assigns.payment_required or not socket.assigns.requires_email_verification) do
       {:noreply,
        socket
@@ -318,14 +317,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   @impl Phoenix.LiveComponent
   def handle_event("toggle_requires_email_verification", _params, socket) do
-    # Guard: verification excludes group bookings, payments and series. The
-    # control renders disabled while any is on, so a stale or forged event
-    # must not turn it on; turning it off is always allowed.
+    # Guard: verification excludes payments and series. The control renders
+    # disabled while either is on, so a stale or forged event must not turn
+    # it on; turning it off is always allowed.
     %{requires_email_verification: on?, series: series} = socket.assigns
 
-    if not on? and
-         (socket.assigns.group_bookings_enabled or socket.assigns.payment_required or
-            series.series_mode != nil) do
+    if not on? and (socket.assigns.payment_required or series.series_mode != nil) do
       {:noreply, socket}
     else
       {:noreply,

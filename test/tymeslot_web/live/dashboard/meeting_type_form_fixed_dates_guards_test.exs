@@ -132,6 +132,25 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormFixedDatesGuardsTest do
     end
   end
 
+  # A date that started since the page rendered can no longer be cancelled:
+  # the host is told, rather than the click doing nothing.
+  test "a cancellation that fails says so", ctx do
+    session = plan!(ctx.meeting_type, at(10, ~T[18:00:00]))
+    view = edit(ctx.conn, ctx.meeting_type)
+
+    session
+    |> Changeset.change(
+      start_time: DateTime.add(DateTime.utc_now(:second), -1, :hour),
+      end_time: DateTime.add(DateTime.utc_now(:second), 30, :minute)
+    )
+    |> Repo.update!()
+
+    forge(view, "cancel_session", %{"id" => session.id})
+
+    assert render(view) =~ "The date could not be cancelled. Please try again."
+    refute Repo.get!(MeetingSchema, session.id).status == :cancelled
+  end
+
   test "a date booked after the page rendered asks before it is cancelled", ctx do
     starts_at = at(10, ~T[18:00:00])
     session = plan!(ctx.meeting_type, starts_at)

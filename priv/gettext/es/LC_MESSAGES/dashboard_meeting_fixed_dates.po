@@ -209,8 +209,8 @@ msgstr "inscripciones cerradas"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
-msgid "registration until %{datetime}"
-msgstr "inscripciones hasta: %{datetime}"
+msgid "registration until %{until_datetime}"
+msgstr "inscripciones hasta: %{until_datetime}"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
 #, elixir-autogen, elixir-format
@@ -224,15 +224,27 @@ msgstr "dentro de la antelación mínima"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
 #, elixir-autogen, elixir-format
-msgid "%{time} does not exist on %{date} because the clocks go forward, so the time was saved as %{saved}."
-msgstr "La hora %{time} no existe el %{date} porque se adelantan los relojes, así que se ha guardado como %{saved}."
+msgid "%{time} does not exist on %{on_date} because the clocks go forward, so the time was saved as %{saved}."
+msgstr "La hora %{time} no existe el %{on_date} porque se adelantan los relojes, así que se ha guardado como %{saved}."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
 #, elixir-autogen, elixir-format
-msgid "%{time} happens twice on %{date} because the clocks go back, so the earlier one (%{zone}) was saved."
-msgstr "La hora %{time} se repite el %{date} porque se atrasan los relojes, así que se ha guardado la primera (%{zone})."
+msgid "%{time} happens twice on %{on_date} because the clocks go back, so the earlier one (%{zone}) was saved."
+msgstr "La hora %{time} se repite el %{on_date} porque se atrasan los relojes, así que se ha guardado la primera (%{zone})."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
 msgstr "Este horario ya no está disponible. Elige otro."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} paid by %{count} person is refunded in full."
+msgid_plural "%{amount} paid by %{count} people is refunded in full."
+msgstr[0] "Se reembolsará íntegramente lo que pagó %{count} persona (%{amount})."
+msgstr[1] "Se reembolsará íntegramente lo que pagaron %{count} personas (%{amount})."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "The date could not be cancelled. Please try again."
+msgstr "No se pudo cancelar la fecha. Inténtalo de nuevo."

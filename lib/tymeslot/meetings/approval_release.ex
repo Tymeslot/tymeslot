@@ -21,6 +21,7 @@ defmodule Tymeslot.Meetings.ApprovalRelease do
   alias Tymeslot.Meetings.ApprovalRefunds
   alias Tymeslot.Meetings.CommittedStep
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.MeetingTransitionQueries
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Notifications.Orchestrator
@@ -37,8 +38,12 @@ defmodule Tymeslot.Meetings.ApprovalRelease do
   @spec decline(Meeting.t(), String.t() | nil) :: {:ok, Meeting.t()} | {:error, Approval.error()}
   def decline(%Meeting{} = meeting, reason \\ nil) do
     case SeriesApproval.for_session(meeting, {:decline, reason}) do
-      :not_in_series -> release(meeting, :cancelled, decline_changes(reason, Clock.utc_now()))
-      answered -> answered
+      :not_in_series ->
+        now = Clock.utc_now()
+        release(meeting, :cancelled, decline_changes(reason, now), now)
+
+      answered ->
+        answered
     end
   end
 
@@ -55,13 +60,19 @@ defmodule Tymeslot.Meetings.ApprovalRelease do
   Releases a held booking whose deadline has passed.
 
   Distinct from `decline/2` only in the status recorded and, downstream, in
-  what the invitee is told. Both free the slot identically.
+  what the invitee is told. Both free the slot identically. The request is
+  dated as resolved at its deadline (`MeetingState.lapsed_at/2`), however
+  late this runs.
   """
   @spec expire(Meeting.t()) :: {:ok, Meeting.t()} | {:error, Approval.error()}
   def expire(%Meeting{} = meeting) do
     case SeriesApproval.for_session(meeting, :expire) do
-      :not_in_series -> release(meeting, :expired, [])
-      answered -> answered
+      :not_in_series ->
+        ended_at = MeetingState.lapsed_at(meeting.approval_deadline_at, Clock.utc_now())
+        release(meeting, :expired, [], ended_at)
+
+      answered ->
+        answered
     end
   end
 
@@ -113,9 +124,11 @@ defmodule Tymeslot.Meetings.ApprovalRelease do
     end)
   end
 
-  defp release(meeting, status, extra_changes) do
-    now = DateTime.truncate(Clock.utc_now(), :second)
-    changes = [status: status, approval_resolved_at: now, cancelled_at: now] ++ extra_changes
+  defp release(meeting, status, extra_changes, %DateTime{} = ended_at) do
+    ended_at = DateTime.truncate(ended_at, :second)
+
+    changes =
+      [status: status, approval_resolved_at: ended_at, cancelled_at: ended_at] ++ extra_changes
 
     with_released_meeting(meeting, changes, fn released -> after_release(released) end)
   end
@@ -219,6 +232,39 @@ defmodule Tymeslot.Meetings.ApprovalRelease do
   @spec refunds_on_release?(Meeting.t() | map()) :: boolean()
   def refunds_on_release?(%{first_announced_at: %DateTime{}}), do: false
   def refunds_on_release?(_meeting), do: true
+
+  @doc """
+  Whether a meeting ended as a held request the host never approved:
+  declined (`decline/2`), expired unanswered (`expire/1`), or withdrawn
+  before an answer (`withdraw/2`), which includes one cancelled while its
+  payment was still awaited. Whether its payment goes back on its own is
+  `refunds_on_release?/1`.
+
+  The status cannot say: a decline and a withdrawal are `:cancelled` like
+  any cancelled meeting, and an expiry is `:expired` like a lapsed checkout.
+  So it is read from what each exit writes. A decline alone stamps
+  `approval_declined_at`. An expiry stamps `approval_resolved_at`, which an
+  approval stamps too, so an approved meeting whose reschedule request
+  lapsed (`reschedule_requested_at`) is not one. A withdrawal stamps
+  neither, and is the one cancelled meeting still carrying the
+  `approval_requested_at` of a request nobody answered: every way out of
+  the gate into a confirmed meeting stamps `approval_resolved_at`, a
+  reschedule onto a type without the gate included
+  (`Bookings.RescheduleGate`).
+  """
+  @spec released_request?(Meeting.t() | map()) :: boolean()
+  def released_request?(%{status: :cancelled, approval_declined_at: %DateTime{}}), do: true
+
+  def released_request?(%{
+        status: :cancelled,
+        approval_requested_at: %DateTime{},
+        approval_resolved_at: nil
+      }),
+      do: true
+
+  def released_request?(%{status: :expired, reschedule_requested_at: %DateTime{}}), do: false
+  def released_request?(%{status: :expired, approval_resolved_at: %DateTime{}}), do: true
+  def released_request?(_meeting), do: false
 
   # Capped here rather than only in the form, because the reason is quoted
   # verbatim into an email to a third party and the two places a host can type

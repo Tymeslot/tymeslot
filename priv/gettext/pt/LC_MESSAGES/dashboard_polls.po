@@ -735,13 +735,13 @@ msgstr "Votação encerrada"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closed %{deadline}"
-msgstr "Votação encerrada em %{deadline}"
+msgid "Voting closed %{on_deadline}"
+msgstr "Votação encerrada em %{on_deadline}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closes %{deadline}"
-msgstr "A votação termina em %{deadline}"
+msgid "Voting closes %{on_deadline}"
+msgstr "A votação termina em %{on_deadline}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
@@ -1011,3 +1011,23 @@ msgstr "Esse local ou provedor de vídeo não está mais disponível. Escolha ou
 #, elixir-autogen, elixir-format
 msgid "Video call"
 msgstr "Chamada de vídeo"
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Keep editing"
+msgstr "Continuar editando"
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Leave without saving"
+msgstr "Sair sem salvar"
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Leave without saving?"
+msgstr "Sair sem salvar?"
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Your changes to this poll are not saved yet. Leaving now discards them."
+msgstr "Suas alterações nesta enquete ainda não foram salvas. Se você sair agora, elas serão descartadas."

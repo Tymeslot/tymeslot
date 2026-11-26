@@ -8,10 +8,78 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   alias Ecto.UUID
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Meetings.MeetingSchema
-  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Repo
 
-  @outstanding_refunds_limit 50
+  # What `DisputeLossBackfill` reads of a candidate; nothing about the
+  # attendee.
+  @dispute_loss_fields [
+    :id,
+    :stripe_charge_id,
+    :stripe_account_id,
+    :amount_cents,
+    :refunded_amount_cents,
+    :stripe_refunded_cents,
+    :disputed_lost_cents,
+    :status
+  ]
+
+  # The migrations after which this deployment recorded a dispute on its
+  # payment (`stripe_dispute_id`), a lost dispute's share apart from the
+  # refunds (`disputed_lost_cents`), and the refunds made apart from both
+  # (`stripe_refunded_cents`).
+  @dispute_tracking_migration 20_261_103_142_458
+  @disputed_lost_migration 20_261_120_141_652
+  @stripe_refunded_migration 20_261_124_084_318
+
+  # When this deployment ran the migration `version`, by its own clock
+  # (Ecto records it in UTC); a deployment's releases, not the calendar,
+  # decide how it recorded a payment.
+  defmacrop migrated_at(version) do
+    quote do
+      fragment(
+        "(SELECT m.inserted_at FROM schema_migrations AS m WHERE m.version = ?)",
+        unquote(version)
+      )
+    end
+  end
+
+  # What the pending refunds of the payment `id` add up to, correlated to the
+  # row the enclosing query reads.
+  defmacrop pending_refund_sum(id) do
+    quote do
+      fragment(
+        "(SELECT COALESCE(SUM(r.amount_cents), 0)::integer FROM booking_payment_refunds AS r WHERE r.booking_payment_id = ? AND r.status = 'pending')",
+        unquote(id)
+      )
+    end
+  end
+
+  # Payment `b`'s application fee less the share its refunds returned. Only
+  # Tymeslot's own refunds ask Stripe to return the fee; one made in the
+  # Stripe dashboard (`:external`) returns none, so its amount is taken off
+  # the refunds made first. A refund made before refunds were recorded one
+  # by one has no row and counts as Tymeslot's, which it was.
+  defmacrop net_application_fee(b) do
+    quote do
+      fragment(
+        "COALESCE(?, 0) - COALESCE(ROUND(COALESCE(?, 0)::numeric * GREATEST(? - (SELECT COALESCE(SUM(r.amount_cents), 0) FROM booking_payment_refunds AS r WHERE r.booking_payment_id = ? AND r.status = 'succeeded' AND r.source = 'external'), 0) / NULLIF(?, 0)), 0)",
+        unquote(b).application_fee_cents,
+        unquote(b).application_fee_cents,
+        unquote(b).stripe_refunded_cents,
+        unquote(b).id,
+        unquote(b).amount_cents
+      )
+    end
+  end
+
+  @doc """
+  Fills in each payment's `pending_refund_cents` (what its pending refunds
+  add up to) as `query` reads it, so the refundable balance of a listed
+  payment needs no query of its own.
+  """
+  @spec with_pending_refund_cents(Ecto.Queryable.t()) :: Ecto.Query.t()
+  def with_pending_refund_cents(query),
+    do: from(b in query, select_merge: %{pending_refund_cents: pending_refund_sum(b.id)})
 
   @doc """
   Fetches a `booking_payment` by id and acquires a `SELECT … FOR UPDATE` row
@@ -67,18 +135,29 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   @spec get_for_host(term(), integer()) :: BookingPaymentSchema.t() | nil
   def get_for_host(id, host_user_id) when is_integer(host_user_id) do
     case cast_id(id) do
-      {:ok, uuid} -> Repo.get_by(BookingPaymentSchema, id: uuid, host_user_id: host_user_id)
-      {:error, :not_found} -> nil
+      {:ok, uuid} ->
+        BookingPaymentSchema
+        |> where([b], b.id == ^uuid and b.host_user_id == ^host_user_id)
+        |> with_pending_refund_cents()
+        |> Repo.one()
+
+      {:error, :not_found} ->
+        nil
     end
   end
 
   @doc """
-  The payment the meeting `meeting_id` owns itself, or `nil`. A session of a
-  paid series owns none: see `for_meeting/1`.
+  The payment the meeting `meeting_id` owns itself, or `nil`: the one payment
+  of a one-to-one booking. A session of a paid series owns none (see
+  `for_meeting/1`), and a group meeting's seat payments, one per paying
+  booker, are never returned here (`list_for_live_seats/1`).
   """
   @spec by_meeting_id(Ecto.UUID.t()) :: BookingPaymentSchema.t() | nil
   def by_meeting_id(meeting_id),
-    do: Repo.get_by(BookingPaymentSchema, meeting_id: meeting_id)
+    do: Repo.one(own_payment(meeting_id))
+
+  defp own_payment(meeting_id),
+    do: where(BookingPaymentSchema, [b], b.meeting_id == ^meeting_id and not b.seat_payment)
 
   @doc "The payment the series `series_id` owns, or `nil`."
   @spec by_series_id(term()) :: BookingPaymentSchema.t() | nil
@@ -103,14 +182,21 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   end
 
   @doc """
-  As `for_meeting/1`, but only a payment `host_user_id` took, or `nil`.
+  As `for_meeting/1`, but only a payment `host_user_id` took, or `nil`. A
+  group meeting's seat payments are never returned, as there.
   """
   @spec for_meeting_for_host(term(), integer()) :: BookingPaymentSchema.t() | nil
   def for_meeting_for_host(meeting_id, host_user_id) when is_integer(host_user_id) do
     case cast_id(meeting_id) do
       {:ok, uuid} ->
-        Repo.get_by(BookingPaymentSchema, meeting_id: uuid, host_user_id: host_user_id) ||
-          series_payment(uuid, dynamic([bp], bp.host_user_id == ^host_user_id))
+        own =
+          uuid
+          |> own_payment()
+          |> where([b], b.host_user_id == ^host_user_id)
+          |> with_pending_refund_cents()
+          |> Repo.one()
+
+        own || series_payment(uuid, dynamic([bp], bp.host_user_id == ^host_user_id))
 
       {:error, :not_found} ->
         nil
@@ -123,6 +209,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     |> where([_bp, m], m.id == ^meeting_id)
     |> where(^scope)
     |> preload(:series)
+    |> with_pending_refund_cents()
     |> Repo.one()
   end
 
@@ -198,127 +285,11 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
           b.host_user_id == ^host_user_id and b.status != :pending and
             not (b.status == :failed and is_nil(b.paid_at)),
         order_by: [desc: b.inserted_at],
-        limit: ^limit
-
-    Repo.all(query)
-  end
-
-  @doc """
-  Lists the host's payments whose meeting has been cancelled while the host
-  still holds the attendee's money, and those whose meeting expired before
-  it was settled: a payment that completed after its slot was taken, or a
-  paid request that lapsed unapproved, whose automatic refund has not gone
-  through (yet).
-
-  Derived from the meeting's status and the payment's own balance rather than
-  from a stored "refund owed" flag, so it cannot drift out of step with either
-  side. Oldest first, the longer an attendee has been out of pocket the more
-  urgent the row: a cancelled booking dated by its cancellation, an expired
-  one, which has no cancellation date, by its payment. Ties go by id, so the
-  bounded window below is the same rows on every read.
-
-  Deliberately not bounded by `for_host/2`'s recent-payments window, which is
-  what let an older unrefunded cancellation drop off the dashboard entirely.
-  It is still bounded, at `#{@outstanding_refunds_limit}` rows, so pair it with
-  `outstanding_refunds_summary_for_host/1` and say how many rows the window is
-  hiding rather than truncating in silence.
-  """
-  @spec outstanding_refunds_for_host(integer(), keyword()) :: [BookingPaymentSchema.t()]
-  def outstanding_refunds_for_host(host_user_id, opts \\ []) do
-    limit = Keyword.get(opts, :limit, @outstanding_refunds_limit)
-
-    query =
-      from [b, m] in outstanding_refunds_query(host_user_id),
-        order_by: [asc: coalesce(m.cancelled_at, b.paid_at), asc: b.id],
         limit: ^limit,
-        preload: [meeting: m]
+        # A seat payment's row names its session.
+        preload: :meeting
 
-    Repo.all(query)
-  end
-
-  @doc """
-  Summarises every outstanding refund a host owes: how many rows there are,
-  and how much is still owed in each currency.
-
-  Unbounded on purpose, and sharing its `where` with
-  `outstanding_refunds_for_host/2` so the two cannot drift: the card needs the
-  true count to report its own truncation, and the disconnect confirmation
-  needs the total before the host walks away from it.
-
-  Totals are per currency rather than one sum, because a host who changed
-  their default currency can be holding money in more than one.
-  """
-  @spec outstanding_refunds_summary_for_host(integer()) :: %{
-          count: non_neg_integer(),
-          totals: [%{currency: String.t(), amount_cents: non_neg_integer()}]
-        }
-  def outstanding_refunds_summary_for_host(host_user_id) do
-    # `amount_cents - refunded_amount_cents` is the SQL twin of
-    # `Refunds.refundable_remaining_cents/1`; the `where` above guarantees it
-    # is positive, so the `max(_, 0)` clamp has nothing to do here. The sum is
-    # typed because Ecto cannot infer a type through the subtraction and would
-    # otherwise hand back a `Decimal` where every other amount in the codebase
-    # is an integer count of cents.
-    query =
-      from b in outstanding_refunds_query(host_user_id),
-        group_by: b.currency,
-        order_by: [asc: b.currency],
-        select: %{
-          currency: b.currency,
-          count: count(b.id),
-          amount_cents: type(sum(b.amount_cents - b.refunded_amount_cents), :integer)
-        }
-
-    rows = Repo.all(query)
-
-    %{
-      count: Enum.sum(Enum.map(rows, & &1.count)),
-      totals: Enum.map(rows, &Map.take(&1, [:currency, :amount_cents]))
-    }
-  end
-
-  # Cancelled or expired bookings whose money the host still holds. A paid
-  # booking ends expired when its payment completed after the slot was taken
-  # (`CheckoutSessionCompleted`), or when a paid request lapsed unapproved
-  # (`Meetings.Approval`); both owe a full refund and refund it on their own,
-  # so a row here is one whose refund has not gone through yet. Derived
-  # from the meeting's status and the payment's own balance rather than from
-  # a stored "refund owed" flag, so it cannot drift out of step with either
-  # side.
-  defp outstanding_refunds_query(host_user_id) do
-    query =
-      from b in BookingPaymentSchema,
-        as: :payment,
-        join: m in MeetingSchema,
-        as: :meeting,
-        # The payment's meeting, or its series' first session still there:
-        # one equality on the meeting id, so the join stays a primary-key
-        # lookup per payment.
-        on:
-          m.id ==
-            fragment(
-              "COALESCE(?, (SELECT sm.id FROM meetings AS sm WHERE sm.series_id = ? ORDER BY sm.series_position LIMIT 1))",
-              b.meeting_id,
-              b.series_id
-            ),
-        where:
-          b.host_user_id == ^host_user_id and
-            b.status in ^BookingPaymentSchema.refundable_statuses() and
-            b.refunded_amount_cents < b.amount_cents,
-        where: is_nil(b.series_id) or not exists(series_sessions_going_ahead())
-
-    MeetingState.where_released(query, :meeting)
-  end
-
-  # A paid series' one payment is owed back once none of its sessions goes
-  # ahead (a late payment refused, say); it is listed by its first session
-  # still there, whichever position that is.
-  # One session cancelled alone is refunded its share when the host cancels
-  # it, and the rest still pays for the sessions going ahead.
-  defp series_sessions_going_ahead do
-    MeetingState.where_not_released(
-      from(m in MeetingSchema, where: m.series_id == parent_as(:payment).series_id)
-    )
+    query |> with_pending_refund_cents() |> Repo.all()
   end
 
   @doc """
@@ -342,6 +313,9 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
 
   Grouped because a host who changed their default currency holds money in
   more than one, and amounts in different currencies cannot be added up.
+
+  `platform_fee` is net of the share Stripe returns with each refund, in
+  proportion to the amount refunded. A lost dispute returns no fee.
   """
   @spec lifetime_stats(integer()) :: [
           %{
@@ -363,7 +337,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
           currency: b.currency,
           received: type(coalesce(sum(b.amount_cents), 0), :integer),
           refunded: type(coalesce(sum(b.refunded_amount_cents), 0), :integer),
-          platform_fee: type(coalesce(sum(b.application_fee_cents), 0), :integer)
+          platform_fee: type(coalesce(sum(net_application_fee(b)), 0), :integer)
         }
 
     Repo.all(query)
@@ -458,6 +432,95 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     |> dated_before(cutoff)
     |> Repo.update_all(set: [attendee_email: nil, attendee_name: nil, updated_at: now])
   end
+
+  @doc """
+  Up to `limit` payments whose refund figures may misstate a lost dispute,
+  in id order after `after_id` (`nil` for the first page): a charge, and
+  either
+
+    * something refunded, no dispute loss recorded and a refunded status,
+      on a payment created before this deployment recorded losses apart
+      (its `disputed_lost_cents` migration ran), and either created before
+      it tracked disputes on the payment at all or carrying a dispute id;
+    * or a loss recorded whose refunds and loss add up to exactly the
+      amount paid, on a payment created before this deployment recorded
+      the refunds apart (its `stripe_refunded_cents` migration ran).
+
+  A payment created after those migrations ran was recorded by code that
+  gets its figures right, so it is never read. Only the fields
+  `Tymeslot.MeetingPayments.DisputeLossBackfill` reads are loaded (the
+  others hold their defaults); its moduledoc says why these rows.
+  """
+  @spec dispute_loss_candidates(Ecto.UUID.t() | nil, pos_integer()) :: [
+          BookingPaymentSchema.t()
+        ]
+  def dispute_loss_candidates(after_id, limit) when is_integer(limit) and limit > 0 do
+    BookingPaymentSchema
+    |> where(
+      [b],
+      not is_nil(b.stripe_charge_id) and
+        ((b.disputed_lost_cents == 0 and b.refunded_amount_cents > 0 and
+            b.status in [:refunded, :partially_refunded] and
+            b.inserted_at < migrated_at(^@disputed_lost_migration) and
+            (not is_nil(b.stripe_dispute_id) or
+               b.inserted_at < migrated_at(^@dispute_tracking_migration))) or
+           (b.disputed_lost_cents > 0 and
+              b.stripe_refunded_cents + b.disputed_lost_cents == b.amount_cents and
+              b.inserted_at < migrated_at(^@stripe_refunded_migration)))
+    )
+    |> after_id(after_id)
+    |> order_by([b], asc: b.id)
+    |> limit(^limit)
+    |> select([b], struct(b, @dispute_loss_fields))
+    |> Repo.all()
+  end
+
+  @doc """
+  Writes `correction` (the refunds made, the lost dispute share, the
+  refunded total and the status) to `payment`, only while the row still
+  holds the figures and status `payment` was read with. Writes nothing
+  else. `{:ok, :unchanged}` when the guard matched no row: another process
+  changed the row first.
+  """
+  @spec record_dispute_loss(BookingPaymentSchema.t(), %{
+          stripe_refunded_cents: non_neg_integer(),
+          disputed_lost_cents: pos_integer(),
+          refunded_amount_cents: pos_integer(),
+          status: BookingPaymentSchema.status()
+        }) :: {:ok, :recorded | :unchanged}
+  def record_dispute_loss(
+        %BookingPaymentSchema{id: id, refunded_amount_cents: read_total} = read,
+        %{
+          stripe_refunded_cents: refunds,
+          disputed_lost_cents: lost,
+          refunded_amount_cents: total,
+          status: status
+        }
+      )
+      when is_integer(refunds) and is_integer(lost) and lost > 0 and is_integer(total) and
+             total >= read_total do
+    query =
+      from b in BookingPaymentSchema,
+        where:
+          b.id == ^id and b.stripe_refunded_cents == ^read.stripe_refunded_cents and
+            b.disputed_lost_cents == ^read.disputed_lost_cents and
+            b.refunded_amount_cents == ^read_total and b.status == ^read.status
+
+    case Repo.update_all(query,
+           set: [
+             stripe_refunded_cents: refunds,
+             disputed_lost_cents: lost,
+             refunded_amount_cents: total,
+             status: status
+           ]
+         ) do
+      {1, _rows} -> {:ok, :recorded}
+      {0, _rows} -> {:ok, :unchanged}
+    end
+  end
+
+  defp after_id(query, nil), do: query
+  defp after_id(query, id), do: where(query, [b], b.id > ^id)
 
   defp dated_before(query, cutoff) do
     where(

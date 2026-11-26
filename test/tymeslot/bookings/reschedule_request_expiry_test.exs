@@ -326,6 +326,34 @@ defmodule Tymeslot.Bookings.RescheduleRequestExpiryTest do
       drain_emails()
       refute_received {:email, _again}
     end
+
+    test "are dated to their deadline, however late the sweep reaches them" do
+      %{user: user} = create_user_with_profile()
+      # Asked a month before a meeting that started a hundred days ago: the
+      # start is the deadline.
+      by_start = open_request(user, 130 * @day, -100 * @day)
+      # Asked the day before a meeting two months ago: the seven days are.
+      by_window = open_request(user, 60 * @day, -59 * @day)
+
+      assert {:ok, %{expired: 2}} = perform_job(RescheduleRequestSweepWorker, %{})
+
+      for meeting <- [by_start, by_window] do
+        expired = reload(meeting)
+        assert expired.status == :expired
+
+        assert DateTime.compare(
+                 expired.cancelled_at,
+                 MeetingState.reschedule_request_deadline(meeting)
+               ) == :eq
+      end
+
+      assert DateTime.compare(reload(by_start).cancelled_at, by_start.start_time) == :eq
+
+      # Neither side is told months later: the news stopped mattering a week
+      # after each deadline.
+      drain_emails()
+      refute_received {:email, _late}
+    end
   end
 
   describe "a group meeting's request" do

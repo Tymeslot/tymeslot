@@ -1,0 +1,20 @@
+{
+  "id": "inpay_test1",
+  "object": "invoice_payment",
+  "amount_paid": 2000,
+  "amount_requested": 2000,
+  "created": 1391288554,
+  "currency": "usd",
+  "invoice": "in_test1",
+  "is_default": true,
+  "livemode": false,
+  "payment": {
+    "type": "payment_intent",
+    "payment_intent": "pi_test1"
+  },
+  "status": "paid",
+  "status_transitions": {
+    "canceled_at": null,
+    "paid_at": 1391288554
+  }
+}

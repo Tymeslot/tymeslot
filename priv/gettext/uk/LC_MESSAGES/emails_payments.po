@@ -43,19 +43,19 @@ msgstr "Статус облікового запису"
 
 #: lib/tymeslot/emails/templates/charge_dispute_opened.ex
 #: lib/tymeslot/emails/templates/connect_account_restricted.ex
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "Action required"
 msgstr "Потрібна дія"
 
 #: lib/tymeslot/emails/templates/charge_dispute_opened.ex
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee email:"
 msgstr "Електронна пошта учасника:"
 
 #: lib/tymeslot/emails/templates/charge_dispute_opened.ex
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee:"
 msgstr "Учасник:"
@@ -86,7 +86,7 @@ msgid "If the dispute is closed in your favour, the booking will reconcile autom
 msgstr "Якщо спір буде закрито на вашу користь, бронювання буде узгоджено автоматично. Якщо спір буде програно, бронювання позначиться як повернуте."
 
 #: lib/tymeslot/emails/templates/charge_dispute_opened.ex
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting:"
 msgstr "Зустріч:"
@@ -217,87 +217,82 @@ msgstr "ні"
 msgid "yes"
 msgstr "так"
 
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "%{amount} is still to be refunded"
 msgstr "Ще потрібно повернути %{amount}"
 
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
-#, elixir-autogen, elixir-format
-msgid "A refund for a cancelled series could not be made."
-msgstr "Не вдалося повернути кошти за скасовану серію."
-
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "Amount to refund:"
 msgstr "Сума до повернення:"
 
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "Open payments"
 msgstr "Відкрити платежі"
 
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "REFUND DETAILS:"
 msgstr "ДЕТАЛІ ПОВЕРНЕННЯ КОШТІВ:"
 
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "Refund details"
 msgstr "Деталі повернення коштів"
 
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
-#, elixir-autogen, elixir-format
-msgid "Refund the attendee from your payments in Tymeslot or from your Stripe dashboard, or let them know what happens next."
-msgstr "Поверніть кошти учаснику через свої платежі в Tymeslot або через панель керування Stripe чи повідомте йому, що буде далі."
-
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
-#, elixir-autogen, elixir-format
-msgid "SERIES REFUND NOT MADE"
-msgstr "КОШТИ ЗА СЕРІЮ НЕ ПОВЕРНЕНО"
-
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
-#, elixir-autogen, elixir-format
-msgid "Series refund not made"
-msgstr "Кошти за серію не повернено"
-
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
-#, elixir-autogen, elixir-format
-msgid "Series refund not made: %{amount}"
-msgstr "Кошти за серію не повернено: %{amount}"
-
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
-#, elixir-autogen, elixir-format
-msgid "Stripe did not accept the refund after several attempts."
-msgstr "Stripe не прийняв повернення коштів після кількох спроб."
-
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
-#, elixir-autogen, elixir-format
-msgid "The payment is older than the 60-day refund window."
-msgstr "Минув 60-денний строк для повернення коштів за цим платежем."
-
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
-#, elixir-autogen, elixir-format
-msgid "The payment is under dispute."
-msgstr "Щодо платежу відкрито спір."
-
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "The refund was not made"
 msgstr "Кошти не повернено"
 
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "WHAT TO DO:"
 msgstr "ЩО ЗРОБИТИ:"
 
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "What to do"
 msgstr "Що зробити"
 
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
-msgid "You cancelled the remaining sessions of a series, but the refund of %{amount} to the attendee could not be made. The sessions stay cancelled."
-msgstr "Ви скасували решту сесій серії, але повернути учаснику %{amount} не вдалося. Сесії залишаються скасованими."
+msgid "Check the payment in your Stripe dashboard. The money is still yours to return: refund the attendee from your payments in Tymeslot or from Stripe, or let them know what happens next."
+msgstr "Перевірте платіж у панелі керування Stripe. Повернути кошти, як і раніше, маєте ви: зробіть повернення учаснику з розділу платежів у Tymeslot або в Stripe чи повідомте йому, що буде далі."
+
+#: lib/tymeslot/emails/templates/refund_failed.ex
+#, elixir-autogen, elixir-format
+msgid "REFUND NOT MADE"
+msgstr "КОШТИ НЕ ПОВЕРНЕНО"
+
+#: lib/tymeslot/emails/templates/refund_failed.ex
+#, elixir-autogen, elixir-format
+msgid "Refund not made"
+msgstr "Кошти не повернено"
+
+#: lib/tymeslot/emails/templates/refund_failed.ex
+#, elixir-autogen, elixir-format
+msgid "Refund of %{amount} to %{attendee} not made"
+msgstr "Повернення %{amount} не виконано (отримувач: %{attendee})"
+
+#: lib/tymeslot/emails/templates/refund_failed.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe declined or could not complete a refund."
+msgstr "Stripe відхилив або не зміг завершити повернення коштів."
+
+#: lib/tymeslot/emails/templates/refund_failed.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe declined or could not complete the refund of %{amount} to %{attendee} for their booking."
+msgstr "Stripe відхилив або не зміг завершити повернення %{amount} за бронювання (отримувач: %{attendee})."
+
+#: lib/tymeslot/emails/templates/refund_failed.ex
+#, elixir-autogen, elixir-format
+msgid "You cancelled sessions of a series, but Stripe declined or could not complete the refund of %{amount} to %{attendee}. The sessions stay cancelled."
+msgstr "Ви скасували сесії серії, але Stripe відхилив або не зміг завершити повернення %{amount} (отримувач: %{attendee}). Сесії залишаються скасованими."
+
+#: lib/tymeslot/emails/templates/refund_failed.ex
+#, elixir-autogen, elixir-format
+msgid "the attendee"
+msgstr "учасник зустрічі"

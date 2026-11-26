@@ -7,6 +7,7 @@ defmodule Tymeslot.Workers.SendConnectAccountRestrictedTest do
 
   alias Ecto.UUID
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
+  alias Tymeslot.Profiles
   alias Tymeslot.Workers.SendConnectAccountRestricted
 
   # Swoosh's test adapter posts {:email, ...} to whichever process calls
@@ -66,6 +67,24 @@ defmodule Tymeslot.Workers.SendConnectAccountRestrictedTest do
       assert email.subject == "Stripe-Konto eingeschränkt: Handlungsbedarf"
       assert email.text_body =~ "Hallo Bob Host,"
       refute email.text_body =~ "RESTORE YOUR ACCOUNT"
+    end
+
+    test "greets the host by their profile name when the account has none" do
+      account = insert_account(%{}, %{name: nil})
+      {:ok, profile} = Profiles.get_or_create_profile(account.user_id)
+      {:ok, _profile} = Profiles.update_full_name(profile, "Bob Profile")
+
+      assert :ok =
+               perform_job(SendConnectAccountRestricted, %{
+                 "connect_account_id" => account.id,
+                 "user_id" => account.user_id,
+                 "stripe_account_id" => account.stripe_account_id,
+                 "disabled_reason" => "requirements.past_due"
+               })
+
+      assert_received {:email, email}
+      assert email.to == [{"Bob Profile", "host@example.com"}]
+      assert email.text_body =~ "Bob Profile,"
     end
 
     test "discards when connect_account is missing" do

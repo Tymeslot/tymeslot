@@ -719,3 +719,8 @@ msgstr "сесія %{position}, %{when}"
 #, elixir-autogen, elixir-format
 msgid "The host answered your request in the meantime, so nothing was withdrawn. The list shows where each session now stands."
 msgstr "Тим часом організатор відповів на ваш запит, тож нічого не відкликано. У списку видно поточний стан кожної сесії."
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Your payment is still open"
+msgstr "Вашу оплату ще не завершено"

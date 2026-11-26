@@ -780,7 +780,7 @@ msgstr ""
 
 #: lib/tymeslot_web/controllers/auth/account_restore_html.ex
 #, elixir-autogen, elixir-format
-msgid "Your account is in the process of being deleted (scheduled for %{date}). If you want to keep it, restore it here."
+msgid "Your account is in the process of being deleted (scheduled for %{for_date}). If you want to keep it, restore it here."
 msgstr ""
 
 #: lib/tymeslot/auth/email_change.ex

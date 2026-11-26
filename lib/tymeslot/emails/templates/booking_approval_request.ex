@@ -38,6 +38,7 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
   }
 
   alias Tymeslot.Utils.DateTimeUtils
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   alias Tymeslot.BookingPages.BookedThrough
   alias Tymeslot.Emails.Shared.BookingRequestLocation
@@ -279,15 +280,16 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
   end
 
   defp deadline_sentence(%Meeting{} = meeting, clock, locale) do
-    deadline =
+    by_deadline =
       meeting.approval_deadline_at
       |> DateTimeUtils.convert_to_timezone(clock.timezone)
       |> Formatting.format_datetime(locale, clock.time_format)
+      |> LocaleFormat.with_article(:none, locale)
 
     dgettext(
       "emails_booking_requests",
-      "The slot is held until you answer. If you haven't replied by %{deadline}, the request lapses and %{name} is told the time is free again.",
-      deadline: deadline,
+      "The slot is held until you answer. If you haven't replied by %{by_deadline}, the request lapses and %{name} is told the time is free again.",
+      by_deadline: by_deadline,
       name: meeting.attendee_name
     )
   end

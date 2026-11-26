@@ -104,6 +104,7 @@ defmodule Tymeslot.Test.TagTaxonomy do
       # Excluded by default in ExUnit.configure — keep in sync with test_helper.exs
       :oauth_integration,
       :calendar_integration,
+      :stripe_live,
       :backup_tests,
       # General-purpose exclusion / environment markers
       :external,

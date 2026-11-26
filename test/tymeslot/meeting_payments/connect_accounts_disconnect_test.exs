@@ -9,7 +9,6 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsDisconnectTest do
   @moduletag :integration
 
   import Ecto.Query, only: [from: 2]
-  import Mox
   import Tymeslot.StripeConnectTestHelpers
 
   alias Oban.Job
@@ -17,13 +16,13 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsDisconnectTest do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccountRetirement
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Repo
-
-  setup :verify_on_exit!
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
   describe "disconnect/1" do
     test "soft-deletes the live account" do
@@ -62,9 +61,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsDisconnectTest do
       # disconnect/1 pre-fetches the payment as "pending" (it was pending when
       # list_pending_for_host ran), but inside the transaction the conditional
       # UPDATE finds status = 'paid' and must not overwrite it.
-      stub(StripeAdapterMock, :expire_checkout_session, fn _session_id, _opts ->
-        {:error, %{message: "already paid"}}
-      end)
+      StripeStub.stub(:expire_checkout_session, {:error_fixture, "invalid_request_error"})
 
       assert {:ok, %{cancelled_count: 0}} = ConnectAccountRetirement.disconnect(user)
 
@@ -90,10 +87,41 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsDisconnectTest do
         status: :pending
       )
 
-      stub(StripeAdapterMock, :expire_checkout_session, fn _session_id, _opts -> {:ok, %{}} end)
+      StripeStub.stub(:expire_checkout_session, StripeFixtures.object("checkout_session_expired"))
 
       assert {:ok, %{cancelled_count: 1}} = ConnectAccountRetirement.disconnect(user)
       assert {:ok, %{status: :expired}} = MeetingQueries.get_meeting(meeting.id)
+    end
+
+    # A group session others have booked keeps going ahead: the pending
+    # seat's hold is released as failed, and its booker told, but the
+    # meeting is never expired as a one-to-one booking's would be.
+    test "releases an open seat hold without expiring its group meeting" do
+      user = insert(:user)
+      {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id)
+      meeting = insert(:group_meeting, organizer_user: user, status: :confirmed, capacity: 4)
+      insert(:participant, meeting: meeting)
+      hold = insert(:seat_hold, meeting: meeting)
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, SeatHolds.topic(hold.id))
+
+      payment =
+        insert(:booking_payment,
+          host_user_id: user.id,
+          meeting: meeting,
+          seat_hold_id: hold.id,
+          seat_payment: true,
+          stripe_checkout_session_id: "cs_SEAT_OPEN",
+          status: :pending
+        )
+
+      StripeStub.stub(:expire_checkout_session, StripeFixtures.object("checkout_session_expired"))
+
+      assert {:ok, %{cancelled_count: 1}} = ConnectAccountRetirement.disconnect(user)
+
+      assert BookingPaymentQueries.get(payment.id).status == :failed
+      assert %{status: :released, released_reason: :failed} = SeatHolds.get(hold.id)
+      assert {:ok, %{status: :confirmed}} = MeetingQueries.get_meeting(meeting.id)
+      assert_receive :expired
     end
 
     # Disconnecting neither settles nor cancels a refund the host already owes;
@@ -171,7 +199,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsDisconnectTest do
 
       connect_account(user, "acct_X")
 
-      # No `deauthorize_account` expectation: Mox fails the job on any call.
+      # No deauthorisation stub: the job fails on any OAuth request.
       assert %{success: 1, failure: 0} =
                Oban.drain_queue(queue: :payments, with_scheduled: true)
 
@@ -207,10 +235,12 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsDisconnectTest do
       connect_account(user, "acct_X")
       assert {:ok, _result} = ConnectAccountRetirement.disconnect(user)
 
-      expect(StripeAdapterMock, :deauthorize_account, 1, fn "acct_X" -> :ok end)
+      expect_deauthorize("acct_X")
 
       assert %{success: 1, failure: 0} =
                Oban.drain_queue(queue: :payments, with_scheduled: true)
+
+      assert_received {:oauth_deauthorize, "acct_X"}
     end
   end
 end

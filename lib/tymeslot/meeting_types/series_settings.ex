@@ -76,11 +76,17 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
   Whether bookers are offered the series right now: it is configured and the
   host's plan includes it. A checker failure counts as not offered, and so
   does a type that asks bookers to confirm their email, which a series would
-  skip: its single sessions are verified instead.
+  skip: its single sessions are verified instead. A paid group type, which
+  `conflicts/1` refuses a series but which may have been saved with one
+  before that rule, books single sessions too: a seat is paid per session.
   """
   @spec offered?(MeetingTypeSchema.t()) :: boolean()
   def offered?(%{series_mode: nil}), do: false
   def offered?(%{requires_email_verification: true}), do: false
+
+  def offered?(%{payment_required: true, max_participants: max_participants})
+      when is_integer(max_participants) and max_participants > 1,
+      do: false
 
   def offered?(%{user_id: user_id}) do
     case Features.check_access(user_id, @feature) do
@@ -128,8 +134,8 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
 
   @doc """
   The settings of a type (a map with `:series_mode`, `:one_off`,
-  `:invitation_only`, `:fixed_dates` and `:requires_email_verification`) that
-  cannot go with a series, as
+  `:invitation_only`, `:fixed_dates`, `:requires_email_verification`,
+  `:payment_required` and `:max_participants`) that cannot go with a series, as
   `{culprit_field, message}`. The culprit is the field that, were it not set,
   would lift the conflict. Empty when there is no series.
   """
@@ -151,7 +157,11 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
        dgettext_noop(
          "errors",
          "Meeting types that ask invitees to confirm their email cannot be booked as a series."
-       )}
+       )},
+      {:payment_required,
+       settings[:payment_required] == true and is_integer(settings[:max_participants]) and
+         settings[:max_participants] > 1,
+       dgettext_noop("errors", "Paid group meeting types cannot be booked as a series.")}
     ]
     |> Enum.filter(fn {_field, conflict?, _message} -> conflict? end)
     |> Enum.map(fn {field, _conflict?, message} -> {field, message} end)
@@ -398,7 +408,9 @@ defmodule Tymeslot.MeetingTypes.SeriesSettings do
       one_off: get_field(changeset, :one_off),
       invitation_only: get_field(changeset, :invitation_only),
       fixed_dates: get_field(changeset, :fixed_dates),
-      requires_email_verification: get_field(changeset, :requires_email_verification)
+      requires_email_verification: get_field(changeset, :requires_email_verification),
+      payment_required: get_field(changeset, :payment_required),
+      max_participants: get_field(changeset, :max_participants)
     }
 
     series_changed? = fetch_change(changeset, :series_mode) != :error

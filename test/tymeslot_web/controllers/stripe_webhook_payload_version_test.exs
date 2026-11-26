@@ -9,7 +9,7 @@ defmodule TymeslotWeb.StripeWebhookPayloadVersionTest do
   newer version dropped or moved still reaches the handler that reads it.
   """
 
-  # async: false: the Stripe adapter and the signing secrets are global config.
+  # async: false: the signing secrets are global config.
   use TymeslotWeb.ConnCase, async: false
 
   @moduletag :payments
@@ -23,12 +23,12 @@ defmodule TymeslotWeb.StripeWebhookPayloadVersionTest do
 
   import Mox
 
-  alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.Payments.PaymentTransactionSchema
-  alias Tymeslot.Payments.StripeMock
   alias Tymeslot.Payments.SubscriptionInvoiceQueries
   alias Tymeslot.Payments.SubscriptionManagerMock
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.StripeWebhookFixtures
 
   setup :verify_on_exit!
@@ -118,13 +118,17 @@ defmodule TymeslotWeb.StripeWebhookPayloadVersionTest do
           subscription_id: "sub_paid_for"
         })
 
-      expect(StripeMock, :list_invoice_payments, fn %{
-                                                      payment: %{
-                                                        type: "payment_intent",
-                                                        payment_intent: "pi_1SfixtureRenewal"
-                                                      }
-                                                    } ->
-        {:ok, %{data: [%{invoice: "in_1SfixtureRenewal"}], has_more: false}}
+      StripeStub.expect(:list_invoice_payments, fn %{
+                                                     query: %{
+                                                       "payment" => %{
+                                                         "type" => "payment_intent",
+                                                         "payment_intent" => "pi_1SfixtureRenewal"
+                                                       }
+                                                     }
+                                                   } ->
+        StripeFixtures.list([
+          StripeFixtures.object("invoice_payment", %{"invoice" => "in_1SfixtureRenewal"})
+        ])
       end)
 
       body =
@@ -185,10 +189,7 @@ defmodule TymeslotWeb.StripeWebhookPayloadVersionTest do
 
   describe "Connect endpoint" do
     setup do
-      with_config(:tymeslot,
-        stripe_adapter: StripeAdapter.Stripity,
-        stripe_connect_webhook_secret: @connect_secret
-      )
+      with_config(:tymeslot, stripe_connect_webhook_secret: @connect_secret)
 
       :ok
     end

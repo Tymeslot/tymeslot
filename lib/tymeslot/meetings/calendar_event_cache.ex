@@ -8,6 +8,7 @@ defmodule Tymeslot.Meetings.CalendarEventCache do
   alias Tymeslot.Availability
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Calendar.Google.ConferenceData
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Meetings.CalendarEventLink
@@ -107,16 +108,29 @@ defmodule Tymeslot.Meetings.CalendarEventCache do
   # UTC with no TZID at all — so writing it invents a value the provider never
   # reports back and the next inbound sync clears again.
   defp update_cached_event(cached_event, event_data) do
-    attrs = %{
-      start_at: event_data.start_time,
-      end_at: event_data.end_time,
-      summary: event_data.summary,
-      description: event_data.description,
-      location: event_data.location,
-      status: Atom.to_string(event_data.status),
-      transparency: Atom.to_string(event_data.transparency)
-    }
+    attrs =
+      Map.merge(
+        %{
+          start_at: event_data.start_time,
+          end_at: event_data.end_time,
+          summary: event_data.summary,
+          description: event_data.description,
+          location: event_data.location,
+          status: Atom.to_string(event_data.status),
+          transparency: Atom.to_string(event_data.transparency)
+        },
+        conference_attrs(cached_event, event_data)
+      )
 
     ProviderCalendarEventQueries.update_after_outbound_push(cached_event, attrs)
   end
+
+  # A Google event's conference change goes onto the cached raw event, where
+  # `MeetingProvisioning.booking_event_update_fields/1` looks for the Meet a
+  # booking asked for: a booking moved off Meet before a sync brought the
+  # requested Meet back would otherwise leave it on the guest's event.
+  defp conference_attrs(cached_event, %{conference_data: change}),
+    do: %{provider_metadata: ConferenceData.put_on_event(cached_event.provider_metadata, change)}
+
+  defp conference_attrs(_cached_event, _event_data), do: %{}
 end

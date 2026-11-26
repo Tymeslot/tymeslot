@@ -17,6 +17,13 @@ defmodule Tymeslot.Integrations.Shared.OAuth.GoogleOAuthHelper do
 
   require Logger
 
+  # Google returns a refresh token only from its consent screen, and skips that
+  # screen for an account that has already granted the scopes, so a reconnect
+  # asks for consent too: without it, the callback carries no refresh token and
+  # the integration keeps the one that had been revoked or had expired. The
+  # state's integration id and the login hint keep a reconnect on its account.
+  @default_prompt "consent select_account"
+
   # Authorisation parameters a caller may set beyond the ones built here.
   @forwarded_options [:include_granted_scopes, :hd]
 
@@ -51,9 +58,6 @@ defmodule Tymeslot.Integrations.Shared.OAuth.GoogleOAuthHelper do
     all_scopes = Enum.uniq([:openid, :email | scopes])
     scope_string = build_scope_string(all_scopes)
 
-    # Re-auth uses select_account only; new connections use consent + select_account
-    default_prompt = if integration_id, do: "select_account", else: "consent select_account"
-
     base_params = %{
       client_id: GoogleConfig.client_id!(),
       redirect_uri: redirect_uri,
@@ -61,7 +65,7 @@ defmodule Tymeslot.Integrations.Shared.OAuth.GoogleOAuthHelper do
       scope: scope_string,
       state: state,
       access_type: Keyword.get(options, :access_type, "offline"),
-      prompt: Keyword.get(options, :prompt, default_prompt)
+      prompt: Keyword.get(options, :prompt, @default_prompt)
     }
 
     # Only parameters Google defines are forwarded: the options also carry

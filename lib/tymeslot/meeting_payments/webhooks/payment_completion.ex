@@ -18,30 +18,34 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentCompletion do
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.ChargeBackfill
   alias Tymeslot.MeetingPayments.Telemetry
+  alias Tymeslot.MeetingPayments.Workers.BackfillCharge
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.UniqueInvitation
   alias Tymeslot.Meetings.UniqueSlot
 
-  # Best effort: a failure is logged and the payment transition stands. For
-  # a late payment being refunded, `RefundLatePayment` backfills again before
-  # it refunds.
+  # The webhook is acknowledged whatever happens here: the payment is
+  # recorded, and a charge id Stripe could not give now is read later by
+  # `Workers.BackfillCharge`, durably, rather than by rerunning the whole
+  # completion. A session naming no payment intent has nothing to read.
   @spec backfill_charge_id(BookingPaymentSchema.t(), map()) :: :ok
   def backfill_charge_id(payment, object) do
     case ChargeBackfill.backfill(payment, object["payment_intent"]) do
       {:ok, _updated} ->
         :ok
 
-      {:error, reason} when reason in [:missing_payment_intent, :charge_not_available] ->
-        Logger.warning("checkout.session.completed: charge ID not available on payment intent",
+      {:error, :missing_payment_intent} ->
+        Logger.warning("checkout.session.completed: no payment intent to read the charge from",
           payment_id: payment.id
         )
 
       {:error, reason} ->
-        Logger.error("checkout.session.completed: failed to backfill stripe_charge_id",
+        Logger.warning("checkout.session.completed: charge id backfill handed to a job",
           payment_id: payment.id,
           reason: LogFormat.reason(reason)
         )
+
+        BackfillCharge.enqueue(payment, object["payment_intent"])
     end
   end
 

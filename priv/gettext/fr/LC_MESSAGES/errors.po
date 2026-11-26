@@ -372,11 +372,6 @@ msgstr "l’appel vidéo d’un type de réunion de groupe doit utiliser exactem
 msgid "group bookings cannot require approval"
 msgstr "les réservations de groupe ne peuvent pas exiger de validation"
 
-#: lib/tymeslot/meeting_types/group_validation.ex
-#, elixir-autogen, elixir-format
-msgid "group bookings cannot require payment"
-msgstr "les réservations de groupe ne peuvent pas exiger de paiement"
-
 #: lib/tymeslot/meeting_types/meeting_type_schema.ex
 #, elixir-autogen, elixir-format
 msgid "You already have a meeting type with this name"
@@ -516,9 +511,9 @@ msgid "is not a supported language"
 msgstr "n’est pas une langue prise en charge"
 
 #: lib/tymeslot/auth/user_schema.ex
+#: lib/tymeslot/meetings/booker_contact.ex
 #: lib/tymeslot/meetings/guest_schema.ex
 #: lib/tymeslot/meetings/meeting_rules.ex
-#: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a supported locale"
 msgstr "n’est pas une langue prise en charge"
@@ -902,11 +897,6 @@ msgstr "Ce créneau n’est plus disponible. Veuillez choisir un autre horaire."
 msgid "email confirmation cannot be combined with payment"
 msgstr "la confirmation de l’adresse e-mail n’est pas compatible avec le paiement"
 
-#: lib/tymeslot/meeting_types/group_validation.ex
-#, elixir-autogen, elixir-format
-msgid "group bookings cannot require email confirmation"
-msgstr "les réservations de groupe ne peuvent pas exiger de confirmation de l’adresse e-mail"
-
 #: lib/tymeslot/meeting_types/meeting_type_schema.ex
 #, elixir-autogen, elixir-format
 msgid "would give a reserved booking link; choose another name or set a custom link"
@@ -921,3 +911,13 @@ msgstr "ne peut pas dépasser %{max} à ce rythme, afin que chaque séance tombe
 #, elixir-autogen, elixir-format
 msgid "Meeting types that ask invitees to confirm their email cannot be booked as a series."
 msgstr "Les types de réunion qui demandent aux invités de confirmer leur adresse e-mail ne peuvent pas être réservés en série."
+
+#: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe account checks"
+msgstr "vérifications du compte Stripe"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Paid group meeting types cannot be booked as a series."
+msgstr "Les types de réunion de groupe payants ne peuvent pas être réservés en série."

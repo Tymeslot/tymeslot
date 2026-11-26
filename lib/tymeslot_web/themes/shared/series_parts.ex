@@ -59,6 +59,8 @@ defmodule TymeslotWeb.Themes.Shared.SeriesParts do
   def reason_label(:already_booked),
     do: dgettext("booking_series", "You already have this session")
 
+  def reason_label(:seat_held), do: dgettext("booking_series", "Your payment is still open")
+
   def reason_label(:overlaps_session),
     do: dgettext("booking_series", "Overlaps another of your sessions")
 

@@ -30,6 +30,8 @@ defmodule Tymeslot.Meetings.GroupSchedulingConcurrencyTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.Scheduling
+  alias Tymeslot.Meetings.SeatHolds
+  alias Tymeslot.Meetings.SeatHoldSchema
   alias Tymeslot.Repo
   alias Tymeslot.Test.RaceConductor
   alias Tymeslot.TestMocks
@@ -114,6 +116,67 @@ defmodule Tymeslot.Meetings.GroupSchedulingConcurrencyTest do
     assert unboxed(fn -> length(ParticipantQueries.list_live_for_meeting(meeting.id)) end) ==
              @capacity
   end
+
+  # A slot a hold creates is `:awaiting_payment`, outside the confirmed-slot
+  # unique index, so nothing but the schedule lock keeps two first holders
+  # from each creating a meeting row. Twice as many holders as seats is
+  # enough to overbook without the lock, and few enough that every contender
+  # has a connection of its own while the rest of the suite holds its share.
+  test "racing holds never overbook", ctx do
+    slot = slot_at(ctx, 13)
+    two = 2
+    holders = 2 * two
+
+    results =
+      race(
+        for n <- 1..holders do
+          fn hold ->
+            book(slot, "holder-#{n}@example.com",
+              on_booked: hold,
+              hold: hold_until(),
+              max_participants: two
+            )
+          end
+        end
+      )
+
+    assert Enum.count(results, &match?({:ok, %{seat_hold: %SeatHoldSchema{}}}, &1)) == two
+    assert Enum.count(results, &match?({:error, :slot_full}, &1)) == holders - two
+
+    assert [%MeetingSchema{status: :awaiting_payment} = meeting] =
+             unboxed(fn ->
+               Repo.all(from(m in MeetingSchema, where: m.organizer_user_id == ^ctx.user.id))
+             end)
+
+    assert unboxed(fn -> length(SeatHolds.list_held_for_meeting(meeting.id)) end) == two
+  end
+
+  test "a hold and a free seat race for the last seat: exactly one gets it", ctx do
+    slot = slot_at(ctx, 14)
+
+    meeting =
+      unboxed(fn ->
+        {:ok, %{meeting: meeting}} = book(slot, "first@example.com")
+        {:ok, _booking} = book(slot, "second@example.com", hold: hold_until())
+        meeting
+      end)
+
+    results =
+      race([
+        fn hold -> book(slot, "seat@example.com", on_booked: hold) end,
+        fn hold -> book(slot, "holder@example.com", on_booked: hold, hold: hold_until()) end
+      ])
+
+    assert Enum.count(results, &match?({:ok, %{created_meeting?: false}}, &1)) == 1
+    assert Enum.count(results, &match?({:error, :slot_full}, &1)) == 1
+
+    assert unboxed(fn ->
+             length(ParticipantQueries.list_live_for_meeting(meeting.id)) +
+               length(SeatHolds.list_held_for_meeting(meeting.id))
+           end) == @capacity
+  end
+
+  defp hold_until, do: %{expires_at: DateTime.add(DateTime.utc_now(:second), 30, :minute)}
 
   # The other interleaving of two first bookers: the late one reads the slot
   # empty and the early one tries to book before the late one's conflict
@@ -295,6 +358,8 @@ defmodule Tymeslot.Meetings.GroupSchedulingConcurrencyTest do
   end
 
   defp book(slot, email, opts \\ []) do
+    {max_participants, opts} = Keyword.pop(opts, :max_participants, @capacity)
+
     GroupScheduling.book_seat(
       %{
         uid: UUID.generate(),
@@ -317,7 +382,7 @@ defmodule Tymeslot.Meetings.GroupSchedulingConcurrencyTest do
           custom_field_answers: %{}
         },
         guest_emails: [],
-        max_participants: @capacity
+        max_participants: max_participants
       },
       opts
     )

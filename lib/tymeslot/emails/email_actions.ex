@@ -15,6 +15,22 @@ defmodule Tymeslot.Emails.EmailActions do
   inserted under the old name would find no handler. Required args are
   checked by key, not value, since some carry an explicit `nil`.
 
+  An action whose news stops mattering at some moment lists
+  `"relevant_until"` among its required args: the job carries that moment
+  (`relevant_until/1`), or an explicit `nil` for a variant that stays owed
+  (a decline sharing an action with an expiry), and `relevant?/2` is false
+  once it has passed, so `Tymeslot.Workers.EmailWorker` drops the job
+  unsent. A sweep catching up on old rows, a restored backup or a long mail
+  outage would otherwise deliver news nobody can use.
+
+  A moment that can move after the job is queued is not frozen into it. A
+  reschedule request (`send_reschedule_request`, `send_seat_reschedule_request`)
+  can be answered until a deadline that follows the meeting's start, which a
+  host edit or a calendar sync can change while the job waits, so its handler
+  judges it against the meeting as it stands
+  (`Tymeslot.Notifications.Email.RescheduleRequestEmails.check_answerable/1`).
+  Every other action is always owed, however late it runs.
+
   A handler is `{module, function}`, called with the args, or
   `{module, function, :with_job_id}`, also called with the Oban job id, which
   the handler passes to `Tymeslot.Workers.DeliveryClaims` so a rescued job
@@ -27,6 +43,7 @@ defmodule Tymeslot.Emails.EmailActions do
   alias Tymeslot.Notifications.Email.BookingApprovalEmails
   alias Tymeslot.Notifications.Email.BookingVerificationEmails
   alias Tymeslot.Notifications.Email.CalendarSyncEmails
+  alias Tymeslot.Notifications.Email.CancellationEmails
   alias Tymeslot.Notifications.Email.EndChangeEmails
   alias Tymeslot.Notifications.Email.GroupMeetingEmails
   alias Tymeslot.Notifications.Email.GuestEmails
@@ -39,6 +56,7 @@ defmodule Tymeslot.Emails.EmailActions do
   alias Tymeslot.Notifications.Email.RescheduleRequestEmails
   alias Tymeslot.Notifications.Email.SeatEmails
   alias Tymeslot.Notifications.Email.SeriesEmails
+  alias Tymeslot.Notifications.Relevance
 
   @type handler :: {module(), atom()} | {module(), atom(), :with_job_id}
 
@@ -54,28 +72,32 @@ defmodule Tymeslot.Emails.EmailActions do
     seat_reschedule: "send_seat_reschedule_emails",
     seat_reschedule_request: "send_seat_reschedule_request",
     seat_reminder: "send_seat_reminder",
-    seat_session_moved: "send_seat_session_moved"
+    seat_session_moved: "send_seat_session_moved",
+    seat_email_verification: "send_seat_email_verification",
+    seat_slot_revived: "send_seat_slot_revived"
   }
 
   @actions %{
     # Meetings
     "send_confirmation_emails" => {["meeting_id"], {MeetingEmails, :handle_confirmation_emails}},
     "send_cancellation_emails" =>
-      {["meeting_id"], {MeetingEmails, :handle_cancellation_emails, :with_job_id}},
+      {["meeting_id"], {CancellationEmails, :handle_cancellation_emails, :with_job_id}},
     "send_reschedule_emails" =>
       {["meeting_id"], {RescheduleEmails, :handle_reschedule_emails, :with_job_id}},
     "send_end_change_emails" =>
       {["meeting_id", "start_time"], {EndChangeEmails, :handle_end_change_emails, :with_job_id}},
     "send_reminder_emails" =>
-      {["meeting_id", "reminder_value", "reminder_unit"],
+      {["meeting_id", "reminder_value", "reminder_unit", "relevant_until"],
        {MeetingEmails, :handle_reminder_emails}},
     "send_reschedule_request" =>
       {["meeting_id"], {RescheduleRequestEmails, :handle_reschedule_request}},
     # The same request, lapsed unanswered
     "send_reschedule_request_unanswered" =>
-      {["meeting_id"], {RescheduleRequestEmails, :handle_reschedule_request_unanswered}},
+      {["meeting_id", "relevant_until"],
+       {RescheduleRequestEmails, :handle_reschedule_request_unanswered}},
     "send_reschedule_request_lapsed" =>
-      {["meeting_id"], {RescheduleRequestEmails, :handle_reschedule_request_lapsed, :with_job_id}},
+      {["meeting_id", "relevant_until"],
+       {RescheduleRequestEmails, :handle_reschedule_request_lapsed, :with_job_id}},
     "send_guest_invitations" =>
       {["meeting_id", "guest_ids"], {GuestEmails, :handle_guest_invitations}},
     # Seats
@@ -93,8 +115,13 @@ defmodule Tymeslot.Emails.EmailActions do
     "send_seat_reschedule_request" =>
       {["meeting_id", "participant_id"], {GroupMeetingEmails, :handle_seat_reschedule_request}},
     "send_seat_reminder" =>
-      {["meeting_id", "participant_id", "reminder_value", "reminder_unit"],
+      {["meeting_id", "participant_id", "reminder_value", "reminder_unit", "relevant_until"],
        {GroupMeetingEmails, :handle_seat_reminder_emails}},
+    "send_seat_email_verification" =>
+      {["meeting_id", "participant_id"],
+       {BookingVerificationEmails, :handle_seat_verification_email, :with_job_id}},
+    "send_seat_slot_revived" =>
+      {["meeting_id", "participant_id"], {SeatEmails, :handle_seat_slot_revived_email}},
     "send_seat_session_moved" =>
       {["meeting_id", "participant_id", "from"],
        {GroupMeetingEmails, :handle_seat_session_moved, :with_job_id}},
@@ -105,23 +132,26 @@ defmodule Tymeslot.Emails.EmailActions do
       {["series_id", "occurrence_ids", "cancelled_by"],
        {SeriesEmails, :handle_series_cancellation, :with_job_id}},
     "send_series_request" =>
-      {["series_id"], {SeriesEmails, :handle_series_request, :with_job_id}},
+      {["series_id", "relevant_until"], {SeriesEmails, :handle_series_request, :with_job_id}},
     "send_series_request_nudge" =>
-      {["series_id"], {SeriesEmails, :handle_series_request_nudge, :with_job_id}},
+      {["series_id", "relevant_until"],
+       {SeriesEmails, :handle_series_request_nudge, :with_job_id}},
     "send_series_request_outcome" =>
-      {["series_id", "variant"], {SeriesEmails, :handle_series_request_outcome}},
+      {["series_id", "variant", "relevant_until"], {SeriesEmails, :handle_series_request_outcome}},
     # Planned sessions
     "send_registration_closed" =>
       {["meeting_id"], {PlannedSessionEmails, :handle_registration_closed, :with_job_id}},
     # Booking requests
     "send_booking_request_emails" =>
-      {["meeting_id"], {BookingApprovalEmails, :handle_booking_request_emails, :with_job_id}},
+      {["meeting_id", "relevant_until"],
+       {BookingApprovalEmails, :handle_booking_request_emails, :with_job_id}},
     "send_booking_email_verification" =>
       {["meeting_id"], {BookingVerificationEmails, :handle_verification_email, :with_job_id}},
     "send_booking_approval_nudge" =>
-      {["meeting_id"], {BookingApprovalEmails, :handle_booking_approval_nudge}},
+      {["meeting_id", "relevant_until"], {BookingApprovalEmails, :handle_booking_approval_nudge}},
     "send_booking_request_outcome" =>
-      {["meeting_id", "variant"], {BookingApprovalEmails, :handle_booking_request_outcome}},
+      {["meeting_id", "variant", "relevant_until"],
+       {BookingApprovalEmails, :handle_booking_request_outcome}},
     "send_reschedule_request_expired" =>
       {["meeting_id"], {BookingApprovalEmails, :handle_reschedule_request_expired}},
     "send_released_guest_cancellations" =>
@@ -129,7 +159,7 @@ defmodule Tymeslot.Emails.EmailActions do
        {BookingApprovalEmails, :handle_released_guest_cancellations, :with_job_id}},
     # Polls
     "send_poll_deadline_reminders" =>
-      {["poll_id"], {PollEmails, :handle_deadline_reminders, :with_job_id}},
+      {["poll_id", "relevant_until"], {PollEmails, :handle_deadline_reminders, :with_job_id}},
     "send_poll_host_nudge" =>
       {["poll_id", "variant"], {PollEmails, :handle_host_nudge, :with_job_id}},
     "send_poll_vote_digest" => {["poll_id"], {PollEmails, :handle_vote_digest, :with_job_id}},
@@ -213,6 +243,28 @@ defmodule Tymeslot.Emails.EmailActions do
   @doc "Every action name, as stored in a job's args."
   @spec names() :: [String.t()]
   def names, do: Map.keys(@actions)
+
+  @doc """
+  The `"relevant_until"` arg for a job whose email stops mattering at
+  `moment`; `nil` for one that stays owed.
+  """
+  @spec relevant_until(DateTime.t() | nil) :: String.t() | nil
+  def relevant_until(nil), do: nil
+  def relevant_until(%DateTime{} = moment), do: DateTime.to_iso8601(moment)
+
+  @doc """
+  Whether a job with `args` is still worth sending at `now`: true unless it
+  names a `"relevant_until"` moment that has passed.
+  """
+  @spec relevant?(map(), DateTime.t()) :: boolean()
+  def relevant?(%{"relevant_until" => until}, %DateTime{} = now) when is_binary(until) do
+    case DateTime.from_iso8601(until) do
+      {:ok, moment, _offset} -> Relevance.relevant?(moment, now)
+      {:error, _reason} -> true
+    end
+  end
+
+  def relevant?(_args, %DateTime{}), do: true
 
   @doc "The stored name of a per-seat action."
   @spec seat_action(atom()) :: String.t()

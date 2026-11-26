@@ -268,10 +268,11 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   # What the booker told the host and nobody else: their address, their
   # message, their contact details, and their answers to the booking form
   # (with the questions, so the guest's calendar entry does not list them
-  # unanswered). The booker's name stays, since a guest is told who arranged
-  # the meeting and the event title already carries it.
+  # unanswered), and what they paid. The booker's name stays, since a guest
+  # is told who arranged the meeting and the event title already carries it.
   @booker_private_keys [
     :attendee_email,
+    :booking_payment,
     :attendee_message,
     :attendee_phone,
     :attendee_company,

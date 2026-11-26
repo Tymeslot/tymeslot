@@ -4,21 +4,18 @@ defmodule TymeslotWeb.Dashboard.PaymentsControllerTest do
   @moduletag :database
   @moduletag :payments
 
-  import Mox
   import Tymeslot.AuthTestHelpers
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
+  import Tymeslot.StripeConnectTestHelpers, only: [expect_exchange: 2, expect_retrieve: 2]
 
   alias Phoenix.Flash
   alias Phoenix.Token
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Test.LogCapture
   alias TymeslotWeb.Endpoint
-
-  setup :verify_on_exit!
 
   setup do
     RateLimiter.clear_all()
@@ -83,7 +80,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsControllerTest do
   test "POST /dashboard/payments/connect is rejected when the feature is disabled", %{conn: conn} do
     # Forged request: the UI hides the button, but a direct POST must not be
     # able to start onboarding when the operator toggle is off. No Stripe call
-    # is expected — Mox verify_on_exit! enforces this.
+    # is expected: an unstubbed Stripe request fails the test.
     Application.put_env(:tymeslot, :meeting_payments_enabled, false)
 
     user = insert(:user, onboarding_completed_at: DateTime.utc_now(:second))
@@ -330,9 +327,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsControllerTest do
     state = start_state(user)
     insert(:connect_account, stripe_account_id: "acct_taken")
 
-    expect(StripeAdapterMock, :exchange_oauth_code, fn _code ->
-      {:ok, %{stripe_user_id: "acct_taken"}}
-    end)
+    expect_exchange("c1", "acct_taken")
 
     callback(user, state)
   end
@@ -345,7 +340,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsControllerTest do
 
   defp failed_exchange(user, error) do
     state = start_state(user)
-    expect(StripeAdapterMock, :exchange_oauth_code, fn _code -> {:error, error} end)
+    expect_exchange("c1", {:error, error})
     callback(user, state)
   end
 
@@ -366,21 +361,11 @@ defmodule TymeslotWeb.Dashboard.PaymentsControllerTest do
   end
 
   defp expect_connection(account_id, currency, opts \\ []) do
-    expect(StripeAdapterMock, :exchange_oauth_code, fn _code ->
-      {:ok, %{stripe_user_id: account_id}}
-    end)
+    expect_exchange("c1", account_id)
 
-    expect(StripeAdapterMock, :retrieve_account, fn ^account_id ->
-      {:ok,
-       %{
-         "id" => account_id,
-         "country" => Keyword.get(opts, :country, "DE"),
-         "default_currency" => currency,
-         "charges_enabled" => false,
-         "payouts_enabled" => false,
-         "details_submitted" => false,
-         "requirements" => %{"disabled_reason" => nil}
-       }}
-    end)
+    expect_retrieve(account_id, %{
+      "country" => Keyword.get(opts, :country, "DE"),
+      "default_currency" => currency
+    })
   end
 end

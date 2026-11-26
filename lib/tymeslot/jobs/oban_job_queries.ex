@@ -35,6 +35,41 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   def get_current_args(%Job{}), do: nil
 
   @doc """
+  Returns the value stored under `key` in a job's `meta`, read from its row,
+  or `nil` when the key or the row is absent.
+  """
+  @spec meta_value(integer(), String.t()) :: term() | nil
+  def meta_value(job_id, key) when is_integer(job_id) and is_binary(key) do
+    case Repo.one(from(j in Job, where: j.id == ^job_id, select: j.meta)) do
+      %{^key => value} -> value
+      _absent -> nil
+    end
+  end
+
+  @doc """
+  Stores the integer `value` under `key` in a job's `meta`, keeping its other
+  entries. Oban's own updates to a failed or discarded job leave `meta` alone,
+  so the value survives into the job's later attempts.
+  """
+  @spec put_meta_integer(integer(), String.t(), integer()) :: :ok
+  def put_meta_integer(job_id, key, value)
+      when is_integer(job_id) and is_binary(key) and is_integer(value) do
+    query =
+      from(j in Job,
+        where: j.id == ^job_id,
+        update: [
+          set: [
+            meta: fragment("? || jsonb_build_object(?::text, ?::integer)", j.meta, ^key, ^value)
+          ]
+        ]
+      )
+
+    Repo.update_all(query, [])
+
+    :ok
+  end
+
+  @doc """
   Counts the jobs of `worker` whose args contain `args` (JSON containment,
   served by Oban's GIN index on `args`) inserted at or after `since`, in any
   state. Returns the count and the oldest such job's `inserted_at`, `nil`
@@ -239,6 +274,23 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   end
 
   @doc """
+  Deletes the pending jobs on the emails queue for the action and meeting
+  `args` names whose args are anything but `args` exactly: the jobs a job
+  with `args` replaces. One with the same args is kept, for the caller's
+  uniqueness to settle.
+  """
+  @spec delete_superseded_jobs(module(), %{String.t() => term()}) :: {non_neg_integer(), nil}
+  def delete_superseded_jobs(
+        worker_module,
+        %{"action" => action, "meeting_id" => meeting_id} = args
+      ) do
+    worker_module
+    |> pending_jobs_query(%{"action" => action, "meeting_id" => meeting_id}, queue: "emails")
+    |> where([j], fragment("? <> ?::jsonb", j.args, type(^args, :map)))
+    |> Repo.delete_all()
+  end
+
+  @doc """
   Deletes every pending job a worker holds for one meeting, on any queue.
 
   `delete_jobs_by_action/3` above is scoped to the `emails` queue, which is
@@ -252,6 +304,14 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
     args_match = %{"meeting_id" => meeting_id}
     delete_pending_jobs(worker_module, args_match)
   end
+
+  @doc """
+  Deletes every pending job `worker_module` holds for one group-meeting seat,
+  by its `"participant_id"` argument.
+  """
+  @spec delete_participant_jobs(module(), term()) :: {non_neg_integer(), nil}
+  def delete_participant_jobs(worker_module, participant_id),
+    do: delete_pending_jobs(worker_module, %{"participant_id" => participant_id})
 
   @doc """
   Deletes existing reminder email jobs for a meeting to avoid duplicates
@@ -374,15 +434,19 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
     do: delete_pending_jobs(worker_module, %{"user_id" => user_id})
 
   defp delete_pending_jobs(worker_module, args_match, opts \\ []) do
+    worker_module
+    |> pending_jobs_query(args_match, opts)
+    |> Repo.delete_all()
+  end
+
+  defp pending_jobs_query(worker_module, args_match, opts) do
     worker_name = normalize_worker_name(worker_module)
-    queue = Keyword.get(opts, :queue)
 
     Job
     |> where([j], j.worker == ^worker_name)
     |> where([j], j.state in @deletable_states)
     |> where([j], fragment("? @> ?::jsonb", j.args, type(^args_match, :map)))
-    |> queue_filter(queue)
-    |> Repo.delete_all()
+    |> queue_filter(Keyword.get(opts, :queue))
   end
 
   defp queue_filter(query, nil), do: query

@@ -20,10 +20,8 @@ defmodule Tymeslot.Payments.Webhooks.SecretCheckTest do
   # A fully configured deployment: a real Stripe key, subscriptions, meeting
   # payments and both webhook secrets. Each test removes one piece.
   setup do
-    setup_config(:stripity_stripe, :api_key, "stripe-key-configured")
-
     setup_config(:tymeslot,
-      stripe_secret_key: nil,
+      stripe_secret_key: "stripe-key-configured",
       subscription_manager: SubscriptionManagerMock,
       meeting_payments_enabled: true,
       stripe_webhook_secret: "whsec_platform",
@@ -78,7 +76,7 @@ defmodule Tymeslot.Payments.Webhooks.SecretCheckTest do
   end
 
   test "nothing is checked without a real Stripe key" do
-    setup_config(:stripity_stripe, :api_key, "sk_test_fake")
+    setup_config(:tymeslot, :stripe_secret_key, "sk_test_fake")
     setup_config(:tymeslot, :stripe_webhook_secret, nil)
     setup_config(:tymeslot, :stripe_connect_webhook_secret, nil)
 

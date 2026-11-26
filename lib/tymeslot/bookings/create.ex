@@ -27,8 +27,6 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes.FixedDates
-  alias Tymeslot.MeetingTypes.MeetingTypeSchema
-  alias Tymeslot.MeetingTypes.SeriesSettings
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
 
@@ -53,7 +51,12 @@ defmodule Tymeslot.Bookings.Create do
   """
   @type execute_result ::
           {:ok, map()}
-          | {:ok, :payment_required, %{meeting: map(), checkout_url: String.t()}}
+          | {:ok, :payment_required,
+             %{
+               required(:meeting) => map(),
+               required(:checkout_url) => String.t(),
+               optional(:seat_hold) => map()
+             }}
           | {:error, Errors.classified_error()}
 
   @doc """
@@ -69,10 +72,11 @@ defmodule Tymeslot.Bookings.Create do
       booking page always sets it)
 
   When the booking's meeting type has `payment_required: true`, the meeting
-  is persisted with status `awaiting_payment`, side effects (calendar, video,
-  email) are deferred until payment confirmation, and a Stripe Checkout
-  Session URL is returned alongside the meeting via the
-  `{:ok, :payment_required, ...}` tuple.
+  is persisted with status `awaiting_payment` (on a group type, the booker's
+  seats are held on the slot instead, and the map also carries the
+  `:seat_hold`), side effects (calendar, video, email) are deferred until
+  payment confirmation, and a Stripe Checkout Session URL is returned
+  alongside the meeting via the `{:ok, :payment_required, ...}` tuple.
 
   When it has `requires_email_verification: true` (and is not paid), the
   meeting is persisted with status `awaiting_verification`, holding its slot,
@@ -96,20 +100,10 @@ defmodule Tymeslot.Bookings.Create do
 
   defp validate_booking(booking_data) do
     with :ok <- Prepare.validate_admission(booking_data),
-         :ok <- validate_single_allowed(booking_data) do
+         :ok <- Prepare.validate_single_allowed(booking_data) do
       validate_time(booking_data, booking_data.organizer_user_id)
     end
   end
-
-  # A type booked as a series takes no single sessions unless the host lets
-  # it (`series_required: false`); a series is booked through
-  # `Tymeslot.BookingSeries`. A reschedule moves one existing session and
-  # never comes here.
-  defp validate_single_allowed(%{meeting_type: %MeetingTypeSchema{} = type}) do
-    if SeriesSettings.single_allowed?(type), do: :ok, else: {:error, :series_required}
-  end
-
-  defp validate_single_allowed(_booking_data), do: :ok
 
   # A fixed-date type offers only the sessions its host planned, so the time
   # booked must be one of them, still open for registration

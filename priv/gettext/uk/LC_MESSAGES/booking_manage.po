@@ -745,6 +745,11 @@ msgstr "Це бронювання більше недоступне, тому с
 
 #: lib/tymeslot_web/live/booking_verification_live/view.ex
 #, elixir-autogen, elixir-format
+msgid "The booking was cancelled and your place released."
+msgstr "Бронювання скасовано, а ваше місце звільнено."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen
 msgid "Cancelling…"
 msgstr "Скасування…"
 
@@ -797,3 +802,18 @@ msgstr[2] "Відхилити всі %{count} сесій"
 #, elixir-autogen, elixir-format
 msgid "If you don't answer by %{deadline}, this request lapses and every session is released."
 msgstr "Якщо ви не відповісте до %{deadline}, запит утратить чинність, а всі сесії звільняться."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "This booking is no longer available, so your place was released."
+msgstr "Це бронювання більше недоступне, тому ваше місце звільнено."
+
+#: lib/tymeslot_web/live/booking_verification_live/view.ex
+#, elixir-autogen, elixir-format
+msgid "This booking is no longer held"
+msgstr "Це бронювання більше не зарезервоване"
+
+#: lib/tymeslot_web/live/booking_verification_live.ex
+#, elixir-autogen, elixir-format
+msgid "The organiser is changing this meeting's time, so your booking cannot be confirmed for now. You can try again while your place is held."
+msgstr "Організатор змінює час цієї зустрічі, тому наразі підтвердити ваше бронювання не можна. Ви можете спробувати ще раз, поки ваше місце зарезервовано за вами."

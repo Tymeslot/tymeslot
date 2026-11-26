@@ -1,8 +1,7 @@
 defmodule TymeslotWeb.OnboardingAvatarUploadTest do
   @moduledoc """
-  Verifies a successful avatar upload on the onboarding profile step clears
-  the file picker by pushing the "upload-complete" event the `AutoUpload`
-  hook listens for, mirroring the dashboard avatar upload fix.
+  Avatar uploads on the onboarding profile step: a picked image is stored on
+  the profile as soon as it arrives, and one over the pixel limit is refused.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -28,15 +27,8 @@ defmodule TymeslotWeb.OnboardingAvatarUploadTest do
   end
 
   describe "avatar upload" do
-    test "a successful upload pushes upload-complete so the AutoUpload hook clears the picker",
-         %{conn: conn} do
-      {:ok, view, _html, _user} = setup_onboarding(conn)
-
-      html = render(view)
-
-      # The file input must be inside the hook's element for clearFileInputs
-      # (assets/js/hooks/auto_upload.js) to find it via this.el.querySelectorAll.
-      assert html =~ ~r/id="onboarding-avatar-upload-group"[^>]*phx-hook="AutoUpload"/
+    test "a picked image is stored on the profile", %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding(conn)
 
       avatar = %{
         last_modified: System.system_time(:millisecond),
@@ -49,7 +41,7 @@ defmodule TymeslotWeb.OnboardingAvatarUploadTest do
       |> file_input("#onboarding-avatar-form", :avatar, [avatar])
       |> render_upload("avatar.png")
 
-      assert_push_event(view, "upload-complete", %{})
+      assert Profiles.get_profile(user.id).avatar =~ ".png"
     end
 
     test "refuses an image over 40 megapixels and says how large it may be", %{conn: conn} do

@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "delegated_count": 1436,
-    "iana_version": "2026110100",
-    "last_updated": "2026-11-02",
+    "delegated_count": 1435,
+    "iana_version": "2026112200",
+    "last_updated": "2026-11-22",
     "source": "https://data.iana.org/TLD/tlds-alpha-by-domain.txt"
   },
   "tlds": {
@@ -1340,7 +1340,6 @@
       "wtf",
       "xbox",
       "xerox",
-      "xihuan",
       "xin",
       "xn--11b4c3d",
       "xn--1ck2e1b",

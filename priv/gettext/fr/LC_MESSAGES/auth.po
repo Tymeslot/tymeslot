@@ -780,8 +780,8 @@ msgstr "Votre compte est en cours de suppression et ne peut plus être restauré
 
 #: lib/tymeslot_web/controllers/auth/account_restore_html.ex
 #, elixir-autogen, elixir-format
-msgid "Your account is in the process of being deleted (scheduled for %{date}). If you want to keep it, restore it here."
-msgstr "Votre compte est en cours de suppression (prévue le %{date}). Si vous souhaitez le conserver, restaurez-le ici."
+msgid "Your account is in the process of being deleted (scheduled for %{for_date}). If you want to keep it, restore it here."
+msgstr "Votre compte est en cours de suppression (prévue le %{for_date}). Si vous souhaitez le conserver, restaurez-le ici."
 
 #: lib/tymeslot/auth/email_change.ex
 #, elixir-autogen, elixir-format

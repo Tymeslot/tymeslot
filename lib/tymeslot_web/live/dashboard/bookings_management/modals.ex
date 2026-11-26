@@ -30,6 +30,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Modals do
   attr :cancel_meeting, :map, default: nil
   attr :show_cancel, :boolean, required: true
   attr :cancel_booking_payment, :map, default: nil
+  attr :cancel_seat_payments, :list, default: []
   attr :cancel_refund_error, :map, default: %{}
   attr :cancel_refund_form, :map, default: %{choice: "full", amount: "", acknowledged: false}
   attr :cancelling, :boolean, required: true
@@ -59,6 +60,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Modals do
       show={@show_cancel}
       meeting={@cancel_meeting}
       booking_payment={@cancel_booking_payment}
+      seat_payments={@cancel_seat_payments}
       refund_error={@cancel_refund_error}
       refund_form={@cancel_refund_form}
       timezone={timezone_for(@cancel_meeting, @profile)}

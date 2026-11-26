@@ -68,7 +68,7 @@ msgstr ""
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
-msgid "%{organizer} will reply by %{deadline} at the latest."
+msgid "%{organizer} will reply by %{by_deadline} at the latest."
 msgstr ""
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
@@ -463,7 +463,7 @@ msgstr ""
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
-msgid "The slot is held until you answer. If you haven't replied by %{deadline}, the request lapses and %{name} is told the time is free again."
+msgid "The slot is held until you answer. If you haven't replied by %{by_deadline}, the request lapses and %{name} is told the time is free again."
 msgstr ""
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
@@ -543,7 +543,7 @@ msgstr ""
 
 #: lib/tymeslot/emails/templates/booking_email_verification.ex
 #, elixir-autogen, elixir-format
-msgid "Your booking is not confirmed yet. Click the button below by %{deadline} to confirm it, and we will hold the time for you until then."
+msgid "Your booking is not confirmed yet. Click the button below by %{by_deadline} to confirm it, and we will hold the time for you until then."
 msgstr ""
 
 #: lib/tymeslot/emails/templates/reschedule_request_unanswered.ex
@@ -616,4 +616,9 @@ msgstr ""
 #: lib/tymeslot/emails/templates/reschedule_request_unanswered.ex
 #, elixir-autogen, elixir-format
 msgid "You asked for this meeting to be moved, and the request lapsed before anyone still on it picked a new time. Its original time had already been given up, so the meeting has expired. The participants have been told and can book again from your booking page."
+msgstr ""
+
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking is not confirmed yet. Click the button below by %{by_deadline} to confirm it, and we will hold your place until then."
 msgstr ""

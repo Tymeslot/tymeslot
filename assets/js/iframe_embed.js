@@ -10,6 +10,9 @@
  *    shrinks between steps. Both inline and modal embeds report height
  *    continuously — the wrapper sizing differs (inline grows freely, modal
  *    is capped) but the measurement protocol is identical.
+ * 3. Relays an Escape the page itself does not consume to the parent as
+ *    `{type: 'tymeslot-escape'}`, so the popup embed closes on Escape with
+ *    focus inside the booking page too.
  *
  * Measurement protocol:
  * - Every pass measures the SAME thing — ceil(getComputedStyle(main).height +
@@ -130,6 +133,39 @@
     );
     return;
   }
+
+  // --- Escape relay ---
+  // Keys pressed inside this frame never reach the embedder's document, so the
+  // popup embed's own Escape handler cannot see them once the visitor has
+  // clicked into the booking page. The page tells the parent instead, which
+  // closes its popup if this frame is the popup's (an inline embed ignores it).
+  //
+  // An Escape something on this page consumes must not also close the popup.
+  // The select panels (floating_panel.js) prevent and stop it, the tooltip
+  // stops it in the capture phase, which this bubble-phase listener on window
+  // then never sees. LiveView's Escape bindings (`phx-key="escape"`: the
+  // language and timezone dropdowns, while open) prevent nothing, so an open
+  // one is looked for in the DOM, which still shows it open at this point.
+  function liveViewTakesEscape(target) {
+    const bound = document.querySelectorAll("[phx-window-keydown], [phx-keydown]");
+    return Array.prototype.some.call(bound, function (el) {
+      if ((el.getAttribute("phx-key") || "").toLowerCase() !== "escape") return false;
+      if (el.getClientRects().length === 0) return false;
+      return el.hasAttribute("phx-window-keydown") || el.contains(target);
+    });
+  }
+
+  window.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape" || e.repeat || e.isComposing) return;
+    if (e.defaultPrevented || liveViewTakesEscape(e.target)) return;
+
+    try {
+      // PUBLIC EMBED PROTOCOL, like "tymeslot-resize" below.
+      window.parent.postMessage({ type: "tymeslot-escape" }, targetOrigin);
+    } catch (_) {
+      // Parent unreachable: nothing to close.
+    }
+  });
 
   // --- Continuous height measurement loop ---
   const POLL_INTERVAL_MS = 50;

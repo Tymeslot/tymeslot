@@ -215,13 +215,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             max_participants={@max_participants}
             show_seat_availability={@show_seat_availability}
             last_spots_threshold={@last_spots_threshold}
-            payment_required={@payment_required}
             blocker={
               GroupRules.enable_blocker(%{
                 type: @type,
                 group_bookings_allowed: @group_bookings_allowed,
-                payment_required: @payment_required,
-                payments_charges_enabled: @payments_charges_enabled,
                 requires_approval: @requires_approval,
                 requires_email_verification: @requires_email_verification,
                 extra_lengths: Map.get(@form_data, "extra_lengths", []),
@@ -282,6 +279,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             session_error={@session_error}
             session_notice={@session_notice}
             confirming_session_id={@confirming_session_id}
+            confirming_seat_refunds={@confirming_seat_refunds}
             editing_session={@editing_session}
             form_id={@id}
             myself={@myself}
@@ -310,7 +308,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           <.email_verification_section
             requires_email_verification={@requires_email_verification}
             payment_required={@payment_required}
-            group_bookings_enabled={@group_bookings_enabled}
             series_enabled={@series.series_mode != nil}
             errors={
               @form_errors

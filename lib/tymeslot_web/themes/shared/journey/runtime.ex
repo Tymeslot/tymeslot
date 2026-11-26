@@ -51,7 +51,8 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
   import Phoenix.Component, only: [assign: 2, assign: 3]
 
   alias Phoenix.LiveView.Socket
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.Checkout
+  alias Tymeslot.Meetings.SeatHolds
   alias TymeslotWeb.Themes.Shared.ChoicesInUrl
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.Journey
@@ -306,17 +307,29 @@ defmodule TymeslotWeb.Themes.Shared.Journey.Runtime do
 
   @doc """
   Forgets a paid booking's payment wait: the meeting it waited on and its
-  checkout link, and the page's subscription to that meeting's payment
-  broadcasts, so a repeated broadcast for it cannot move a later booking.
+  checkout link, the seat hold a group booking waited on, and the page's
+  subscription to the payment broadcasts of either, so a repeated broadcast
+  for it cannot move a later booking.
   """
   @spec forget_payment_wait(Socket.t()) :: Socket.t()
   def forget_payment_wait(socket) do
+    # A seat's wait holds its meeting too, so this also unsubscribes that
+    # meeting's topic, which the seat's page never joined: harmless.
     case socket.assigns[:awaiting_payment_meeting] do
-      %{id: id} -> Phoenix.PubSub.unsubscribe(Tymeslot.PubSub, MeetingPayments.payment_topic(id))
+      %{id: id} -> Phoenix.PubSub.unsubscribe(Tymeslot.PubSub, Checkout.payment_topic(id))
       _none -> :ok
     end
 
-    assign(socket, awaiting_payment_meeting: nil, awaiting_payment_checkout_url: nil)
+    case socket.assigns[:awaiting_payment_hold] do
+      %{id: id} -> Phoenix.PubSub.unsubscribe(Tymeslot.PubSub, SeatHolds.topic(id))
+      _none -> :ok
+    end
+
+    assign(socket,
+      awaiting_payment_meeting: nil,
+      awaiting_payment_hold: nil,
+      awaiting_payment_checkout_url: nil
+    )
   end
 
   @doc """

@@ -34,6 +34,10 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
   # time.
   @max_steps 100_000
 
+  # How far `last_start/2` steps a rule it cannot work out directly: two
+  # years, a millisecond or so, as an `.ics` import judges thousands of series.
+  @max_last_start_days 731
+
   @doc """
   Expands a single event into its occurrences within `[range_start, range_end]`.
 
@@ -124,6 +128,71 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
       :error ->
         1
     end
+  end
+
+  @doc """
+  The start of the last occurrence `rule` makes from `first` before its
+  `COUNT` runs out, as `expand/4` generates them; `first`, the start returned
+  and exclusions are read as in `count_before/3`.
+
+  The work is bounded whatever the `COUNT` and however old `first` is. A rule
+  repeating only by `FREQ` and `INTERVAL`, from a day every period holds, is
+  worked out directly; any other is stepped for at most #{@max_last_start_days}
+  days, and is `:unknown` past them, as without a `COUNT` or a readable rule.
+  """
+  @spec last_start(String.t(), Date.t() | DateTime.t()) ::
+          {:ok, Date.t() | DateTime.t()} | :unknown
+  def last_start(rule, first) do
+    with {:ok, %RRule{count: count} = parsed} when is_integer(count) and count > 0 <-
+           RRule.parse(rule),
+         start_dt = step_datetime(first),
+         {:ok, last} <- last_start_dt(start_dt, stepping(parsed, start_dt.time_zone)) do
+      {:ok, if(is_struct(first, DateTime), do: last, else: DateTime.to_date(last))}
+    else
+      _no_count_or_unknown -> :unknown
+    end
+  end
+
+  # Every period of a rule without BYxxx parts yields the first start's day,
+  # bar a month or year lacking it (the 31st, 29 February), so the last start
+  # is `COUNT - 1` periods on; one past the year 9999 is `:unknown`.
+  defp last_start_dt(start_dt, %{count: count} = rule) do
+    first_date = DateTime.to_date(start_dt)
+
+    cond do
+      not direct?(rule, first_date) ->
+        stepped_last_start(start_dt, rule)
+
+      (count - 1) * rule.interval > periods_between(first_date, ~D[9999-12-31], rule) ->
+        :unknown
+
+      true ->
+        {:ok, rebuild_in_zone(start_dt, nth_period(first_date, rule, count - 1))}
+    end
+  end
+
+  defp direct?(rule, first_date) do
+    Enum.all?([:by_day, :by_month_day, :by_month, :by_set_pos, :until], &is_nil(rule[&1])) and
+      every_period_holds?(rule.freq, first_date)
+  end
+
+  defp every_period_holds?(:monthly, date), do: date.day <= 28
+  defp every_period_holds?(:yearly, date), do: {date.month, date.day} != {2, 29}
+  defp every_period_holds?(_daily_or_weekly, _date), do: true
+
+  # Stopping short of `COUNT` within the horizon means UNTIL ended the series
+  # when it falls first, and the horizon cut it off otherwise.
+  defp stepped_last_start(start_dt, rule) do
+    horizon = DateTime.add(start_dt, @max_last_start_days, :day)
+
+    starts =
+      start_dt |> occurrence_starts(rule, {start_dt, horizon}, 0, :uncapped) |> Enum.to_list()
+
+    until_first? = is_struct(rule.until, DateTime) and DateTime.before?(rule.until, horizon)
+
+    if starts != [] and (length(starts) == rule.count or until_first?),
+      do: {:ok, List.last(starts)},
+      else: :unknown
   end
 
   @doc """

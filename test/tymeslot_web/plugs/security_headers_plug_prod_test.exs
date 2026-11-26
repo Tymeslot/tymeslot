@@ -180,7 +180,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugProdTest do
       assert directives["frame-src"] == "'self'"
 
       assert directives["form-action"] ==
-               "'self' https://billing.stripe.com https://checkout.stripe.com https://connect.stripe.com"
+               "'self' https://accounts.google.com https://github.com https://billing.stripe.com https://checkout.stripe.com https://connect.stripe.com"
     end
 
     test "adds the reCAPTCHA origins while booking reCAPTCHA is active", %{

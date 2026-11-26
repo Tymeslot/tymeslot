@@ -22,6 +22,7 @@ defmodule Tymeslot.Meetings.SeatView do
   event's snapshot) with `load/4`.
   """
 
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema
@@ -62,7 +63,10 @@ defmodule Tymeslot.Meetings.SeatView do
   def for_booker(%MeetingSchema{id: meeting_id} = meeting, email) when is_binary(email) do
     address = ParticipantSchema.normalize_email(email)
 
-    case Enum.find(ParticipantQueries.list_live_for_meeting(meeting_id), &(&1.email == address)) do
+    case Enum.find(
+           ParticipantQueries.list_live_held_for_meeting(meeting_id),
+           &(&1.email == address)
+         ) do
       nil -> nil
       participant -> at_event(meeting, participant)
     end
@@ -99,6 +103,21 @@ defmodule Tymeslot.Meetings.SeatView do
 
       _missing_or_elsewhere ->
         {:error, :not_found}
+    end
+  end
+
+  @doc """
+  The view of the seat `participant_id` holds now, on whichever meeting it
+  sits: a paid seat hold can convert onto a meeting other than its own
+  (`Tymeslot.Meetings.SeatHoldConversion`), so its booker's confirmation is
+  built from the participant rather than the hold's meeting. Returns
+  `{:error, :not_found}` for a participant that does not exist.
+  """
+  @spec for_participant(binary()) :: {:ok, MeetingSchema.t()} | {:error, :not_found}
+  def for_participant(participant_id) when is_binary(participant_id) do
+    with {:ok, participant} <- ParticipantQueries.get(participant_id),
+         {:ok, meeting} <- MeetingQueries.get_meeting(participant.meeting_id) do
+      {:ok, at_event(meeting, participant)}
     end
   end
 
@@ -143,8 +162,20 @@ defmodule Tymeslot.Meetings.SeatView do
 
   defp seat_guests(not_loaded, _participant_id), do: not_loaded
 
-  defp put_seat_status(meeting, %ParticipantSchema{cancelled_at: nil}), do: meeting
   defp put_seat_status(%MeetingSchema{status: :cancelled} = meeting, _participant), do: meeting
+
+  # A held seat is held until its own deadline. The slot's deadline is only
+  # its first held seat's, and a planned session, or a slot whose first seat
+  # counted at once, has none at all.
+  defp put_seat_status(meeting, %ParticipantSchema{cancelled_at: nil} = participant) do
+    if ParticipantSchema.unverified?(participant),
+      do: %{
+        meeting
+        | status: :awaiting_verification,
+          verification_deadline_at: participant.verification_deadline_at
+      },
+      else: meeting
+  end
 
   defp put_seat_status(meeting, %ParticipantSchema{cancelled_at: cancelled_at}),
     do: %{meeting | status: :cancelled, cancelled_at: cancelled_at}

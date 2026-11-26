@@ -41,6 +41,7 @@ defmodule Tymeslot.Emails.Templates.SeriesRequest do
   }
 
   alias Tymeslot.Utils.DateTimeUtils
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -172,8 +173,8 @@ defmodule Tymeslot.Emails.Templates.SeriesRequest do
 
     dgettext(
       "emails_booking_series",
-      "Every session is held until you answer. If you haven't replied by %{deadline}, the request lapses and %{name} is told the times are free again.",
-      deadline: format_deadline(deadline, zone, locale, details[:organizer_time_format]),
+      "Every session is held until you answer. If you haven't replied by %{by_deadline}, the request lapses and %{name} is told the times are free again.",
+      by_deadline: by_deadline(deadline, zone, locale, details[:organizer_time_format]),
       name: details.attendee_name
     )
   end
@@ -189,10 +190,10 @@ defmodule Tymeslot.Emails.Templates.SeriesRequest do
 
     dgettext(
       "emails_booking_series",
-      "Hi %{name}, %{host} has your request for the sessions below. They are held for you but not booked until %{host} approves them, and you'll hear either way by %{deadline}.",
+      "Hi %{name}, %{host} has your request for the sessions below. They are held for you but not booked until %{host} approves them, and you'll hear either way by %{by_deadline}.",
       name: details.attendee_name,
       host: details.organizer_name,
-      deadline: format_deadline(deadline, zone, locale, nil)
+      by_deadline: by_deadline(deadline, zone, locale, nil)
     )
   end
 
@@ -205,10 +206,13 @@ defmodule Tymeslot.Emails.Templates.SeriesRequest do
     )
   end
 
-  defp format_deadline(deadline, zone, locale, time_format) do
+  # Both sentences put "by" before the deadline, so it carries the article
+  # that goes with it (`LocaleFormat.with_article/3`).
+  defp by_deadline(deadline, zone, locale, time_format) do
     deadline
     |> DateTimeUtils.convert_to_timezone(zone)
     |> Formatting.format_datetime(locale, time_format)
+    |> LocaleFormat.with_article(:none, locale)
   end
 
   defp rule(details, first_start, locale, time_format) do

@@ -4,7 +4,7 @@ defmodule Tymeslot.MixProject do
   def project do
     [
       app: :tymeslot,
-      version: "1.48.0",
+      version: "1.50.0",
       elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -120,33 +120,12 @@ defmodule Tymeslot.MixProject do
       {:dns_cluster, "~> 0.3"},
       {:bandit, "~> 1.8"},
       {:tz, "~> 0.28"},
-      {:uuid, "~> 1.1"},
       # QR codes are drawn server-side (booking-link email, onboarding).
       {:eqrcode, "~> 0.2"},
       {:bcrypt_elixir, "~> 3.2"},
       {:mox, "~> 1.0", only: :test},
       {:meck, "~> 1.1", only: :test},
       {:ex_machina, "~> 2.8", only: :test},
-      {:stripity_stripe, "~> 3.3"},
-      # Pinned to 4.x, which every remaining requirement accepts: Swoosh
-      # declares it optional, Wallaby's httpoison and web_driver_client (and
-      # the Tesla it pulls in) are test-only, and stripity_stripe uses hackney
-      # as its non-optional HTTP client for every Stripe API call.
-      # hackney 4.x has two real runtime consumers: Swoosh's Postmark
-      # adapter (config :swoosh, :api_client, Swoosh.ApiClient.Hackney,
-      # prod-only) and stripity_stripe. Neither path is exercised in CI
-      # (test config uses Swoosh.Adapters.Test and Stripe is mocked), so
-      # both need verification in staging after any hackney upgrade.
-      # The same override must be repeated in any project that depends on
-      # this one as a path dependency, because overrides declared by a
-      # dependency do not apply to the parent project's resolution.
-      # Verified via `mix deps.tree`/mix.lock: no current dependency
-      # requires hackney below 4.0 (stripity_stripe's own requirement is
-      # already the non-optional `~> 4.0` that would be picked without this
-      # override), so nothing is being resolved here today. Retained
-      # deliberately as a guard against a future dependency reintroducing a
-      # lower requirement and silently downgrading hackney underneath it.
-      {:hackney, "~> 4.0", override: true},
       {:html_sanitize_ex, "~> 1.4"},
       {:gen_smtp, "~> 1.2"},
       {:castore, "~> 1.0"},
@@ -160,7 +139,7 @@ defmodule Tymeslot.MixProject do
       # libvips through vix, which ships prebuilt binaries: re-encodes uploaded
       # images so their metadata (EXIF location, capture time, device) is never
       # published.
-      {:image, "~> 0.72"},
+      {:vix, "~> 0.42"},
       {:sweet_xml, "~> 0.7"},
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
@@ -182,6 +161,10 @@ defmodule Tymeslot.MixProject do
       # Plug for setting conn.remote_ip from proxy headers
       {:remote_ip, "~> 1.1"},
       {:stream_data, "~> 1.1", only: :test},
+      # Wallaby's httpoison and web_driver_client are the only consumers of
+      # hackney, so it is test-only; httpoison's `~> 4.0` keeps it on 4.x
+      # without an override. Production HTTP goes through Finch and Req,
+      # Swoosh included (`config :swoosh, :api_client`).
       {:wallaby, "~> 0.30", only: :test, runtime: false},
       {:phoenix_ecto, "~> 4.6"}
     ]
@@ -211,16 +194,17 @@ defmodule Tymeslot.MixProject do
       # Every `:e2e` test module lives in this repo, and `test_helper.exs` starts
       # the endpoint and Wallaby only when E2E is set, so the tag is unrunnable
       # without this alias. Needs a local Chrome and chromedriver, which is why
-      # it is not part of the default gate or of CI. The browser loads the
-      # bundles in priv/static, which nothing else rebuilds outside a running
-      # dev server's watchers, so without `assets.build` a JavaScript or CSS
-      # change goes untested and the run passes against the stale build.
+      # it is not part of the default gate; CI runs it in `e2e.yml`. The
+      # browser loads the bundles in priv/static, which nothing else rebuilds
+      # outside a running dev server's watchers, so without `assets.build` a
+      # JavaScript or CSS change goes untested and the run passes against the
+      # stale build.
       "test.e2e": [
         &set_e2e_env/1,
         "assets.build",
         "ecto.create --quiet",
         "ecto.migrate --quiet",
-        "test --color --preload-modules --only e2e"
+        &run_e2e_tests/1
       ],
       # The Vitest suite under assets/, which `mix test` does not reach. A
       # `mix precommit` step and a CI step of its own.
@@ -260,6 +244,18 @@ defmodule Tymeslot.MixProject do
   # `test_helper.exs` reads this to decide whether to start the HTTP endpoint and
   # Wallaby, which the browser needs to connect to.
   defp set_e2e_env(_args), do: System.put_env("E2E", "true")
+
+  # Without a path, the browser suite's own directory rather than the whole
+  # of `test/`: `--only e2e` over everything loads every other test module
+  # only to exclude it, about a minute of a run.
+  defp run_e2e_tests(args) do
+    paths =
+      if Enum.any?(args, &String.starts_with?(&1, "test/")),
+        do: [],
+        else: ["test/tymeslot_web/e2e"]
+
+    Mix.Task.run("test", ["--color", "--preload-modules", "--only", "e2e"] ++ args ++ paths)
+  end
 
   # `mix setup` builds the assets with the esbuild and Tailwind binaries and
   # never runs npm, so a fresh clone has no node_modules until this installs

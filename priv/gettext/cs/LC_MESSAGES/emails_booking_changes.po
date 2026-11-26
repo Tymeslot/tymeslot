@@ -227,8 +227,8 @@ msgstr "Dobrý den, %{name}, naše schůzka byla zrušena. Omlouvám se za kompl
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex
 #, elixir-autogen, elixir-format
-msgid "Hi %{name} - you've given up your spot in %{meeting} on %{date}."
-msgstr "Dobrý den, %{name}, vzdali jste se svého místa na %{meeting} dne %{date}."
+msgid "Hi %{name} - you've given up your spot in %{meeting} on %{on_date}."
+msgstr "Dobrý den, %{name}, vzdali jste se svého místa na %{meeting} dne %{on_date}."
 
 #: lib/tymeslot/emails/templates/booking_payment_refunded.ex
 #, elixir-autogen, elixir-format
@@ -711,3 +711,82 @@ msgstr "Vaši hosté byli o zrušení informováni."
 #, elixir-autogen, elixir-format
 msgid "Video call"
 msgstr "Videohovor"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} cancelled their spot. No one else has confirmed a spot on this slot, so the meeting has been cancelled."
+msgstr "%{name} zrušil(a) své místo. V tomto termínu nemá nikdo další potvrzené místo, takže schůzka byla zrušena."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting cancelled: %{name} cancelled - %{date}"
+msgstr "Schůzka zrušena: %{name} zrušil(a) - %{date}"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "No one else has confirmed a spot at the earlier time, so that meeting has been cancelled."
+msgstr "V původním termínu nemá nikdo další potvrzené místo, takže tamní schůzka byla zrušena."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} took a spot on this slot, so the meeting you were told had been cancelled goes ahead after all."
+msgstr "%{name} si rezervoval(a) místo v tomto termínu, takže schůzka, jejíž zrušení vám bylo oznámeno, se přece jen koná."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Back on"
+msgstr "Obnoveno"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting back on: %{name} - %{date}"
+msgstr "Schůzka obnovena: %{name} - %{date}"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Your group meeting is on again"
+msgstr "Vaše skupinová schůzka se znovu koná"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} is being refunded to %{count} participant. They get an email once the refund is issued."
+msgid_plural "%{amount} is being refunded to %{count} participants. Each gets an email once their refund is issued."
+msgstr[0] "%{amount} se vrací %{count} účastníkovi. Jakmile bude platba vrácena, dostane e-mail."
+msgstr[1] "%{amount} se vrací %{count} účastníkům. Každý z nich dostane e-mail, jakmile mu bude platba vrácena."
+msgstr[2] "%{amount} se vrací %{count} účastníkům. Každý z nich dostane e-mail, jakmile mu bude platba vrácena."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "REFUNDS ON THEIR WAY:"
+msgstr "PLATBY SE VRACEJÍ:"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "REFUNDS OUTSTANDING:"
+msgstr "PLATBY K VRÁCENÍ:"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Refunds on their way"
+msgstr "Platby se vracejí"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Refunds outstanding"
+msgstr "Platby k vrácení"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "You still hold %{amount} from %{count} participant. Refund it under Payments in your dashboard if you need to."
+msgid_plural "You still hold %{amount} from %{count} participants. Refund them under Payments in your dashboard if you need to."
+msgstr[0] "Stále u vás zůstává %{amount} od %{count} účastníka. Pokud je to potřeba, vraťte platbu v sekci Platby na své nástěnce."
+msgstr[1] "Stále u vás zůstává %{amount} od %{count} účastníků. Pokud je to potřeba, vraťte platby v sekci Platby na své nástěnce."
+msgstr[2] "Stále u vás zůstává %{amount} od %{count} účastníků. Pokud je to potřeba, vraťte platby v sekci Platby na své nástěnce."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} from %{count} participant can't be refunded automatically: the payment is older than the 60-day refund window. Refund it from your Stripe dashboard."
+msgid_plural "%{amount} from %{count} participants can't be refunded automatically: their payments are older than the 60-day refund window. Refund them from your Stripe dashboard."
+msgstr[0] "%{amount} od %{count} účastníka nelze vrátit automaticky, protože platba je starší než 60denní lhůta pro vrácení. Vraťte ji v nástěnce Stripe."
+msgstr[1] "%{amount} od %{count} účastníků nelze vrátit automaticky, protože platby jsou starší než 60denní lhůta pro vrácení. Vraťte je v nástěnce Stripe."
+msgstr[2] "%{amount} od %{count} účastníků nelze vrátit automaticky, protože platby jsou starší než 60denní lhůta pro vrácení. Vraťte je v nástěnce Stripe."

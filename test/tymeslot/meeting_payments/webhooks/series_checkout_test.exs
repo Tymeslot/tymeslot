@@ -13,23 +13,23 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutTest do
   @moduletag :integration
 
   import Ecto.Query, only: [from: 2]
-  import Mox
+  import Mox, only: [stub: 3]
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.PaidSeriesTestHelpers
 
   alias Ecto.Changeset
   alias Tymeslot.CalendarMock
-  alias Tymeslot.MeetingPayments
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
+
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.MeetingPayments.Webhooks.PaymentLookup
   alias Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.SeriesAnnouncementWorker
-
-  setup :verify_on_exit!
 
   setup do
     setup_config(:tymeslot,
@@ -45,7 +45,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutTest do
     expect_checkout()
     assert {:ok, :payment_required, %{series: series}} = book(host, paid_series_type(host), 3)
 
-    %{series: series, payment: MeetingPayments.payment_for_series(series.id)}
+    %{series: series, payment: BookingPayments.payment_for_series(series.id)}
   end
 
   defp statuses,
@@ -89,10 +89,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutTest do
   } do
     detach(payment)
 
-    expect(StripeAdapterMock, :retrieve_payment_intent, fn "pi_RACE", opts ->
-      assert opts[:connect_account] == account()
-      {:ok, %{metadata: %{"series_id" => series.id}}}
-    end)
+    StripeStub.expect(
+      :retrieve_payment_intent,
+      StripeFixtures.object("payment_intent_with_latest_charge", %{
+        "id" => "pi_RACE",
+        "metadata" => %{"series_id" => series.id}
+      })
+    )
 
     event = %{
       "id" => "evt_CHARGE",
@@ -101,6 +104,11 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutTest do
     }
 
     assert PaymentLookup.find_for_charge(event, "ch_UNLINKED").id == payment.id
+
+    assert [%{path: "/v1/payment_intents/pi_RACE", headers: headers}] =
+             StripeStub.requests(:retrieve_payment_intent)
+
+    assert headers["stripe-account"] == account()
   end
 
   test "an event from another account is ignored", %{series: series, payment: payment} do
@@ -148,13 +156,16 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutTest do
     stale = DateTime.add(DateTime.utc_now(:second), -2, :hour)
     payment |> Changeset.change(inserted_at: stale) |> Repo.update!()
 
-    expect(StripeAdapterMock, :retrieve_checkout_session, fn id, opts ->
-      assert id == session_id()
-      assert opts[:connect_account] == account()
-      {:ok, completed_event("unused", series.id, total())["data"]["object"]}
-    end)
+    StripeStub.expect(
+      :retrieve_checkout_session,
+      completed_event("unused", series.id, total())["data"]["object"]
+    )
 
     assert {:ok, %{reconciled: 1}} = perform_job(ReconcileAwaitingPayments, %{})
+
+    assert [%{path: path, headers: headers}] = StripeStub.requests(:retrieve_checkout_session)
+    assert path == "/v1/checkout/sessions/" <> session_id()
+    assert headers["stripe-account"] == account()
 
     assert statuses() == [:confirmed, :confirmed, :confirmed]
     assert Repo.reload!(payment).status == :paid

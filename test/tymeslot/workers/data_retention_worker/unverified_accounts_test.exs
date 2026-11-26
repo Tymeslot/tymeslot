@@ -114,6 +114,7 @@ defmodule Tymeslot.Workers.DataRetentionWorker.UnverifiedAccountsTest do
 
       %{
         "action" => "send_reminder_emails",
+        "relevant_until" => nil,
         "meeting_id" => meeting.id,
         "reminder_value" => 1,
         "reminder_unit" => "hours"

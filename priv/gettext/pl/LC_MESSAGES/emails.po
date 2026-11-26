@@ -195,8 +195,8 @@ msgstr "%{name} zaprasza cię na wydarzenie."
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
-msgid "Calendar Invitation - %{title} on %{date}"
-msgstr "Zaproszenie do kalendarza – %{title}, %{date}"
+msgid "Calendar Invitation - %{title} on %{on_date}"
+msgstr "Zaproszenie do kalendarza – %{title}, %{on_date}"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
@@ -399,8 +399,8 @@ msgstr "Cały dzień"
 
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
-msgid "All day, until %{date}"
-msgstr "Cały dzień, do %{date}"
+msgid "All day, until %{until_date}"
+msgstr "Cały dzień, do %{until_date}"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
@@ -454,8 +454,8 @@ msgstr "Odwołane – %{title} (wszystkie wystąpienia)"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
-msgid "Cancelled - %{title} on %{date}"
-msgstr "Odwołane – %{title}, %{date}"
+msgid "Cancelled - %{title} on %{on_date}"
+msgstr "Odwołane – %{title}, %{on_date}"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
@@ -586,8 +586,8 @@ msgstr "Usunięto"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
-msgid "Removed from %{title} on %{date}"
-msgstr "Usunięto – %{title}, %{date}"
+msgid "Removed from %{title} on %{on_date}"
+msgstr "Usunięto – %{title}, %{on_date}"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format

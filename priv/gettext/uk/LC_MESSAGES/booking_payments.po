@@ -38,13 +38,13 @@ msgstr "Підтвердження платежу…"
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
-msgid "If there's no answer by %{deadline}, the request lapses and you're refunded automatically."
-msgstr "Якщо до %{deadline} не буде відповіді, запит утратить чинність, а кошти буде повернено автоматично."
+msgid "If there's no answer by %{by_deadline}, the request lapses and you're refunded automatically."
+msgstr "Якщо до %{by_deadline} не буде відповіді, запит утратить чинність, а кошти буде повернено автоматично."
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
-msgid "If there's no answer by %{deadline}, the request lapses."
-msgstr "Якщо до %{deadline} не буде відповіді, запит утратить чинність."
+msgid "If there's no answer by %{by_deadline}, the request lapses."
+msgstr "Якщо до %{by_deadline} не буде відповіді, запит утратить чинність."
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
@@ -83,8 +83,8 @@ msgstr "Повернутися до бронювання"
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
-msgid "Thank you, your booking is confirmed for %{date}."
-msgstr "Дякуємо, ваше бронювання на %{date} підтверджено."
+msgid "Thank you, your booking is confirmed for %{for_date}."
+msgstr "Дякуємо, ваше бронювання на %{for_date} підтверджено."
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
@@ -136,8 +136,32 @@ msgstr[2] "%{name}, %{count} сесій"
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
-msgid "Thank you, your %{count} session is confirmed, the first on %{date}."
-msgid_plural "Thank you, your %{count} sessions are confirmed, the first on %{date}."
-msgstr[0] "Дякуємо, вашу %{count} сесію підтверджено, перша: %{date}."
-msgstr[1] "Дякуємо, ваші %{count} сесії підтверджено, перша: %{date}."
-msgstr[2] "Дякуємо, ваші %{count} сесій підтверджено, перша: %{date}."
+msgid "Thank you, your %{count} session is confirmed, the first on %{on_date}."
+msgid_plural "Thank you, your %{count} sessions are confirmed, the first on %{on_date}."
+msgstr[0] "Дякуємо, вашу %{count} сесію підтверджено, перша: %{on_date}."
+msgstr[1] "Дякуємо, ваші %{count} сесії підтверджено, перша: %{on_date}."
+msgstr[2] "Дякуємо, ваші %{count} сесій підтверджено, перша: %{on_date}."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "The payment wasn't completed in time, so the seat held for you was released. You can return and book again."
+msgid_plural "The payment wasn't completed in time, so the seats held for you were released. You can return and book again."
+msgstr[0] "Оплату не було завершено вчасно, тому зарезервоване за вами місце звільнено. Ви можете повернутися й забронювати знову."
+msgstr[1] "Оплату не було завершено вчасно, тому зарезервовані за вами місця звільнено. Ви можете повернутися й забронювати знову."
+msgstr[2] "Оплату не було завершено вчасно, тому зарезервовані за вами місця звільнено. Ви можете повернутися й забронювати знову."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Your payment arrived after the seat held for you was released, and the session had no room left. Your payment is being refunded."
+msgid_plural "Your payment arrived after the seats held for you were released, and the session had no room left. Your payment is being refunded."
+msgstr[0] "Ваш платіж надійшов уже після того, як зарезервоване за вами місце звільнено, а вільних місць на зустрічі не залишилося. Ваш платіж повертається."
+msgstr[1] "Ваш платіж надійшов уже після того, як зарезервовані за вами місця звільнено, а вільних місць на зустрічі не залишилося. Ваш платіж повертається."
+msgstr[2] "Ваш платіж надійшов уже після того, як зарезервовані за вами місця звільнено, а вільних місць на зустрічі не залишилося. Ваш платіж повертається."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Your seat was released"
+msgid_plural "Your seats were released"
+msgstr[0] "Ваше місце звільнено"
+msgstr[1] "Ваші місця звільнено"
+msgstr[2] "Ваші місця звільнено"

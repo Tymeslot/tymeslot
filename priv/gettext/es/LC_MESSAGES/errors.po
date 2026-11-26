@@ -379,11 +379,6 @@ msgstr "la videollamada de un tipo de reunión de grupo debe usar exactamente un
 msgid "group bookings cannot require approval"
 msgstr "las reservas de grupo no pueden requerir aprobación"
 
-#: lib/tymeslot/meeting_types/group_validation.ex
-#, elixir-autogen, elixir-format
-msgid "group bookings cannot require payment"
-msgstr "las reservas de grupo no pueden requerir pago"
-
 #: lib/tymeslot/meeting_types/meeting_type_schema.ex
 #, elixir-autogen, elixir-format
 msgid "You already have a meeting type with this name"
@@ -523,9 +518,9 @@ msgid "is not a supported language"
 msgstr "no es un idioma compatible"
 
 #: lib/tymeslot/auth/user_schema.ex
+#: lib/tymeslot/meetings/booker_contact.ex
 #: lib/tymeslot/meetings/guest_schema.ex
 #: lib/tymeslot/meetings/meeting_rules.ex
-#: lib/tymeslot/meetings/participant_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a supported locale"
 msgstr "no es un idioma compatible"
@@ -909,11 +904,6 @@ msgstr "Este horario ya no está disponible. Elige otro."
 msgid "email confirmation cannot be combined with payment"
 msgstr "la confirmación del correo no se puede combinar con el pago"
 
-#: lib/tymeslot/meeting_types/group_validation.ex
-#, elixir-autogen, elixir-format
-msgid "group bookings cannot require email confirmation"
-msgstr "las reservas de grupo no pueden requerir confirmación del correo"
-
 #: lib/tymeslot/meeting_types/meeting_type_schema.ex
 #, elixir-autogen, elixir-format
 msgid "would give a reserved booking link; choose another name or set a custom link"
@@ -928,3 +918,13 @@ msgstr "debe ser como máximo %{max} con este ritmo, para que todas las sesiones
 #, elixir-autogen, elixir-format
 msgid "Meeting types that ask invitees to confirm their email cannot be booked as a series."
 msgstr "Los tipos de reunión que piden a quien reserve que confirme su correo no se pueden reservar como serie."
+
+#: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe account checks"
+msgstr "comprobaciones de la cuenta de Stripe"
+
+#: lib/tymeslot/meeting_types/series_settings.ex
+#, elixir-autogen, elixir-format
+msgid "Paid group meeting types cannot be booked as a series."
+msgstr "Los tipos de reunión de grupo de pago no se pueden reservar como serie."

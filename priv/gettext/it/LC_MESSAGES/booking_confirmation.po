@@ -249,5 +249,20 @@ msgstr "Non possiamo inviare di nuovo l'email. Se non è arrivata, controlla la 
 
 #: lib/tymeslot_web/themes/shared/confirmation_text.ex
 #, elixir-autogen, elixir-format
-msgid "We have sent a link to %{email}. Click it by %{deadline} to confirm your booking. Until then the time is held for you."
-msgstr "Abbiamo inviato un link a %{email}. Cliccalo entro il %{deadline} per confermare la tua prenotazione. Fino ad allora l'orario resta riservato a te."
+msgid "We have sent a link to %{email}. Click it by %{by_deadline} to confirm your booking. Until then the time is held for you."
+msgstr "Abbiamo inviato un link a %{email}. Cliccalo entro %{by_deadline} per confermare la tua prenotazione. Fino ad allora l'orario resta riservato a te."
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "The organiser is changing this meeting's time, so the email cannot be sent again for now. You can try again while your place is held."
+msgstr "L'organizzatore sta cambiando l'orario di questa riunione, quindi per ora non è possibile inviare di nuovo l'email. Puoi riprovare finché il tuo posto resta riservato."
+
+#: lib/tymeslot_web/themes/shared/confirmation_text.ex
+#, elixir-autogen, elixir-format
+msgid "We have sent a link to %{email}. Click it by %{by_deadline} to confirm your booking. Until then your place is held for you."
+msgstr "Abbiamo inviato un link a %{email}. Cliccalo entro %{by_deadline} per confermare la tua prenotazione. Fino ad allora il tuo posto resta riservato a te."
+
+#: lib/tymeslot_web/themes/shared/components/verification_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Your place was released because the booking was not confirmed in time. Please book again."
+msgstr "Il tuo posto è stato liberato perché la prenotazione non è stata confermata in tempo. Prenota di nuovo."

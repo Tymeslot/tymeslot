@@ -2,17 +2,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
   @moduledoc """
   Stateless function component for the meeting-type form's Payments section.
 
-  Renders the "require payment" toggle and the price input. Gating is decided
-  by the parent `MeetingTypeForm` (feature flag + Stripe charges enabled);
-  this component only reflects the `charges_enabled` flag it is given —
-  disabling the toggle and showing a connect-Stripe hint when the host cannot
-  yet accept charges. A host whose Stripe account carries a currency outside
-  the allowlist cannot set prices either, whether or not checkout still
-  charges it (`Tymeslot.MeetingPayments.currency_support/1`), and is told why.
-  A type that is already paid keeps its price in those states, so the stored
-  amount is stated in words, in the account's currency, where the price input
-  cannot be rendered. Payments and group bookings are mutually exclusive:
-  while group bookings are enabled the toggle renders disabled with a hint.
+  Renders the "require payment" toggle and the price input. Gating is
+  decided by the parent `MeetingTypeForm` (feature flag + Stripe charges
+  enabled); this component only reflects the `charges_enabled` flag it is
+  given — disabling the toggle and showing a connect-Stripe hint when the
+  host cannot yet accept charges. A host whose Stripe account carries a
+  currency outside the allowlist cannot set prices either, whether or not
+  checkout still charges it (`Tymeslot.MeetingPayments.currency_support/1`),
+  and is told why. A type that is already paid keeps its price in those
+  states, so the stored amount is stated in words, in the account's currency,
+  where the price input cannot be rendered. A group type charges the price
+  per seat: each booker pays it for every seat they take, guests included.
 
   The toggle and price input dispatch `toggle_payment_required` and
   `change_payment_price` events back to the parent form component
@@ -53,17 +53,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
         id="payment-required-toggle"
         label={dgettext("dashboard_meeting_form", "Require payment for this meeting type")}
         checked={@payment_required}
-        disabled={
-          not @charges_enabled or @group_bookings_enabled or
-            (@requires_email_verification and not @payment_required)
-        }
+        disabled={not @charges_enabled or (@requires_email_verification and not @payment_required)}
         on_change="toggle_payment_required"
         target={@myself}
       >
         <:disabled_reason>
           <%= cond do %>
-            <% @charges_enabled and @group_bookings_enabled -> %>
-              {dgettext("dashboard_meeting_form", "Turn off group bookings to require payment.")}
             <% @charges_enabled -> %>
               {dgettext(
                 "dashboard_meeting_form",
@@ -114,11 +109,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
         <.input
           type="number"
           name="meeting_type[price_input]"
-          label={
-            dgettext("dashboard_meeting_form", "Price (%{currency})",
-              currency: String.upcase(@currency)
-            )
-          }
+          label={price_label(@group_bookings_enabled, @currency)}
           value={@payment_price}
           min="0"
           step="0.01"
@@ -150,11 +141,33 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
         </p>
       </div>
 
+      <%!-- Outside the charges-only block, so a host without charges who keeps
+            a stored price on a group type still reads that it is per seat. --%>
+      <p
+        :if={@group_bookings_enabled and @payment_required}
+        class="mt-1 text-token-sm text-tymeslot-600"
+      >
+        {dgettext(
+          "dashboard_meeting_form",
+          "Each booker pays this for every seat they take, guests included."
+        )}
+      </p>
+
       <%= for error <- FormValidationHelpers.field_errors(@form_errors, :payment_required) do %>
         <p class="form-error">{Helpers.format_errors(error)}</p>
       <% end %>
     </section>
     """
+  end
+
+  defp price_label(true = _group, currency) do
+    dgettext("dashboard_meeting_form", "Price per seat (%{currency})",
+      currency: String.upcase(currency)
+    )
+  end
+
+  defp price_label(false = _group, currency) do
+    dgettext("dashboard_meeting_form", "Price (%{currency})", currency: String.upcase(currency))
   end
 
   defp stored_price_note(support, amount) when support in [:legacy, :unsupported] do

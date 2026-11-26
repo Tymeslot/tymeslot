@@ -28,8 +28,8 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
   alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.BookingSeries.Notifications, as: SeriesNotifications
   alias Tymeslot.CalendarMock
-  alias Tymeslot.MeetingPayments
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
+
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
@@ -38,6 +38,8 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
   alias Tymeslot.Meetings.Workers.ApprovalSweepWorker
   alias Tymeslot.PaidSeriesTestHelpers, as: Paid
   alias Tymeslot.Repo
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.SeriesAnnouncementWorker
 
@@ -64,8 +66,8 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
 
   defp expiry_jobs, do: all_enqueued(worker: ApprovalExpiryWorker)
 
-  defp past_deadline! do
-    past = DateTime.add(DateTime.utc_now(:second), -60, :second)
+  defp past_deadline!(seconds_ago \\ 60) do
+    past = DateTime.add(DateTime.utc_now(:second), -seconds_ago, :second)
 
     Repo.update_all(from(m in MeetingSchema, where: not is_nil(m.series_id)),
       set: [approval_deadline_at: past]
@@ -268,7 +270,10 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
     assert length(deletes) == 3
 
     assert email_jobs("send_booking_request_outcome") == []
-    assert [_outcome] = email_jobs("send_series_request_outcome")
+
+    # A decline is owed however late it goes out.
+    assert [%{args: %{"variant" => "declined", "relevant_until" => nil}}] =
+             email_jobs("send_series_request_outcome")
 
     drain_emails()
     assert [declined] = sent_emails()
@@ -295,7 +300,13 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
 
     assert :ok = perform_job(ApprovalExpiryWorker, %{"meeting_id" => first.id})
     assert statuses() == [:expired, :expired, :expired]
-    assert [%{args: %{"variant" => "expired"}}] = email_jobs("send_series_request_outcome")
+
+    # Dropped unsent once the last session has started: three weekly
+    # sessions end later than a week past a deadline that just passed.
+    assert [%{args: %{"variant" => "expired", "relevant_until" => until}}] =
+             email_jobs("send_series_request_outcome")
+
+    assert until == DateTime.to_iso8601(List.last(meetings()).start_time)
 
     drain_emails()
     assert [expired] = sent_emails()
@@ -364,9 +375,7 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       )
 
       # The completed webhook backfills the charge the refund is made on.
-      stub(StripeAdapterMock, :retrieve_payment_intent, fn "pi_SERIES", _opts ->
-        {:ok, %{"latest_charge" => "ch_SERIES"}}
-      end)
+      Paid.stub_charge_backfill()
 
       host = Paid.paid_host()
 
@@ -410,18 +419,19 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       series: series
     } do
       pay(series)
-      payment = MeetingPayments.payment_for_series(series.id)
+      payment = BookingPayments.payment_for_series(series.id)
 
-      expect(StripeAdapterMock, :create_refund, 1, fn params, _opts ->
-        assert params.charge == "ch_SERIES"
-        assert params.amount == 3 * Paid.price_cents()
-        {:ok, %{id: "re_SERIES"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["charge"] == "ch_SERIES"
+        assert request.form["amount"] == to_string(3 * Paid.price_cents())
+        StripeStubResponses.refund(request, "re_SERIES")
       end)
 
       assert {:ok, _declined} = SeriesApproval.decline(series, host.user, nil)
+      assert %{success: 1} = drain_refunds()
 
       assert statuses() == [:cancelled, :cancelled, :cancelled]
-      reloaded = MeetingPayments.payment_for_series(series.id)
+      reloaded = BookingPayments.payment_for_series(series.id)
       assert reloaded.id == payment.id
       assert reloaded.status == :refunded
       assert reloaded.refunded_amount_cents == 3 * Paid.price_cents()
@@ -432,9 +442,10 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       expect_one_full_refund()
 
       assert {:ok, _withdrawn} = Meetings.cancel_meeting(List.last(meetings()))
+      assert %{success: 1} = drain_refunds()
 
       assert statuses() == [:cancelled, :cancelled, :cancelled]
-      assert MeetingPayments.payment_for_series(series.id).status == :refunded
+      assert BookingPayments.payment_for_series(series.id).status == :refunded
     end
 
     test "an expiry refunds a paid series once", %{series: series} do
@@ -443,9 +454,10 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       past_deadline!()
 
       assert :ok = perform_job(ApprovalExpiryWorker, %{"meeting_id" => hd(meetings()).id})
+      assert %{success: 1} = drain_refunds()
 
       assert statuses() == [:expired, :expired, :expired]
-      assert MeetingPayments.payment_for_series(series.id).status == :refunded
+      assert BookingPayments.payment_for_series(series.id).status == :refunded
     end
 
     test "the host cannot cancel a held session on its own", %{host: host, series: series} do
@@ -470,9 +482,9 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       assert {:ok, %{status: :awaiting_approval}} =
                Reschedule.execute(second.uid, move_to(15), host.user.id)
 
-      expect(StripeAdapterMock, :create_refund, 1, fn params, _opts ->
-        assert params.amount == Paid.price_cents()
-        {:ok, %{id: "re_SESSION"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["amount"] == to_string(Paid.price_cents())
+        StripeStubResponses.refund(request, "re_SESSION")
       end)
 
       assert {:ok, %MeetingSchema{status: :cancelled}} =
@@ -485,15 +497,15 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       assert statuses() == [:confirmed, :cancelled, :confirmed]
 
       assert %{status: :partially_refunded, refunded_amount_cents: refunded} =
-               MeetingPayments.payment_for_series(series.id)
+               BookingPayments.payment_for_series(series.id)
 
       assert refunded == Paid.price_cents()
     end
 
     defp expect_one_full_refund do
-      expect(StripeAdapterMock, :create_refund, 1, fn params, _opts ->
-        assert params.amount == 3 * Paid.price_cents()
-        {:ok, %{id: "re_SERIES"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["amount"] == to_string(3 * Paid.price_cents())
+        StripeStubResponses.refund(request, "re_SERIES")
       end)
     end
   end
@@ -508,6 +520,19 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
     assert email_jobs("send_booking_request_outcome") == []
   end
 
+  test "a sweep that reaches a series long after its deadline dates every session to it" do
+    book_three()
+    past_deadline!(30 * 86_400)
+
+    assert {:ok, %{expired: 1}} = perform_job(ApprovalSweepWorker, %{})
+
+    for session <- meetings() do
+      assert session.status == :expired
+      assert DateTime.compare(session.cancelled_at, session.approval_deadline_at) == :eq
+      assert DateTime.compare(session.approval_resolved_at, session.approval_deadline_at) == :eq
+    end
+  end
+
   test "a held session cannot be moved on its own" do
     %{host: host} = book_three()
     [_first, second, _third] = meetings()
@@ -517,4 +542,7 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
 
     assert Enum.map(meetings(), & &1.start_time) == [Paid.at(7), Paid.at(14), Paid.at(21)]
   end
+
+  # A released request's refund job is due at once.
+  defp drain_refunds, do: Oban.drain_queue(queue: :payments, with_scheduled: true)
 end

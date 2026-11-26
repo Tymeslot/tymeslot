@@ -658,8 +658,8 @@ msgstr[2] "Sesja grupowa: masz jedno z %{count} miejsc."
 
 #: lib/tymeslot_web/themes/shared/components/group_session.ex
 #, elixir-autogen, elixir-format
-msgid "Moving your spot on %{datetime}. Pick a new time below."
-msgstr "Przenosisz swoje miejsce z terminu %{datetime}. Wybierz poniżej nowy termin."
+msgid "Moving your spot on %{on_datetime}. Pick a new time below."
+msgstr "Przenosisz swoje miejsce z terminu %{on_datetime}. Wybierz poniżej nowy termin."
 
 #: lib/tymeslot_web/themes/shared/seat_move_link.ex
 #, elixir-autogen, elixir-format
@@ -907,3 +907,16 @@ msgstr "%{page} z %{name}"
 #, elixir-autogen, elixir-format
 msgid "We'll email you a link to confirm this booking."
 msgstr "Wyślemy ci e-mailem link do potwierdzenia tej rezerwacji."
+
+#: lib/tymeslot_web/themes/shared/booking_text.ex
+#, elixir-autogen, elixir-format
+msgid "%{price} per person"
+msgstr "%{price} za osobę"
+
+#: lib/tymeslot_web/themes/shared/components/submit_price.ex
+#, elixir-autogen, elixir-format
+msgid "%{total} for %{count} seat"
+msgid_plural "%{total} for %{count} seats"
+msgstr[0] "%{total} za %{count} miejsce"
+msgstr[1] "%{total} za %{count} miejsca"
+msgstr[2] "%{total} za %{count} miejsc"

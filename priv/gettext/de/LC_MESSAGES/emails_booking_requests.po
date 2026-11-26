@@ -68,8 +68,8 @@ msgstr "%{organizer} konnte diese Buchung nicht annehmen, daher ist die Zeit nic
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
-msgid "%{organizer} will reply by %{deadline} at the latest."
-msgstr "%{organizer} antwortet spätestens bis %{deadline}."
+msgid "%{organizer} will reply by %{by_deadline} at the latest."
+msgstr "%{organizer} antwortet spätestens bis %{by_deadline}."
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
@@ -463,8 +463,8 @@ msgstr "Die neue Zeit ist in der Zwischenzeit für Sie reserviert, sodass nieman
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
-msgid "The slot is held until you answer. If you haven't replied by %{deadline}, the request lapses and %{name} is told the time is free again."
-msgstr "Der Termin bleibt reserviert, bis Sie antworten. Ohne Antwort bis %{deadline} verfällt die Anfrage und %{name} erfährt, dass die Zeit wieder frei ist."
+msgid "The slot is held until you answer. If you haven't replied by %{by_deadline}, the request lapses and %{name} is told the time is free again."
+msgstr "Der Termin bleibt reserviert, bis Sie antworten. Ohne Antwort bis %{by_deadline} verfällt die Anfrage und %{name} erfährt, dass die Zeit wieder frei ist."
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
@@ -543,8 +543,8 @@ msgstr "Bitte bestätigen Sie Ihre Buchung"
 
 #: lib/tymeslot/emails/templates/booking_email_verification.ex
 #, elixir-autogen, elixir-format
-msgid "Your booking is not confirmed yet. Click the button below by %{deadline} to confirm it, and we will hold the time for you until then."
-msgstr "Ihre Buchung ist noch nicht bestätigt. Klicken Sie bis zum %{deadline} auf die Schaltfläche unten, um sie zu bestätigen. Bis dahin halten wir die Zeit für Sie frei."
+msgid "Your booking is not confirmed yet. Click the button below by %{by_deadline} to confirm it, and we will hold the time for you until then."
+msgstr "Ihre Buchung ist noch nicht bestätigt. Klicken Sie bis zum %{by_deadline} auf die Schaltfläche unten, um sie zu bestätigen. Bis dahin halten wir die Zeit für Sie frei."
 
 #: lib/tymeslot/emails/templates/reschedule_request_unanswered.ex
 #, elixir-autogen, elixir-format
@@ -617,3 +617,8 @@ msgstr "Sie haben %{name} gebeten, eine neue Zeit für diesen Termin zu wählen,
 #, elixir-autogen, elixir-format
 msgid "You asked for this meeting to be moved, and the request lapsed before anyone still on it picked a new time. Its original time had already been given up, so the meeting has expired. The participants have been told and can book again from your booking page."
 msgstr "Sie haben darum gebeten, diesen Termin zu verschieben, doch die Anfrage ist verfallen, bevor einer der verbliebenen Teilnehmer eine neue Zeit gewählt hat. Die ursprüngliche Zeit war bereits freigegeben, daher ist der Termin verfallen. Die Teilnehmer wurden informiert und können über Ihre Buchungsseite erneut buchen."
+
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking is not confirmed yet. Click the button below by %{by_deadline} to confirm it, and we will hold your place until then."
+msgstr "Ihre Buchung ist noch nicht bestätigt. Klicken Sie bis zum %{by_deadline} auf die Schaltfläche unten, um sie zu bestätigen. Bis dahin halten wir Ihren Platz für Sie frei."

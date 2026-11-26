@@ -15,6 +15,7 @@ defmodule Tymeslot.Workers.AccountDeletionWorkerTest do
   alias Tymeslot.Auth.AccountDeletion
   alias Tymeslot.Auth.AccountDeletion.Runner
   alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.Integrations.Stripe.Error, as: StripeError
   alias Tymeslot.Repo
   alias Tymeslot.Workers.{AccountDeletionSweepWorker, AccountDeletionWorker}
 
@@ -29,6 +30,21 @@ defmodule Tymeslot.Workers.AccountDeletionWorkerTest do
 
     @impl Tymeslot.Auth.Behaviours.AccountDeletionHook
     def on_account_deletion(_user_id), do: {:error, :billing_unreachable}
+  end
+
+  defmodule StripeRefusingHook do
+    @behaviour Tymeslot.Auth.Behaviours.AccountDeletionHook
+
+    @impl Tymeslot.Auth.Behaviours.AccountDeletionHook
+    def on_deletion_requested(_user_id, _feedback), do: :ok
+
+    @impl Tymeslot.Auth.Behaviours.AccountDeletionHook
+    def on_deletion_restored(_user_id), do: :ok
+
+    @impl Tymeslot.Auth.Behaviours.AccountDeletionHook
+    def on_account_deletion(_user_id) do
+      {:error, Application.fetch_env!(:tymeslot, :test_stripe_refusal)}
+    end
   end
 
   setup do
@@ -95,6 +111,52 @@ defmodule Tymeslot.Workers.AccountDeletionWorkerTest do
       assert payload.user_id == user.id
       assert payload.reason_message =~ "billing_unreachable"
       assert Repo.get(UserSchema, user.id)
+    end
+  end
+
+  describe "a deletion the hook refuses with a Stripe error" do
+    setup :capture_admin_alerts
+
+    setup do
+      with_config(:tymeslot, :account_deletion_hook, StripeRefusingHook)
+      at = DateTime.add(DateTime.utc_now(:second), -1, :second)
+      %{user: insert(:user, deletion_requested_at: at, deletion_scheduled_at: at)}
+    end
+
+    test "a permanent error alerts on the first attempt and still retries", %{user: user} do
+      error = %StripeError{type: "invalid_request_error", status: 400, request_id: "req_perm"}
+      with_config(:tymeslot, :test_stripe_refusal, error)
+
+      assert perform_job(AccountDeletionWorker, %{"user_id" => user.id}, attempt: 1) ==
+               {:error, error}
+
+      assert_received {:send_alert, :account_deletion_stalled, payload}
+      assert payload.user_id == user.id
+      assert payload.stripe_request_id == "req_perm"
+      assert payload.summary =~ "refused by Stripe"
+      assert Repo.get(UserSchema, user.id)
+    end
+
+    test "a transient error alerts only on the last attempt", %{user: user} do
+      error = %StripeError{type: "api_connection_error", reason: :timeout}
+      with_config(:tymeslot, :test_stripe_refusal, error)
+
+      assert {:error, ^error} =
+               perform_job(AccountDeletionWorker, %{"user_id" => user.id},
+                 attempt: 1,
+                 max_attempts: 5
+               )
+
+      refute_received {:send_alert, _type, _payload}
+
+      assert {:error, ^error} =
+               perform_job(AccountDeletionWorker, %{"user_id" => user.id},
+                 attempt: 5,
+                 max_attempts: 5
+               )
+
+      assert_received {:send_alert, :account_deletion_stalled, payload}
+      assert payload.summary == "Account deletion failed after every retry"
     end
   end
 

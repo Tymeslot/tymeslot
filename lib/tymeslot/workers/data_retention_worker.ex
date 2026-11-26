@@ -32,6 +32,9 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
       day after their verification deadline (not a day count), deleted with
       the name, email and answers they hold (see
       `Tymeslot.Meetings.EmailVerification.prune_unverified/1`)
+  17. Seat holds (what a booker gave while paying for a seat), 30 days
+      after they converted or lapsed; a hold still held is never pruned
+      by age (see `Tymeslot.Meetings.SeatHolds.prune_settled/1`)
 
   Ensures the database doesn't grow indefinitely by removing
   old records based on configured retention periods.
@@ -54,6 +57,7 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   alias Tymeslot.Integrations.Shared.OAuth.PendingFlow
   alias Tymeslot.InviteeData
   alias Tymeslot.Meetings.EmailVerification
+  alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.MeetingTypes.OfferedTimes
   alias Tymeslot.Payments.Webhooks.StripeEventQueries
   alias Tymeslot.Polls
@@ -125,6 +129,13 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
       config_key: :invitee_data_days,
       default_days: 730,
       prune: {InviteeData, :anonymise_expired}
+    },
+    %{
+      name: "seat hold",
+      args_key: "seat_hold_retention_days",
+      config_key: :seat_hold_days,
+      default_days: 30,
+      prune: {SeatHolds, :prune_settled}
     }
   ]
 

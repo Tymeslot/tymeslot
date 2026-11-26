@@ -12,18 +12,17 @@ defmodule TymeslotWeb.Live.Scheduling.RhythmSeriesTest do
   @moduletag :scheduling
   @moduletag :live
 
-  import Mox
   import Tymeslot.Factory
   import TymeslotWeb.SeriesBookingHelpers
 
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias TymeslotWeb.BookingDriver
 
   @theme "2"
   @flow [reveal: false]
   @checkout_url "https://checkout.stripe.com/c/pay/cs_RHYTHM_SERIES"
 
-  setup :verify_on_exit!
   setup tags, do: setup_series(tags)
 
   @tag :capture_log
@@ -130,12 +129,11 @@ defmodule TymeslotWeb.Live.Scheduling.RhythmSeriesTest do
       charges_enabled: true
     )
 
-    test_pid = self()
-
-    expect(StripeAdapterMock, :create_checkout_session, fn params, _opts ->
-      send(test_pid, {:checkout_session, params})
-      {:ok, %{id: "cs_RHYTHM_SERIES", url: @checkout_url}}
-    end)
+    StripeStub.expect(
+      :create_checkout_session,
+      1,
+      StripeStubResponses.checkout_session("cs_RHYTHM_SERIES", @checkout_url)
+    )
 
     view = to_series(conn, profile, day, @flow)
     assert has_element?(view, "[data-testid='series-total']", "200")
@@ -150,8 +148,10 @@ defmodule TymeslotWeb.Live.Scheduling.RhythmSeriesTest do
     |> render_submit()
 
     assert_redirect(view, @checkout_url, 5_000)
-    assert_received {:checkout_session, params}
-    assert [%{price_data: %{unit_amount: 5000}, quantity: 4}] = params.line_items
+    assert [%{form: form}] = StripeStub.requests(:create_checkout_session)
+
+    assert [%{"price_data" => %{"unit_amount" => "5000"}, "quantity" => "4"}] =
+             form["line_items"]
   end
 
   @tag :capture_log

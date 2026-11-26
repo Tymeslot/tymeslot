@@ -293,6 +293,7 @@ defmodule TymeslotWeb.Themes.Paper.Scheduling.Details do
       locale={@locale}
       rescheduling={@is_rescheduling}
       count={@series_count}
+      seats={SeriesSummary.seats(assigns)}
       class="paper-book__price"
     />
 

@@ -3,6 +3,7 @@ defmodule Tymeslot.Meetings.ParticipantQueriesTest do
 
   @moduletag :meetings
   @moduletag :queries
+  @moduletag :bookings
 
   import Tymeslot.Factory
 
@@ -268,6 +269,123 @@ defmodule Tymeslot.Meetings.ParticipantQueriesTest do
                DateTime.add(start_time, -3, :day),
                DateTime.add(start_time, -1, :day)
              ) == %{}
+    end
+  end
+
+  describe "email verification on seats" do
+    setup do
+      %{meeting: insert(:meeting), now: DateTime.utc_now(:second)}
+    end
+
+    defp seat(meeting, attrs) do
+      insert(:participant, Map.merge(%{meeting: meeting}, Map.new(attrs)))
+    end
+
+    defp held(meeting, now, offset_minutes \\ 30) do
+      seat(meeting, verification_deadline_at: DateTime.add(now, offset_minutes, :minute))
+    end
+
+    test "a seat is visible unless it awaits verification", %{meeting: meeting, now: now} do
+      ungated = seat(meeting, [])
+      _unverified = held(meeting, now)
+
+      verified =
+        seat(meeting,
+          verification_deadline_at: DateTime.add(now, 30, :minute),
+          email_verified_at: now
+        )
+
+      ids =
+        ParticipantSchema
+        |> ParticipantQueries.where_visible()
+        |> Repo.all()
+        |> Enum.map(& &1.id)
+
+      assert Enum.sort(ids) == Enum.sort([ungated.id, verified.id])
+    end
+
+    test "verifying a seat is guarded", %{meeting: meeting, now: now} do
+      participant = held(meeting, now)
+      cancelled = held(meeting, now)
+      {:ok, _seat} = ParticipantQueries.cancel(cancelled, now)
+
+      assert {:ok, %ParticipantSchema{email_verified_at: ^now}} =
+               ParticipantQueries.transition_from_unverified(participant.id, now)
+
+      assert {:error, :not_awaiting_verification} =
+               ParticipantQueries.transition_from_unverified(participant.id, now)
+
+      assert {:error, :not_awaiting_verification} =
+               ParticipantQueries.transition_from_unverified(cancelled.id, now)
+
+      assert {:error, :not_awaiting_verification} =
+               ParticipantQueries.transition_from_unverified(seat(meeting, []).id, now)
+    end
+
+    test "cancel_unverified leaves verified seats alone", %{meeting: meeting, now: now} do
+      participant = held(meeting, now)
+      verified = held(meeting, now)
+      {:ok, _seat} = ParticipantQueries.transition_from_unverified(verified.id, now)
+
+      assert {:ok, %ParticipantSchema{cancelled_at: ^now, ical_sequence: 1}} =
+               ParticipantQueries.cancel_unverified(participant.id, now)
+
+      assert {:error, :not_awaiting_verification} =
+               ParticipantQueries.cancel_unverified(participant.id, now)
+
+      assert {:error, :not_awaiting_verification} =
+               ParticipantQueries.cancel_unverified(verified.id, now)
+
+      assert Repo.get!(ParticipantSchema, verified.id).cancelled_at == nil
+    end
+
+    test "cancel_unverified_for_meeting cancels only live unverified seats", %{
+      meeting: meeting,
+      now: now
+    } do
+      held_seat = held(meeting, now)
+      verified = held(meeting, now)
+      {:ok, _seat} = ParticipantQueries.transition_from_unverified(verified.id, now)
+      ungated = seat(meeting, [])
+      other = held(insert(:meeting), now)
+
+      assert {1, [held_id]} = ParticipantQueries.cancel_unverified_for_meeting(meeting.id, now)
+      assert held_id == held_seat.id
+
+      assert Repo.get!(ParticipantSchema, held_seat.id).cancelled_at == now
+      assert Repo.get!(ParticipantSchema, verified.id).cancelled_at == nil
+      assert Repo.get!(ParticipantSchema, ungated.id).cancelled_at == nil
+      assert Repo.get!(ParticipantSchema, other.id).cancelled_at == nil
+    end
+
+    test "list_expired_verifications returns only lapsed live unverified seats", %{
+      meeting: meeting,
+      now: now
+    } do
+      older = held(meeting, now, -20)
+      newer = held(meeting, now, -5)
+      _future = held(meeting, now, 10)
+      _ungated = seat(meeting, [])
+      verified = held(meeting, now, -10)
+      {:ok, _seat} = ParticipantQueries.transition_from_unverified(verified.id, now)
+      cancelled = held(meeting, now, -15)
+      {:ok, _seat} = ParticipantQueries.cancel(cancelled, now)
+
+      assert [first, second] = ParticipantQueries.list_expired_verifications(now, 10)
+      assert [first.id, second.id] == [older.id, newer.id]
+      assert %Tymeslot.Meetings.MeetingSchema{} = first.meeting
+
+      assert [_only] = ParticipantQueries.list_expired_verifications(now, 1)
+    end
+
+    test "unverified?/1 reads both columns", %{now: now} do
+      refute ParticipantSchema.unverified?(%ParticipantSchema{})
+      assert ParticipantSchema.unverified?(%ParticipantSchema{verification_deadline_at: now})
+
+      refute ParticipantSchema.unverified?(%ParticipantSchema{
+               verification_deadline_at: now,
+               email_verified_at: now
+             })
     end
   end
 end

@@ -1,8 +1,8 @@
 defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.LogoPanel do
   @moduledoc """
   The dashboard panel for an `Options.Logo` group: the stored logo, an
-  upload form for a new one (`upload_asset` into `logo_path`, which replaces
-  the old file) and a button removing it (`theme:set_option` on `logo_path`
+  upload form for a new one (saved into `logo_path` by the upload's progress
+  callback, replacing the old file) and a button removing it (`theme:set_option` on `logo_path`
   with an empty choice). It keeps no UI state, so the `Panel` defaults for
   `ui/3`, `handle_ui/5` and `telemetry/3` stand.
   """

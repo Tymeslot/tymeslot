@@ -6,6 +6,7 @@ defmodule Tymeslot.MeetingTypes do
   alias Tymeslot.BookingPage.Publication
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CalendarEntry
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes.BookingCalendar
@@ -309,6 +310,14 @@ defmodule Tymeslot.MeetingTypes do
     sessions = PlannedSessions.upcoming(meeting_type)
     {length(sessions), sessions |> Enum.map(&PlannedSessions.participant_count/1) |> Enum.sum()}
   end
+
+  @doc """
+  The paid seats on the upcoming planned dates of `meeting_type` that
+  deleting the type refunds in full (`PlannedSessions.seat_refunds/1`).
+  """
+  @spec upcoming_seat_refunds(map()) :: BookingPayments.outstanding_refunds_summary()
+  def upcoming_seat_refunds(meeting_type),
+    do: meeting_type |> PlannedSessions.upcoming() |> PlannedSessions.seat_refunds()
 
   defp cancel_planned_sessions(meeting_type) do
     meeting_type

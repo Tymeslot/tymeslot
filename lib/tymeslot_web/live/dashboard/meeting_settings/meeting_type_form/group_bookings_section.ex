@@ -11,17 +11,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
   `last_spots_threshold_input` to `change_last_spots_threshold`). The rule
   they feed is `Tymeslot.Meetings.Seats.display/3`.
 
-  A group type cannot require payment or approval, and its location has to be
+  A group type cannot require approval, and its location has to be
   fixed in advance (`Tymeslot.MeetingTypes.GroupLocationRule`). While any of
   those stands in the way (`GroupRules.enable_blocker/1`, the `blocker`
   attr), the toggle renders disabled with a hint saying what to change; the
   parent guards the event server-side and the changeset enforces the rules.
   Turning group bookings off is blocked only while a fixed-date type has
   upcoming planned dates (`dates_planned`), which would otherwise be left
-  on the calendar with nothing to manage them from. The payment rule does not
-  block a host who has since lost charge capability: the payments toggle is
-  unreachable in that state, so the parent clears `payment_required` as part
-  of enabling group bookings instead.
+  on the calendar with nothing to manage them from.
 
   Group bookings can be a paid feature. Without access (`allowed: false`) a
   one-to-one type shows the upgrade placeholder registered under
@@ -50,7 +47,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
   attr :max_participants, :string, required: true
   attr :show_seat_availability, :boolean, default: true
   attr :last_spots_threshold, :integer, default: nil
-  attr :payment_required, :boolean, required: true
   attr :blocker, :any, default: nil, doc: "`GroupRules.enable_blocker/1`'s answer"
   attr :allowed, :boolean, default: true
 
@@ -130,7 +126,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
         </:disabled_reason>
       </.setting_row>
 
-      <div :if={@group_bookings_enabled and not @payment_required} class="max-w-xs">
+      <div :if={@group_bookings_enabled} class="max-w-xs">
         <.input
           type="number"
           name="meeting_type[max_participants_input]"
@@ -156,7 +152,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
       </div>
 
       <div
-        :if={@group_bookings_enabled and not @payment_required}
+        :if={@group_bookings_enabled}
         class="space-y-4"
         data-testid="seat-display-settings"
       >
@@ -219,13 +215,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
         </div>
       </div>
 
-      <%!-- The number input above only renders while the toggle is on and
-           payment is not required. A cross-field error can still land on
-           this same field while it's hidden, such as the changeset's mutual
-           exclusion check on `:max_participants` when payment becomes
-           required, so mirror the payments section's unconditional error
+      <%!-- The number input above only renders while the toggle is on. A
+           cross-field error can still land on this same field while it's
+           hidden, so mirror the payments section's unconditional error
            outlet rather than let it go silently invisible. --%>
-      <%= if not (@group_bookings_enabled and not @payment_required) do %>
+      <%= if not @group_bookings_enabled do %>
         <%= for error <- FormValidationHelpers.field_errors(@form_errors, :max_participants) do %>
           <p class="form-error">{Helpers.format_errors(error)}</p>
         <% end %>
@@ -238,15 +232,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupBookingsSec
 
   defp blocker_message(:invitation_only), do: GroupRules.invitation_only_message()
 
-  defp blocker_message(:payment),
-    do: dgettext("dashboard_meeting_form", "Turn off payments to enable group bookings.")
-
   defp blocker_message(:approval),
     do: dgettext("dashboard_meeting_form", "Turn off approval to enable group bookings.")
-
-  defp blocker_message(:email_verification),
-    do:
-      dgettext("dashboard_meeting_form", "Turn off email confirmation to enable group bookings.")
 
   defp blocker_message(:lengths),
     do:

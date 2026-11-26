@@ -76,6 +76,12 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
   attempt that can still be retried, so a job alerts when it is given up on,
   and a failure a retry recovers from alerts not at all.
 
+  An attempt that can still be retried and returned `{:error, reason}` is
+  not recorded at all when its worker declares the reason an expected wait
+  (`expected_retry?/1` of `Tymeslot.Infrastructure.ExpectedJobOutcome`): the
+  job is waiting for something outside it, not failing. Its last attempt is
+  judged by `expected_outcome?/1`, as any other.
+
   Telemetry detaches a handler that raises, so `handle_event/4` never raises:
   a failure is logged, naming only its module, and dropped.
   """
@@ -124,8 +130,9 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
   Records the job failure reported by an `[:oban, :job, :exception]` event,
   with the job's context taken from `metadata.job` rather than from the
   reporting process. An attempt that can be retried is recorded as
-  ErrorTracker's Oban integration records it; the last attempt as the job
-  being given up on (see *Failed jobs*). Raises when a retryable attempt's
+  ErrorTracker's Oban integration records it, unless its worker declares the
+  reason it returned an expected wait; the last attempt as the job being
+  given up on (see *Failed jobs*). Raises when a retryable attempt's
   report fails; the caller guards against that.
   """
   @spec report_exception(map()) :: :ok
@@ -139,6 +146,12 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
   end
 
   def report_exception(%{job: %Oban.Job{} = job, reason: reason} = metadata) do
+    if expected_retry?(job.worker, Map.get(metadata, :result)),
+      do: :ok,
+      else: report_failure(job, reason, metadata)
+  end
+
+  defp report_failure(job, reason, metadata) do
     state = Map.get(metadata, :state, :failure)
     exception = if is_exception(reason), do: reason, else: {Map.get(metadata, :kind), reason}
 
@@ -295,6 +308,25 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
 
   defp declared_expected?(module, reason) do
     function_exported?(module, :expected_outcome?, 1) and module.expected_outcome?(reason) == true
+  rescue
+    exception -> callback_failed(module, inspect(exception.__struct__))
+  catch
+    kind, _reason -> callback_failed(module, inspect(kind))
+  end
+
+  # Only a reason the worker returned can be an expected wait; a raise, a
+  # timeout or a crash is always recorded.
+  defp expected_retry?(worker, {:error, reason}) when not is_exception(reason) do
+    case Worker.from_string(worker) do
+      {:ok, module} -> declared_expected_retry?(module, reason)
+      {:error, _unknown} -> false
+    end
+  end
+
+  defp expected_retry?(_worker, _result), do: false
+
+  defp declared_expected_retry?(module, reason) do
+    function_exported?(module, :expected_retry?, 1) and module.expected_retry?(reason) == true
   rescue
     exception -> callback_failed(module, inspect(exception.__struct__))
   catch

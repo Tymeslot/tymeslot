@@ -335,3 +335,8 @@ msgstr "Гостей можна додати лише до одиничного 
 #, elixir-autogen, elixir-format
 msgid "The request to pick a new time for this meeting has lapsed, so it is no longer booked. You're welcome to book a new time."
 msgstr "Запит на вибір нового часу для цієї зустрічі втратив чинність, тому вона більше не заброньована. Ви можете забронювати новий час."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex
+#, elixir-autogen, elixir-format
+msgid "A payment for this email is still open for this time. Finish that payment, or try again in about half an hour."
+msgstr "Для цієї адреси електронної пошти вже є незавершена оплата на цей час. Завершіть її або спробуйте ще раз приблизно через пів години."

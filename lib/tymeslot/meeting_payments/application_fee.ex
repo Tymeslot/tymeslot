@@ -9,6 +9,14 @@ defmodule Tymeslot.MeetingPayments.ApplicationFee do
     and rounds up otherwise so the platform never under-charges itself.
   """
 
+  @doc """
+  The fee charged on payments at booking, in basis points (100 bp = 1%), as
+  configured by `config :tymeslot, :payment_application_fee_bp` (set from
+  `MEETING_PAYMENTS_APPLICATION_FEE_BP` in production). `0` when unset.
+  """
+  @spec configured_bp() :: non_neg_integer()
+  def configured_bp, do: Application.get_env(:tymeslot, :payment_application_fee_bp, 0)
+
   @spec calculate(price_cents :: non_neg_integer(), bp :: non_neg_integer()) ::
           non_neg_integer()
   def calculate(0, _bp), do: 0

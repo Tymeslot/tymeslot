@@ -14,11 +14,19 @@ defmodule Tymeslot.MeetingPayments.Webhooks.FailAndExpire do
   awaiting payment (`HeldMeetings.expire_series/1`), announced once, on its
   first session's topic.
 
+  A held group seat's payment releases its hold instead (`:expired` for a
+  lapsed checkout, `:failed` for a failed payment; a hold released already
+  keeps its first reason) and settles the hold's meeting
+  (`SeatRelease.settle_after_hold/1`): a slot only holds took expires, an
+  emptied confirmed one is cancelled. Every such payment ends `failed`, so
+  none stays pending to block its host's currency change.
+
   Idempotent on `last_event_id`; safe to invoke again on Stripe retry.
   """
 
   require Logger
 
+  alias Tymeslot.Bookings.SeatRelease
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.HeldMeetings
@@ -26,6 +34,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.FailAndExpire do
   alias Tymeslot.MeetingPayments.Webhooks.LockedPayment
   alias Tymeslot.MeetingPayments.Webhooks.PaymentLookup
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.SeatHolds
+  alias Tymeslot.Meetings.SeatHoldSchema
   alias Tymeslot.Payments.Behaviours.WebhookHandler
 
   @doc """
@@ -76,13 +86,14 @@ defmodule Tymeslot.MeetingPayments.Webhooks.FailAndExpire do
       LockedPayment.run(payment, event_id, fn
         %BookingPaymentSchema{status: :pending} = locked ->
           with {:ok, _bp} <- mark_failed(locked, event_id, reason),
-               {:ok, outcome} <- release(locked) do
+               {:ok, outcome} <- release(locked, reason) do
             {:ok, {:failed, outcome}}
           end
 
         %BookingPaymentSchema{status: :failed} = locked ->
-          case release(locked) do
+          case release(locked, reason) do
             {:ok, %MeetingSchema{} = meeting} -> {:ok, {:failed, meeting}}
+            {:ok, {:seat, %{released?: true}} = seat} -> {:ok, {:failed, seat}}
             {:ok, _unchanged} -> {:ok, {:not_pending, :failed}}
             {:error, _reason} = error -> error
           end
@@ -91,6 +102,10 @@ defmodule Tymeslot.MeetingPayments.Webhooks.FailAndExpire do
           {:ok, {:not_pending, status}}
       end)
 
+    announce(result, payment, event_id)
+  end
+
+  defp announce(result, payment, event_id) do
     case result do
       {:ok, :idempotent_replay} ->
         :ok
@@ -118,6 +133,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.FailAndExpire do
         HeldMeetings.broadcast(meeting_id, :expired)
         :ok
 
+      {:ok, {:failed, {:seat, released}}} ->
+        SeatRelease.announce_released(released)
+
       {:ok, {:failed, :unchanged}} ->
         :ok
 
@@ -126,11 +144,30 @@ defmodule Tymeslot.MeetingPayments.Webhooks.FailAndExpire do
     end
   end
 
-  # Releases what the payment held: its meeting, or every session of its
-  # series (locked after the payment, series row first). Returns the meeting
-  # to announce (a series' first session), `{:moved_on, meeting_id}` when
-  # nothing was held any more, or `:unchanged` when there is no meeting.
-  defp release(%BookingPaymentSchema{series_id: series_id}) when is_binary(series_id) do
+  # Releases what the payment held: its meeting, every session of its
+  # series (locked after the payment, series row first), or its seat hold
+  # (its meeting locked before the hold). Returns the meeting to announce (a
+  # series' first session), `{:seat, release}` for a hold, `{:moved_on,
+  # meeting_id}` when nothing was held any more, or `:unchanged` when there
+  # is no meeting.
+  # A seat payment whose hold is gone has nothing left to release, and
+  # never its group meeting, which other seats share.
+  defp release(%BookingPaymentSchema{seat_payment: true, seat_hold_id: nil}, _reason),
+    do: {:ok, :unchanged}
+
+  defp release(%BookingPaymentSchema{seat_hold_id: hold_id}, reason) when is_binary(hold_id) do
+    case SeatHolds.get(hold_id) do
+      %SeatHoldSchema{} = hold ->
+        with {:ok, released} <-
+               SeatRelease.release_hold(hold, hold_release_reason(reason)),
+             do: {:ok, {:seat, released}}
+
+      nil ->
+        {:ok, :unchanged}
+    end
+  end
+
+  defp release(%BookingPaymentSchema{series_id: series_id}, _reason) when is_binary(series_id) do
     case HeldMeetings.expire_series(series_id) do
       {:ok, :expired, first} -> {:ok, first}
       {:ok, :unchanged, first_id} -> {:ok, moved_on(first_id)}
@@ -138,13 +175,17 @@ defmodule Tymeslot.MeetingPayments.Webhooks.FailAndExpire do
     end
   end
 
-  defp release(%BookingPaymentSchema{meeting_id: meeting_id}) do
+  defp release(%BookingPaymentSchema{meeting_id: meeting_id}, _reason) do
     case HeldMeetings.expire(meeting_id) do
       {:ok, :expired, meeting} -> {:ok, meeting}
       {:ok, :unchanged} -> {:ok, moved_on(meeting_id)}
       {:error, _changeset} = error -> error
     end
   end
+
+  # Why a seat hold is released, by the reason its payment failed.
+  defp hold_release_reason(:webhook_expired), do: :expired
+  defp hold_release_reason(:webhook_async_payment_failed), do: :failed
 
   defp moved_on(nil), do: :unchanged
   defp moved_on(meeting_id), do: {:moved_on, meeting_id}

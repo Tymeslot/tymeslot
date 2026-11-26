@@ -180,6 +180,37 @@ defmodule Tymeslot.Integrations.Calendar.ExternalEndChangeEmailsTest do
       host = received_for(meeting.organizer_email)
       assert host.text_body =~ "We emailed 2 participants the new end time"
     end
+
+    test "tells neither a seat awaiting email verification nor its guests", ctx do
+      meeting =
+        ctx.meeting
+        |> Changeset.change(capacity: 4, attendee_name: nil, attendee_email: nil)
+        |> Repo.update!()
+
+      seated = insert(:participant, meeting: meeting, timezone: "Etc/UTC")
+
+      held =
+        insert(:participant,
+          meeting: meeting,
+          timezone: "Etc/UTC",
+          verification_deadline_at: DateTime.add(DateTime.utc_now(:second), 30, :minute)
+        )
+
+      {:ok, [_guest]} =
+        Guests.create_for_participant(meeting.id, held.id, ["held-guest@example.com"])
+
+      sync(ctx, ~T[11:30:00])
+      assert [job] = all_enqueued(worker: EmailWorker)
+      assert :ok = perform_job(EmailWorker, job.args)
+
+      assert received_for(seated.email).text_body =~ "now ends at 11:30 AM UTC"
+      host = received_for(meeting.organizer_email)
+      refute host.text_body =~ "emailed too"
+
+      held_email = held.email
+      refute_received {:email, %Swoosh.Email{to: [{_name, ^held_email}]}}
+      refute_received {:email, %Swoosh.Email{to: [{_name, "held-guest@example.com"}]}}
+    end
   end
 
   describe "a meeting the host manages lengthened in Google" do

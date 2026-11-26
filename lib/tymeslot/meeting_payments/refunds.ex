@@ -1,83 +1,334 @@
 defmodule Tymeslot.MeetingPayments.Refunds do
   @moduledoc """
-  Issues refunds against `booking_payments` rows via the Stripe Refund
-  API and reconciles the local row.
+  Refunds of `booking_payments` rows: what may be refunded, and recording a
+  refund for `RefundExecutor` to make at Stripe.
 
-  The contract shared by `issue_refund/4` (system refunds, unscoped) and
-  `issue_host_refund/5` (a host refunding a payment they took):
+  `request_refund/4` records a refund (`RefundSchema`) under the payment's
+  row lock, with no Stripe call, and with it a job that makes it
+  (`Workers.ExecuteRefund`). `execute/2` makes one attempt outside any
+  transaction (`RefundExecutor`), and `refund_now/4` does both, for a caller
+  that waits on the answer. A pending refund counts against the refundable
+  balance until it settles, so a second refund cannot spend the same money.
 
-    * Refuses a payment `refusal/1` rules out, before any Stripe call:
-      one never paid (`:not_paid`), one past the 60-day refund window
-      (`:outside_refund_window`), and one Stripe holds for a dispute
-      (`:under_dispute`).
-    * Validates the requested amount is positive and does not exceed
-      the remaining refundable balance.
-    * Calls Stripe under the caller's idempotency key, which names the
-      decision to refund rather than the payment's state, so every retry
-      of one refund gets the same refund back from Stripe. A key built
-      from the refunded total would change once the `charge.refunded`
-      webhook recorded a refund whose own transaction rolled back, and
-      the retry would refund again. Stripe requires the same parameters
-      under a reused key, so the key must change with the amount, and a
-      caller's retries must end inside the 24 hours Stripe keeps it.
-    * Conditionally passes `refund_application_fee: true` only when
-      the original charge had a non-zero application fee. Stripe
-      errors if asked to refund a fee that was never collected.
-    * Updates the local `booking_payments` row, transitioning status
-      to `partially_refunded` or `refunded` based on the new total. The
-      new total is Stripe's own refunded total for the charge, read from
-      the refund's expanded charge and never lowering the recorded
-      refunds (the `charge.refunded` webhook's rule), so a refund Stripe
-      answers again for a replayed key is not counted twice. What a lost
-      dispute took is added to it, never compared with it
-      (`RefundedTotal`).
-    * Synchronously enqueues an attendee refund email via
-      `Tymeslot.Workers.SendBookingPaymentRefunded`.
+  How a refund ended at Stripe is recorded by `Refunds.Settlement`, for an
+  attempt and for the refund webhooks alike (`reconcile/2`), so each refund
+  settles once.
+
+  A payment `refusal/1` rules out is refused before anything is recorded:
+  one never paid (`:not_paid`), one past the 60-day refund window
+  (`:outside_refund_window`), and one Stripe holds for a dispute
+  (`:under_dispute`). The one exception is `request_remaining_refund/2`
+  under a dispute, which records the refund already failed, so the
+  dispute's close can tell it was owed.
   """
 
-  require Logger
-
-  alias Stripe.Error, as: StripeError
-  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Ecto.Changeset
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Money
   alias Tymeslot.MeetingPayments.RefundedTotal
-  alias Tymeslot.MeetingPayments.StripeAdapter
-  alias Tymeslot.MeetingPayments.Telemetry
+  alias Tymeslot.MeetingPayments.RefundExecutor
+  alias Tymeslot.MeetingPayments.RefundQueries
+  alias Tymeslot.MeetingPayments.Refunds.Settlement
+  alias Tymeslot.MeetingPayments.RefundSchema
+  alias Tymeslot.MeetingPayments.Workers.ExecuteRefund
   alias Tymeslot.Repo
-  alias Tymeslot.Workers.SendBookingPaymentRefunded
+
+  require Logger
 
   @refund_window_days 60
 
-  # The refund call runs while its transaction holds the payment's row lock,
-  # so it is bounded tighter than hackney's defaults (8_000 ms to connect,
-  # 5_000 ms per receive). stripity_stripe passes these through to hackney
-  # and retries a timed-out request up to three more times, with at most
-  # 2_000 ms between attempts, safely under the same idempotency key: four
-  # attempts at 3_000 + 5_000 ms plus 3_500 ms of backoff bound the call at
-  # about 35 seconds instead of about 55.
-  @stripe_connect_timeout_ms 3_000
-  @stripe_recv_timeout_ms 5_000
+  # The failure code of a refund recorded while a dispute held the money
+  # (`request_remaining_refund/2`).
+  @held_by_dispute "under_dispute"
 
-  @type refund_error ::
-          :not_paid
+  # How long the Stripe call of `refund_now/4` may take: someone waits on it.
+  @interactive_deadline_ms 10_000
+
+  # A requested refund's safety job runs this long after the request, by
+  # when a caller making the refund itself has normally settled it.
+  @safety_delay_seconds 120
+
+  # `RefundSchema.requestable_sources/0`, written out so that reading it
+  # adds no compile-time dependency on the schema; a test keeps the two
+  # lists the same.
+  @requestable_sources [:host, :cancellation, :approval_release, :late_payment, :series_host]
+
+  @type refund_source :: :host | :cancellation | :approval_release | :late_payment | :series_host
+  @type refusal ::
+          :not_found
+          | :not_paid
           | :outside_refund_window
-          | :already_refunded
           | :under_dispute
+          | :already_refunded
           | :invalid_amount
           | :missing_charge
-          | term()
+          | :refund_in_progress
+
+  @typedoc "How an attempt at a recorded refund ended (`execute/2`)."
+  @type attempt_result ::
+          {:ok | :pending | :stuck, RefundSchema.t()} | {:error, refusal() | :refund_failed}
 
   @doc """
-  Returns the remaining refundable balance in cents for a booking payment.
-
-  Computes `max(amount_cents - refunded_amount_cents, 0)`.
+  Returns the remaining refundable balance in cents for a booking payment:
+  what is neither refunded nor in a pending refund
+  (`RefundedTotal.refundable_cents/2`, `pending_refund_cents/1`).
   """
   @spec refundable_remaining_cents(BookingPaymentSchema.t()) :: non_neg_integer()
-  def refundable_remaining_cents(%{amount_cents: amount, refunded_amount_cents: refunded})
-      when is_integer(amount) and is_integer(refunded),
-      do: max(amount - refunded, 0)
+  def refundable_remaining_cents(payment),
+    do: RefundedTotal.refundable_cents(payment, pending_refund_cents(payment))
+
+  @doc """
+  What the payment's pending refunds add up to, in cents: its
+  `pending_refund_cents`, as the host-facing queries fill it in, or, for a
+  payment loaded without it, looked up by its id, once.
+  """
+  @spec pending_refund_cents(BookingPaymentSchema.t()) :: non_neg_integer()
+  def pending_refund_cents(%{pending_refund_cents: pending}) when is_integer(pending),
+    do: pending
+
+  def pending_refund_cents(%{id: id}) when is_binary(id), do: RefundQueries.pending_cents(id)
+  def pending_refund_cents(_payment), do: 0
+
+  @doc "Whether a refund of the payment is recorded and not yet settled."
+  @spec refund_pending?(BookingPaymentSchema.t()) :: boolean()
+  def refund_pending?(payment), do: pending_refund_cents(payment) > 0
+
+  @doc """
+  Records a refund of `amount_cents` of `payment`, decided by `source`, and
+  the job that makes it. Asks nothing of Stripe; `execute/2` or the job does.
+
+  One transaction, joining the caller's when there is one: the payment is
+  locked, then `refusal/1` applies, a refunded payment is
+  `:already_refunded`, and the amount must be a positive integer within the
+  refundable balance (`refundable_remaining_cents/1`). An amount over it is
+  `:refund_in_progress` while other refunds are pending, else
+  `:invalid_amount`. A missing charge id is no refusal here: the attempt
+  backfills it.
+
+  Raises, rolling the transaction back, when the refund or its job cannot
+  be inserted: the checks above leave nothing the row's constraints refuse,
+  so that is a fault, not a refusal to report.
+
+  Options:
+
+    * `:host_user_id`: the host acting. Only a payment they took is found,
+      decided under the lock; any other is `{:error, :not_found}`. Recorded
+      as who asked.
+    * `:reason`: the Stripe `reason` param.
+    * `:legacy_idempotency_key` and `:legacy_since`, given together: a key
+      the refund may already have been sent under elsewhere, and when it
+      could first have been. The attempts replay it while Stripe keeps it
+      (`RefundExecutor`).
+    * `:schedule_in` (default #{@safety_delay_seconds}): seconds until the
+      job runs; `:enqueue_now` runs it at once, for a caller that does not
+      make the refund itself.
+  """
+  @spec request_refund(BookingPaymentSchema.t(), pos_integer(), refund_source(), keyword()) ::
+          {:ok, RefundSchema.t()} | {:error, refusal()}
+  def request_refund(%BookingPaymentSchema{} = payment, amount_cents, source, opts)
+      when source in @requestable_sources do
+    opts =
+      Keyword.validate!(opts, [
+        :host_user_id,
+        :reason,
+        :legacy_idempotency_key,
+        :legacy_since,
+        :schedule_in,
+        enqueue_now: false
+      ])
+
+    Repo.transaction(fn ->
+      with {:ok, locked} <- lock(payment.id, opts[:host_user_id]),
+           :ok <- refusal(locked),
+           :ok <- requestable(locked, amount_cents, RefundQueries.pending_cents(locked.id)),
+           {:ok, refund} <- insert_request(locked, amount_cents, source, opts) do
+        refund
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+  end
+
+  @doc """
+  Records a refund of whatever `payment` has left to refund, decided by
+  `source`, with its job enqueued to run at once (`request_refund/4`), for
+  a refund the attendee is owed in full and nobody waits on.
+
+  A payment with nothing left, or one `refusal/1` rules out, records no
+  refund to make and returns `{:ok, :none}`: the money stays on the host's
+  outstanding refunds. A payment under dispute still records the refund,
+  settled `failed` with code `#{@held_by_dispute}` and never sent to Stripe,
+  which refuses to refund a disputed charge: that is the row an attempt
+  leaves when the dispute opens after the refund was recorded, so whichever
+  came first, the dispute's close finds the refund was owed
+  (`Webhooks.ChargeDisputeClosed`). All of this is checked before
+  `request_refund/4`, whose refusal would abort a transaction the caller
+  holds, so `payment` must be current (as under its row lock); its pending
+  refunds are read afresh.
+
+  `host_user_id:`, when given, is recorded as who asked, as
+  `request_refund/4` records it.
+  """
+  @spec request_remaining_refund(BookingPaymentSchema.t(), refund_source(), keyword()) ::
+          {:ok, RefundSchema.t() | :none} | {:error, refusal()}
+  def request_remaining_refund(%BookingPaymentSchema{} = payment, source, opts \\ [])
+      when source in @requestable_sources do
+    opts = Keyword.validate!(opts, [:host_user_id])
+    remaining = RefundedTotal.refundable_cents(payment, RefundQueries.pending_cents(payment.id))
+    request_remaining(payment, remaining, source, refusal(payment), opts)
+  end
+
+  @doc """
+  Locks the payment `payment_id` taken by `host_user_id`, then records a
+  refund of whatever it has left, asked by that host
+  (`request_remaining_refund/3`), for a caller whose transaction holds no
+  lock on it yet. Sized under the lock, so a refund or dispute that landed
+  since the caller last read the payment is accounted for rather than
+  refused. Another host's payment, or one that does not exist, is
+  `{:error, :not_found}`.
+  """
+  @spec request_remaining_refund_locked(Ecto.UUID.t(), integer(), refund_source()) ::
+          {:ok, RefundSchema.t() | :none} | {:error, refusal()}
+  def request_remaining_refund_locked(payment_id, host_user_id, source)
+      when is_integer(host_user_id) do
+    with {:ok, payment} <- lock(payment_id, host_user_id),
+         do: request_remaining_refund(payment, source, host_user_id: host_user_id)
+  end
+
+  defp request_remaining(_payment, remaining, _source, _refusal, _opts) when remaining <= 0,
+    do: {:ok, :none}
+
+  defp request_remaining(payment, remaining, source, :ok, opts),
+    do: request_refund(payment, remaining, source, [enqueue_now: true] ++ opts)
+
+  defp request_remaining(payment, remaining, source, {:error, :under_dispute}, opts) do
+    %RefundSchema{}
+    |> RefundSchema.request_changeset(%{
+      booking_payment_id: payment.id,
+      amount_cents: remaining,
+      source: source,
+      requested_by_user_id: opts[:host_user_id]
+    })
+    |> Changeset.change(
+      status: :failed,
+      failure_code: @held_by_dispute,
+      settled_at: DateTime.utc_now(:second)
+    )
+    |> RefundQueries.insert!()
+
+    Logger.info("Refund held back by a dispute, recorded for the dispute's close",
+      booking_payment_id: payment.id,
+      source: source
+    )
+
+    {:ok, :none}
+  end
+
+  defp request_remaining(payment, _remaining, source, {:error, reason}, _opts) do
+    Logger.warning("Refund cannot be made automatically, left to the host",
+      booking_payment_id: payment.id,
+      source: source,
+      reason: reason
+    )
+
+    {:ok, :none}
+  end
+
+  @doc """
+  Makes one attempt at a recorded refund, outside any transaction; see
+  `RefundExecutor.run/2` for the steps and options. Returns the refund once
+  it succeeded, `{:pending, refund}` while it waits for another attempt,
+  `{:error, :refund_failed}` once it failed, `{:error, :missing_charge}`
+  when the last attempt found no charge to refund, and `{:stuck, refund}`
+  when Stripe refuses to list the charge's refunds: the refund stays
+  pending, reported, and its `Workers.ExecuteRefund` job snoozes and tries
+  again, up to a day apart, until it is settled.
+  """
+  @spec execute(RefundSchema.t(), keyword()) :: attempt_result()
+  defdelegate execute(refund, opts), to: RefundExecutor, as: :run
+
+  @doc """
+  Records `refund` as made at Stripe; see `Refunds.Settlement.settle_succeeded/2`.
+  """
+  @spec settle_succeeded(RefundSchema.t(), map()) :: Settlement.settled() | {:error, term()}
+  defdelegate settle_succeeded(refund, stripe_refund), to: Settlement
+
+  @doc """
+  Settles a pending refund failed as Stripe reported it; see
+  `Refunds.Settlement.settle_failed/3`.
+  """
+  @spec settle_failed(RefundSchema.t(), map(), String.t()) ::
+          Settlement.settled() | {:error, term()}
+  defdelegate settle_failed(refund, stripe_refund, code), to: Settlement
+
+  @doc """
+  Settles a pending refund no attempt can from what an operator read off
+  Stripe's dashboard; see `Refunds.Settlement.settle_by_hand/2`.
+  """
+  @spec settle_by_hand(RefundSchema.t(), term()) :: Settlement.settled() | {:error, term()}
+  defdelegate settle_by_hand(refund, outcome), to: Settlement
+
+  @doc """
+  Brings a payment's recorded refunds in line with the refunds Stripe
+  reports for its charge, for the refund webhooks; see
+  `Refunds.Settlement.reconcile/2`.
+  """
+  @spec reconcile(BookingPaymentSchema.t(), [map()]) :: :ok | {:error, term()}
+  defdelegate reconcile(payment, stripe_refunds), to: Settlement
+
+  @doc """
+  What an older report of a payment's charge refunds still counts as
+  committed of refunds Stripe has since reported ended; see
+  `Refunds.Settlement.stale_committed_cents/2`.
+  """
+  @spec stale_committed_cents(BookingPaymentSchema.t(), [map()]) :: non_neg_integer()
+  defdelegate stale_committed_cents(payment, stripe_refunds), to: Settlement
+
+  @doc """
+  Records a refund (`request_refund/4`) and makes its first attempt at once
+  (`execute/2`), for a caller waiting on the outcome.
+  """
+  @spec refund_now(BookingPaymentSchema.t(), pos_integer(), refund_source(), keyword()) ::
+          attempt_result()
+  def refund_now(payment, amount_cents, source, opts) do
+    with {:ok, refund} <- request_refund(payment, amount_cents, source, opts),
+         do: execute(refund, deadline_ms: @interactive_deadline_ms)
+  end
+
+  defp lock(id, nil), do: BookingPaymentQueries.get_for_update(id)
+  defp lock(id, host_user_id), do: BookingPaymentQueries.get_for_update(id, host_user_id)
+
+  defp requestable(%{status: :refunded}, _amount_cents, _pending), do: {:error, :already_refunded}
+
+  defp requestable(payment, amount_cents, pending) do
+    cond do
+      not is_integer(amount_cents) or amount_cents <= 0 -> {:error, :invalid_amount}
+      amount_cents <= RefundedTotal.refundable_cents(payment, pending) -> :ok
+      pending > 0 -> {:error, :refund_in_progress}
+      true -> {:error, :invalid_amount}
+    end
+  end
+
+  defp insert_request(payment, amount_cents, source, opts) do
+    changeset =
+      RefundSchema.request_changeset(%RefundSchema{}, %{
+        booking_payment_id: payment.id,
+        amount_cents: amount_cents,
+        source: source,
+        reason: opts[:reason],
+        requested_by_user_id: opts[:host_user_id],
+        legacy_idempotency_key: opts[:legacy_idempotency_key],
+        legacy_since: opts[:legacy_since]
+      })
+
+    schedule_in =
+      if opts[:enqueue_now], do: 0, else: opts[:schedule_in] || @safety_delay_seconds
+
+    refund = RefundQueries.insert!(changeset)
+    Oban.insert!(ExecuteRefund.new(%{refund_id: refund.id}, schedule_in: schedule_in))
+    {:ok, refund}
+  end
 
   @doc """
   What a host's cancellation of one booking refunds by default: the
@@ -141,7 +392,7 @@ defmodule Tymeslot.MeetingPayments.Refunds do
 
   These are the refusals no retry turns round, and they need no Stripe call,
   so a caller about to make one (fetching a missing charge id, say) can check
-  them first. `issue_refund/4` and `issue_host_refund/5` apply them too.
+  them first. `request_refund/4` applies them too.
   """
   @spec refusal(BookingPaymentSchema.t()) ::
           :ok | {:error, :not_paid | :outside_refund_window | :under_dispute}
@@ -158,8 +409,8 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   end
 
   @doc """
-  Parses raw refund-form params into a validated `{:ok, pos_integer()}` or
-  a tagged `{:error, atom()}`.
+  Parses raw refund-form params into `{:ok, cents}` or a tagged
+  `{:error, atom()}`.
 
   Accepts the standard `"refund_type"` param shape used by the payments UI:
 
@@ -171,11 +422,17 @@ defmodule Tymeslot.MeetingPayments.Refunds do
     * `:choose_type` — `refund_type` key is absent or unrecognised
     * `:invalid_amount` — amount string cannot be parsed or is not positive
     * `:exceeds_remaining` — parsed amount exceeds the remaining balance
+    * `:refund_in_progress` — a full refund of a payment whose pending
+      refunds hold all that remains
   """
   @spec parse_refund_amount(BookingPaymentSchema.t(), map()) ::
-          {:ok, pos_integer()} | {:error, :invalid_amount | :exceeds_remaining | :choose_type}
+          {:ok, non_neg_integer()}
+          | {:error, :invalid_amount | :exceeds_remaining | :choose_type | :refund_in_progress}
   def parse_refund_amount(payment, %{"refund_type" => "full"}) do
-    {:ok, refundable_remaining_cents(payment)}
+    case refundable_remaining_cents(payment) do
+      0 -> if refund_pending?(payment), do: {:error, :refund_in_progress}, else: {:ok, 0}
+      remaining -> {:ok, remaining}
+    end
   end
 
   def parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => raw}) do
@@ -193,228 +450,4 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   end
 
   def parse_refund_amount(_payment, _params), do: {:error, :choose_type}
-
-  @doc """
-  Refunds a payment on behalf of the platform, whoever took it.
-
-  Unscoped: this is for system rules that refund without an acting user, such
-  as releasing the payment for a request that was never approved. Anything
-  acting for a signed-in user must use `issue_host_refund/5` instead.
-
-  `key` is the Stripe idempotency key, as for `issue_host_refund/5`.
-  """
-  @spec issue_refund(BookingPaymentSchema.t(), integer(), String.t(), String.t() | nil) ::
-          {:ok, BookingPaymentSchema.t()} | {:error, refund_error()}
-  def issue_refund(payment, amount_cents, key, reason \\ nil) when is_binary(key) do
-    refund_locked(
-      fn -> BookingPaymentQueries.get_for_update(payment.id) end,
-      amount_cents,
-      reason,
-      key
-    )
-  end
-
-  @doc """
-  Refunds a payment on behalf of the host who took it.
-
-  Only the host whose Stripe account holds the money may refund it. Ownership
-  is checked in the locked query, inside the same transaction as the
-  validation and the Stripe call, so it cannot change between the check and
-  the refund. Another host's payment, an unknown id and a malformed id all
-  return `{:error, :not_found}`, so the answer reveals nothing about payments
-  the caller does not own.
-
-  `key` is the Stripe idempotency key for this one refund, fixed when the
-  refund is decided (a job's id, a dialog's attempt) and carrying the
-  amount; see the moduledoc.
-
-  An amount the recorded balance no longer covers may be this very refund,
-  made by an attempt that rolled back and since recorded by the
-  `charge.refunded` webhook. When the recorded refunds could include it
-  (the part a lost dispute took never can), Stripe is asked anyway: a replayed key returns the refund already made,
-  which records nothing new, and a fresh one Stripe rejects, which returns
-  the local refusal (`:invalid_amount` or `:already_refunded`).
-  """
-  @spec issue_host_refund(term(), integer(), integer(), String.t(), String.t() | nil) ::
-          {:ok, BookingPaymentSchema.t()} | {:error, :not_found | refund_error()}
-  def issue_host_refund(payment_id, host_user_id, amount_cents, key, reason \\ nil)
-      when is_integer(host_user_id) and is_binary(key) do
-    refund_locked(
-      fn -> BookingPaymentQueries.get_for_update(payment_id, host_user_id) end,
-      amount_cents,
-      reason,
-      key
-    )
-  end
-
-  # Run the full validate → Stripe call → DB update sequence inside a
-  # serialised transaction with a row lock so that two concurrent host
-  # clicks cannot both pass validation against stale `refunded_amount_cents`
-  # and issue duplicate refunds via Stripe.
-  #
-  # The second concurrent caller blocks on the lock, then re-fetches the
-  # updated row and re-validates — at which point the remaining refundable
-  # balance will reflect the first refund, causing the over-refund attempt
-  # to return {:error, :invalid_amount}.
-  #
-  # `lock_payment` decides which row may be locked at all: the unscoped
-  # lookup for system refunds, or the host-scoped one for a host's own.
-  defp refund_locked(lock_payment, amount_cents, reason, key) do
-    Repo.transaction(fn ->
-      with {:ok, locked} <- lock_payment.(),
-           :ok <- refusal(locked),
-           {:ok, stripe_refund} <- refund_at_stripe(locked, amount_cents, reason, key),
-           {:ok, updated_payment} <-
-             update_payment_after_refund(locked, amount_cents, stripe_refund) do
-        enqueue_refund_email(updated_payment)
-        updated_payment
-      else
-        {:error, rollback_reason} -> Repo.rollback(rollback_reason)
-      end
-    end)
-  end
-
-  defp refund_at_stripe(payment, amount_cents, reason, key) do
-    with :ok <- validate_amount(payment, amount_cents),
-         :ok <- validate_charge(payment) do
-      create_stripe_refund(payment, amount_cents, reason, key)
-    else
-      {:error, refused} when refused in [:invalid_amount, :already_refunded] ->
-        if replayable?(payment, amount_cents),
-          do: replay_stripe_refund(payment, amount_cents, reason, key, refused),
-          else: {:error, refused}
-
-      {:error, _reason} = error ->
-        error
-    end
-  end
-
-  # A refund already made is part of the recorded refunds, so an amount
-  # they cannot hold was never made and needs no Stripe call. A lost
-  # dispute's part of the total is no refund Stripe could replay.
-  defp replayable?(payment, amount_cents),
-    do:
-      is_integer(amount_cents) and amount_cents > 0 and
-        amount_cents <= RefundedTotal.stripe_refunded_cents(payment)
-
-  # The key may name a refund Stripe already made, which the recorded
-  # balance now includes: a replay returns it, and a refund Stripe was
-  # never asked for is rejected there as it was here.
-  defp replay_stripe_refund(payment, amount_cents, reason, key, refused) do
-    with :ok <- validate_charge(payment),
-         {:ok, _stripe_refund} = made <- create_stripe_refund(payment, amount_cents, reason, key) do
-      made
-    else
-      {:error, :missing_charge} -> {:error, refused}
-      {:error, %StripeError{source: :stripe, code: :invalid_request_error}} -> {:error, refused}
-      {:error, _reason} = error -> error
-    end
-  end
-
-  defp validate_amount(%{status: :refunded}, _amount_cents), do: {:error, :already_refunded}
-
-  defp validate_amount(
-         %{amount_cents: amount, refunded_amount_cents: refunded},
-         amount_cents
-       )
-       when is_integer(amount_cents) and amount_cents > 0 and
-              amount_cents <= amount - refunded,
-       do: :ok
-
-  defp validate_amount(_payment, _amount_cents), do: {:error, :invalid_amount}
-
-  defp validate_charge(%{stripe_charge_id: charge}) when is_binary(charge) and charge != "",
-    do: :ok
-
-  defp validate_charge(_payment), do: {:error, :missing_charge}
-
-  defp create_stripe_refund(payment, amount_cents, reason, key) do
-    params =
-      %{
-        charge: payment.stripe_charge_id,
-        amount: amount_cents,
-        metadata: refund_metadata(payment),
-        expand: ["charge"]
-      }
-      |> maybe_put_reason(reason)
-      |> maybe_refund_application_fee(payment)
-
-    StripeAdapter.create_refund(params,
-      connect_account: payment.stripe_account_id,
-      idempotency_key: key,
-      connect_timeout: @stripe_connect_timeout_ms,
-      recv_timeout: @stripe_recv_timeout_ms
-    )
-  end
-
-  # A series payment names its series instead of a meeting.
-  defp refund_metadata(%{series_id: series_id} = payment) when is_binary(series_id),
-    do: %{series_id: series_id, booking_payment_id: payment.id}
-
-  defp refund_metadata(payment),
-    do: %{meeting_id: payment.meeting_id, booking_payment_id: payment.id}
-
-  # Stripe rejects a blank `reason` ("cannot be unset") — only include it when
-  # the caller supplies a non-empty value, otherwise omit the param entirely.
-  defp maybe_put_reason(params, reason) when is_binary(reason) and reason != "",
-    do: Map.put(params, :reason, reason)
-
-  defp maybe_put_reason(params, _reason), do: params
-
-  defp maybe_refund_application_fee(params, %{application_fee_cents: fee})
-       when is_integer(fee) and fee > 0,
-       do: Map.put(params, :refund_application_fee, true)
-
-  defp maybe_refund_application_fee(params, _payment), do: params
-
-  defp update_payment_after_refund(payment, amount_cents, stripe_refund) do
-    new_total = refunded_total(payment, amount_cents, stripe_refund)
-
-    new_status =
-      cond do
-        new_total >= payment.amount_cents -> :refunded
-        new_total > 0 -> :partially_refunded
-        true -> payment.status
-      end
-
-    case BookingPaymentQueries.update(payment, %{
-           refunded_amount_cents: new_total,
-           status: new_status
-         }) do
-      {:ok, updated} = result ->
-        Telemetry.emit_status_changed(payment.status, updated.status, :host_refund)
-        result
-
-      {:error, _changeset} = err ->
-        err
-    end
-  end
-
-  # Stripe's refunded total for the charge, which counts this refund once
-  # however often its key is replayed, and never below the recorded refunds
-  # (the webhook's rule). A response without the expanded charge falls back
-  # to adding the refund to the recorded refunds.
-  defp refunded_total(payment, _amount_cents, %{charge: %{amount_refunded: stripe_total}})
-       when is_integer(stripe_total),
-       do: RefundedTotal.with_stripe_refunded(payment, stripe_total)
-
-  defp refunded_total(payment, amount_cents, _stripe_refund),
-    do: RefundedTotal.with_refund_added(payment, amount_cents)
-
-  defp enqueue_refund_email(payment) do
-    case %{booking_payment_id: payment.id}
-         |> SendBookingPaymentRefunded.new()
-         |> Oban.insert() do
-      {:ok, _job} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.warning("Failed to enqueue refund email",
-          booking_payment_id: payment.id,
-          reason: LogFormat.reason(reason)
-        )
-
-        :ok
-    end
-  end
 end

@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal d
 
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Components.CoreComponents.Modal
+  alias TymeslotWeb.Components.PaymentHelpers
 
   @doc """
   Renders a delete confirmation modal for meeting types.
@@ -19,6 +20,8 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal d
     * `sign_ups` - `{dates, people}`: the fixed-date type's upcoming dates the
       delete cancels and the people booked on them
       (`Tymeslot.MeetingTypes.upcoming_sign_ups/1`)
+    * `seat_refunds` - the paid seats on those dates the delete refunds in
+      full (`Tymeslot.MeetingTypes.upcoming_seat_refunds/1`), or nil
     * `myself` - The LiveComponent target for event handling (required)
 
   ## Examples
@@ -32,6 +35,7 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal d
   attr :show, :boolean, required: true
   attr :meeting_type, :map, default: nil
   attr :sign_ups, :any, default: {0, 0}
+  attr :seat_refunds, :map, default: nil
   attr :myself, :any, required: true
 
   @spec delete_meeting_type_modal(map()) :: Phoenix.LiveView.Rendered.t()
@@ -66,6 +70,16 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal d
               "The %{count} person who signed up is told by email.",
               "The %{count} people who signed up are told by email.",
               elem(@sign_ups, 1)
+            )}
+          </span>
+          <span :if={@seat_refunds && @seat_refunds.count > 0} data-testid="delete-refunds-seats">
+            {dngettext(
+              "dashboard_meeting_types",
+              "%{amount} paid by %{count} person is refunded in full.",
+              "%{amount} paid by %{count} people is refunded in full.",
+              @seat_refunds.count,
+              count: @seat_refunds.count,
+              amount: PaymentHelpers.format_totals(@seat_refunds.totals)
             )}
           </span>
         </p>

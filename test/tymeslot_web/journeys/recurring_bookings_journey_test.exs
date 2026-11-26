@@ -31,14 +31,17 @@ defmodule TymeslotWeb.Journeys.RecurringBookingsJourneyTest do
   alias Plug.Test
   alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.MeetingPayments
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
+
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.PaidSeriesTestHelpers, as: Paid
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.BookingDriver
@@ -251,9 +254,15 @@ defmodule TymeslotWeb.Journeys.RecurringBookingsJourneyTest do
       charges_enabled: true
     )
 
-    expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
-      {:ok, %{id: Paid.session_id(), url: @checkout_url, payment_intent: "pi_SERIES"}}
-    end)
+    StripeStub.expect(
+      :create_checkout_session,
+      1,
+      StripeFixtures.object("checkout_session_payment", %{
+        "id" => Paid.session_id(),
+        "url" => @checkout_url,
+        "payment_intent" => "pi_SERIES"
+      })
+    )
 
     # The booker picks five times: the first, then four more.
     view = to_series(conn, profile, day)
@@ -272,10 +281,13 @@ defmodule TymeslotWeb.Journeys.RecurringBookingsJourneyTest do
     assert_redirect(view, @checkout_url, 5_000)
     assert statuses(user) == List.duplicate(:awaiting_payment, 5)
 
+    assert [%{form: %{"line_items" => [%{"quantity" => "5"}]}, headers: headers}] =
+             StripeStub.requests(:create_checkout_session)
+
+    assert headers["stripe-account"] == Paid.account()
+
     # Stripe tells us the checkout completed.
-    stub(StripeAdapterMock, :retrieve_payment_intent, fn "pi_SERIES", _opts ->
-      {:ok, %{"latest_charge" => "ch_SERIES"}}
-    end)
+    Paid.stub_charge_backfill()
 
     series_id = hd(sessions(user)).series_id
     event = Paid.completed_event("evt_FIVE", series_id, 5 * Paid.price_cents())
@@ -287,9 +299,9 @@ defmodule TymeslotWeb.Journeys.RecurringBookingsJourneyTest do
 
     # The host cancels one session from the dashboard, with the default
     # refund: that session's share of the payment.
-    expect(StripeAdapterMock, :create_refund, fn params, _opts ->
-      assert params.amount == Paid.price_cents()
-      {:ok, %{id: "re_FIVE"}}
+    StripeStub.expect(:create_refund, 1, fn request ->
+      assert request.form["amount"] == to_string(Paid.price_cents())
+      StripeStubResponses.refund(request, "re_FIVE")
     end)
 
     [_first, second | _rest] = sessions(user)
@@ -300,7 +312,7 @@ defmodule TymeslotWeb.Journeys.RecurringBookingsJourneyTest do
     assert statuses(user) == [:confirmed, :cancelled, :confirmed, :confirmed, :confirmed]
 
     assert %{status: :partially_refunded, refunded_amount_cents: refunded} =
-             MeetingPayments.payment_for_series(series_id)
+             BookingPayments.payment_for_series(series_id)
 
     assert refunded == Paid.price_cents()
   end

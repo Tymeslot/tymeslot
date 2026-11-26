@@ -500,9 +500,35 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   end
 
   @doc """
-  Returns the organizer's scheduling page path for restarting a booking,
-  e.g. "/username", or "/username/page" for an organiser resolved through
-  one of their booking pages.
+  The booking page a guest goes back to from `meeting`'s pages, as a path:
+  the page the meeting was booked through while it exists and is public,
+  otherwise the host's own page, exactly as the meeting's emails link
+  (`BookingPages.address_for_meeting/2`). "/" only for a host without a
+  username. Reads the database, so it is resolved once at mount and kept
+  as the `:booking_path` assign.
+  """
+  @spec meeting_booking_path(map() | nil, map()) :: String.t()
+  def meeting_booking_path(%{username: username}, meeting)
+      when is_binary(username) and username != "",
+      do: address_path(BookingPages.address_for_meeting(meeting, username))
+
+  def meeting_booking_path(_no_profile, _meeting), do: "/"
+
+  @doc """
+  A meeting page's booking page path: its `:booking_path` assign
+  (`meeting_booking_path/2`), or, for a page rendered without one, the
+  organiser's public address.
+  """
+  @spec booking_path(map()) :: String.t()
+  def booking_path(assigns),
+    do:
+      assigns[:booking_path] ||
+        address_path(BookingPages.public_address(assigns[:organizer_profile]))
+
+  @doc """
+  Returns the organizer's scheduling page path for restarting a booking:
+  `booking_path/1`, e.g. "/username", or "/username/page" for a meeting
+  booked through one of their booking pages.
 
   Invoked from the reschedule flow's "Choose New Time" CTA. When a
   `:meeting_uid` is present in the assigns it is carried forward as the
@@ -518,14 +544,14 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   """
   @spec organizer_scheduling_path(map()) :: String.t()
   def organizer_scheduling_path(assigns) do
-    case BookingPages.public_address(assigns[:organizer_profile]) do
-      address when is_binary(address) and address != "" ->
-        with_query("/#{address}", reschedule_query(assigns[:meeting_uid], assigns[:locale]))
-
-      _other ->
-        "/"
+    case booking_path(assigns) do
+      "/" -> "/"
+      path -> with_query(path, reschedule_query(assigns[:meeting_uid], assigns[:locale]))
     end
   end
+
+  defp address_path(address) when is_binary(address) and address != "", do: "/" <> address
+  defp address_path(_no_address), do: "/"
 
   defp reschedule_query(uid, locale) when is_binary(uid) and uid != "" do
     Map.reject(%{"reschedule_meeting_uid" => uid, "locale" => locale}, fn {_key, value} ->

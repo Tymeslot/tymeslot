@@ -40,9 +40,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
      |> assign(:loading, true)
      |> assign(:is_empty, true)
      |> assign(:cancelling_meeting, nil)
-     |> assign(:cancel_booking_payment, nil)
-     |> assign(:cancel_refund_error, %{})
-     |> assign(:cancel_refund_form, %{choice: "full", amount: "", acknowledged: false})
+     |> assign(Cancellation.dialog_assigns())
      |> assign(:sending_reschedule, nil)
      |> assign(:answering_request, MapSet.new())
      |> assign(:answering_opts, %{})
@@ -407,6 +405,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         cancel_meeting={@cancel_meeting_modal_data}
         show_cancel={@show_cancel_meeting_modal || false}
         cancel_booking_payment={@cancel_booking_payment}
+        cancel_seat_payments={@cancel_seat_payments}
         cancel_refund_error={@cancel_refund_error}
         cancel_refund_form={@cancel_refund_form}
         cancelling={@cancelling_meeting != nil}

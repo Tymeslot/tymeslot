@@ -357,7 +357,7 @@ msgstr "Wird geprüft"
 #: lib/tymeslot_web/themes/shared/series_parts.ex
 #, elixir-autogen, elixir-format
 msgid "Checking availability…"
-msgstr "Verfügbarkeit wird geprüft …"
+msgstr "Verfügbarkeit wird geprüft…"
 
 #: lib/tymeslot_web/themes/shared/series_chooser.ex
 #, elixir-autogen, elixir-format
@@ -404,7 +404,7 @@ msgstr "Ausgebucht"
 #: lib/tymeslot_web/themes/shared/series_chooser.ex
 #, elixir-autogen, elixir-format
 msgid "Loading times…"
-msgstr "Zeiten werden geladen …"
+msgstr "Zeiten werden geladen…"
 
 #: lib/tymeslot_web/themes/shared/series_summary.ex
 #, elixir-autogen, elixir-format
@@ -601,7 +601,7 @@ msgstr "Durch die Absage wird Ihre Zahlung nicht automatisch erstattet. Klären 
 #: lib/tymeslot_web/themes/shared/components/series_page.ex
 #, elixir-autogen, elixir-format
 msgid "Cancelling…"
-msgstr "Wird abgesagt …"
+msgstr "Wird abgesagt…"
 
 #: lib/tymeslot_web/themes/shared/components/series_page.ex
 #, elixir-autogen, elixir-format
@@ -658,7 +658,7 @@ msgstr[1] "Ihre Anfrage für %{count} Termine zurückziehen? Das lässt sich nic
 #: lib/tymeslot_web/themes/shared/components/series_page.ex
 #, elixir-autogen, elixir-format
 msgid "Withdrawing…"
-msgstr "Wird zurückgezogen …"
+msgstr "Wird zurückgezogen…"
 
 #: lib/tymeslot_web/themes/shared/components/series_page.ex
 #, elixir-autogen, elixir-format
@@ -701,3 +701,8 @@ msgstr "Termin %{position}, %{when}"
 #, elixir-autogen, elixir-format
 msgid "The host answered your request in the meantime, so nothing was withdrawn. The list shows where each session now stands."
 msgstr "Der Gastgeber hat Ihre Anfrage inzwischen beantwortet, daher wurde nichts zurückgezogen. Die Liste zeigt den aktuellen Stand jedes Termins."
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Your payment is still open"
+msgstr "Ihre Zahlung ist noch offen"

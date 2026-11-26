@@ -24,6 +24,7 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   }
 
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.ParticipantSchema
 
   @doc """
   Sends an appointment confirmation email to the organizer.
@@ -75,6 +76,17 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
           {:ok, any()} | {:error, any()}
   def send_booking_email_verification(%Meeting{} = meeting, verify_url) do
     Delivery.deliver(BookingEmailVerification.render(meeting, verify_url))
+  end
+
+  @doc """
+  Asks a group booker to confirm their email address before their seat counts.
+  Same rules as `send_booking_email_verification/2`; the recipient, language
+  and timezone are the seat's.
+  """
+  @spec send_seat_email_verification(Meeting.t(), ParticipantSchema.t(), String.t()) ::
+          {:ok, any()} | {:error, any()}
+  def send_seat_email_verification(%Meeting{} = slot, %ParticipantSchema{} = seat, verify_url) do
+    Delivery.deliver(BookingEmailVerification.render_seat(slot, seat, verify_url))
   end
 
   @doc """
@@ -185,8 +197,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   end
 
   @doc """
-  Tells the organiser about one seat of a group meeting: booked, cancelled by
-  its participant, or moved to another time. See
+  Tells the organiser about one seat of a group meeting: booked, bringing
+  back a slot they were told had been cancelled, cancelled by its
+  participant, or moved to another time. See
   `Tymeslot.Emails.Templates.SeatUpdateForOrganizer`.
   """
   @spec send_seat_update_to_organizer(

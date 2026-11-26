@@ -2,12 +2,9 @@ defmodule Tymeslot.MeetingPayments.Telemetry do
   @moduledoc """
   Telemetry helpers for the meeting-payments context.
 
-  Three event families are emitted from this module so dashboards and
+  Two event families are emitted from this module so dashboards and
   log aggregators have a stable contract:
 
-    * `[:tymeslot, :meeting_payments, :stripe, :api, :start | :stop | :exception]`
-      — wraps every Stripe API call so latency and error rate per operation
-      can be charted. Emitted via `:telemetry.span/3`.
     * `[:tymeslot, :meeting_payments, :webhook, :received, :start | :stop | :exception]`
       — wraps every Connect webhook handler. The `:processed` metadata key
       on `:stop` distinguishes successful processing, idempotent replays,
@@ -25,7 +22,6 @@ defmodule Tymeslot.MeetingPayments.Telemetry do
 
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
 
-  @stripe_event [:tymeslot, :meeting_payments, :stripe, :api]
   @webhook_event [:tymeslot, :meeting_payments, :webhook, :received]
   @status_changed_event [:tymeslot, :meeting_payments, :booking_payment, :status_changed]
 
@@ -38,14 +34,16 @@ defmodule Tymeslot.MeetingPayments.Telemetry do
           | :webhook_dispute_created
           | :webhook_dispute_closed
           | :host_refund
+          | :cancellation_refund
+          | :approval_release_refund
+          | :late_payment_refund
+          | :series_host_refund
+          | :external_refund
+          | :webhook_refund_failed
           | :reconcile
 
   @typedoc "Webhook processing outcome surfaced as telemetry metadata."
   @type webhook_processed :: :ok | :idempotent_replay | :skipped | :error
-
-  @doc "Telemetry event prefix for Stripe API calls."
-  @spec stripe_event() :: [atom()]
-  def stripe_event, do: @stripe_event
 
   @doc "Telemetry event prefix for webhook handlers."
   @spec webhook_event() :: [atom()]
@@ -54,25 +52,6 @@ defmodule Tymeslot.MeetingPayments.Telemetry do
   @doc "Telemetry event for booking_payment status transitions."
   @spec status_changed_event() :: [atom()]
   def status_changed_event, do: @status_changed_event
-
-  @doc """
-  Wraps a Stripe API call in a `:telemetry.span/3`. The supplied function
-  must return `{:ok, value}`, `{:error, reason}` or a bare `:ok`; any of them is forwarded
-  to the caller unchanged. The `:stop` event metadata carries `status: :ok`
-  or `status: :error` so dashboards can compute error rate without parsing
-  the result tuple.
-  """
-  @spec span_stripe(atom(), String.t() | nil, (-> result)) :: result when result: term()
-  def span_stripe(operation, account_id, fun)
-      when is_atom(operation) and (is_binary(account_id) or is_nil(account_id)) and
-             is_function(fun, 0) do
-    metadata = %{operation: operation, account_id: account_id}
-
-    :telemetry.span(@stripe_event, metadata, fn ->
-      result = fun.()
-      {result, Map.put(metadata, :status, status_for(result))}
-    end)
-  end
 
   @doc """
   Wraps a webhook handler in a `:telemetry.span/3`. The supplied function
@@ -116,9 +95,4 @@ defmodule Tymeslot.MeetingPayments.Telemetry do
       :ok
     end
   end
-
-  defp status_for({:ok, _value}), do: :ok
-  defp status_for({:error, _reason}), do: :error
-  defp status_for(:ok), do: :ok
-  defp status_for(_other), do: :error
 end

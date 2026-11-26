@@ -21,6 +21,7 @@ defmodule Tymeslot.SignedToken do
           | :cursor_page
           | :slack_oauth_state
           | :checkout_return
+          | :seat_checkout_return
           | :stripe_connect_state
 
   @purposes %{
@@ -52,6 +53,9 @@ defmodule Tymeslot.SignedToken do
     # URL only Stripe and the guest's browser see. A day outlasts the longest
     # checkout Stripe allows.
     checkout_return: [salt: "checkout return", max_age: 24 * 3600],
+    # The same proof for a group seat's checkout, signed over the seat hold's
+    # id rather than the meeting's, which every booker on the slot shares.
+    seat_checkout_return: [salt: "seat checkout return", max_age: 24 * 3600],
     # Far longer than Slack's: a host creating a new Stripe account fills in a
     # long form and may stop to find bank details. Single use is enforced by
     # the nonce on the connect_accounts row, not by this expiry.

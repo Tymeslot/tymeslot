@@ -12,7 +12,6 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.CancelledTest do
   @moduletag :payments
   @moduletag :integration
 
-  import Mox
   import Phoenix.ConnTest
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
@@ -20,15 +19,12 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.CancelledTest do
   alias Ecto.UUID
   alias Tymeslot.BookingTestHelpers
   alias Tymeslot.Invitations
-  alias Tymeslot.MeetingPayments
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.MeetingPayments.Webhooks.FailAndExpire
   alias Tymeslot.Profiles
   alias Tymeslot.SignedToken
-
-  # The guest's mount expires their checkout from a task the LiveView starts.
-  setup :set_mox_global
-  setup :verify_on_exit!
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
   setup do
     user = insert(:user)
@@ -128,6 +124,9 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.CancelledTest do
         stripe_checkout_session_id: "cs_TEST"
       )
 
+      # Whichever mount finds the checkout still open ends it at Stripe.
+      StripeStub.stub(:expire_checkout_session, StripeFixtures.object("checkout_session_expired"))
+
       %{invitation: invitation, meeting: meeting}
     end
 
@@ -135,9 +134,12 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.CancelledTest do
          %{conn: conn, invitation: invitation, meeting: meeting} do
       test_pid = self()
 
-      expect(StripeAdapterMock, :expire_checkout_session, fn "cs_TEST", opts ->
-        send(test_pid, {:expired_session, opts[:connect_account]})
-        {:ok, %{id: "cs_TEST", status: "expired"}}
+      # The guest's mount expires their checkout from a task the LiveView
+      # starts; the stub follows the task to the test.
+      StripeStub.expect(:expire_checkout_session, 1, fn request ->
+        assert request.path == "/v1/checkout/sessions/cs_TEST/expire"
+        send(test_pid, {:expired_session, request.headers["stripe-account"]})
+        StripeFixtures.object("checkout_session_expired", %{"id" => "cs_TEST"})
       end)
 
       {:ok, view, html} = live(conn, guest_path(meeting))
@@ -185,7 +187,6 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.CancelledTest do
     end
 
     test "the language switch keeps the guest's proof", %{conn: conn, meeting: meeting} do
-      stub(StripeAdapterMock, :expire_checkout_session, fn _id, _opts -> {:ok, %{}} end)
       {:ok, view, _html} = live(conn, guest_path(meeting))
 
       render_hook(view, "change_locale", %{"locale" => "de"})
@@ -193,7 +194,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.CancelledTest do
 
       query = URI.decode_query(URI.parse(path).query)
       assert query["locale"] == "de"
-      assert MeetingPayments.returned_from_checkout?(meeting.id, query["return_token"])
+      assert Checkout.returned_from_checkout?(meeting.id, query["return_token"])
     end
 
     # Anyone else holding the meeting id (a shared screen, a log line, a

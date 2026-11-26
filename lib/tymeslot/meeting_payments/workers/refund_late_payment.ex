@@ -1,56 +1,36 @@
 defmodule Tymeslot.MeetingPayments.Workers.RefundLatePayment do
   @moduledoc """
-  Refunds, in full, a payment that completed after its booking had expired
-  and its slot had been given to someone else, or for a host whose account
-  is pending deletion.
+  Runs jobs queued before the release that brought in the refund outbox
+  (`booking_payment_refunds`); delete in the release after it.
 
-  `CheckoutSessionCompleted` records such a payment as paid, leaves the
-  meeting expired and inserts this job in the same transaction, so the
-  webhook never waits on Stripe, and a lasting Stripe failure cannot roll
-  back every delivery while the money sits unseen. Until the refund
-  goes through, the booking is on the host's outstanding-refunds list, where
-  the host can also refund it by hand.
+  Such a job refunds, in full, a payment that completed after its booking
+  had expired and its slot had been given to someone else, or for a host
+  whose account is pending deletion (`reason: "late"`), or what a decided
+  dispute left with the host (`reason: "after_dispute"`). Nothing inserts
+  such jobs: the webhooks record those refunds themselves
+  (`Refunds.request_remaining_refund/2`).
 
-  The refund needs the payment's charge id. The webhook backfills it from
-  Stripe before inserting this job, but commits the payment and the job
-  whether or not that worked, so each attempt here first backfills a charge
-  id still missing (`ChargeBackfill`), and an attempt that cannot is retried
-  like any other failed one. The refusals below are checked before that,
-  since they need no charge id and no Stripe call.
+  A run records the refund of the remaining balance
+  (`Refunds.request_refund/4`, source `:late_payment`) and leaves it to
+  `ExecuteRefund`, which makes it, retries it and reports a failure. An
+  earlier attempt of the job may have refunded at Stripe under its key
+  (`late_payment_refund:<id>:<reason>:<amount>`) without recording it, so
+  the refund carries that key and the job's `inserted_at`, from when the
+  key could first have been sent: the executor replays the key while Stripe
+  keeps it, and adopts a refund it made after that.
 
-  The refund is `Refunds.issue_refund/4`, under a Stripe idempotency key
-  naming this job (the payment and the job's reason, of which there is only
-  ever one job) and the amount (`late_payment_refund:<id>:<reason>:<amount>`).
-  Every attempt asks for the same remaining balance, so the key is the same
-  each time: when Stripe accepted a refund but the transaction that records
-  it rolled back, the retry gets the same refund back from Stripe instead of
-  a second one, whether or not `charge.refunded` has recorded it meanwhile.
-  The attendee's refund email is enqueued in that same transaction, so only
-  once Stripe has accepted the refund.
+  The refusals no retry can turn round (`:not_paid`,
+  `:outside_refund_window`, `:under_dispute`) discard the job and leave the
+  booking on the host's outstanding refunds, as does an amount the balance
+  no longer holds. A payment refunded already (by the host, or by an
+  earlier attempt whose refund `charge.refunded` recorded after that
+  attempt's own transaction rolled back) has the attendee emailed once.
+  The refund is recorded under a delivery claim, so a rerun records none.
 
-  Retries are spread over about four hours (`backoff/1`), well inside the
-  24 hours Stripe keeps an idempotency key. When the last attempt fails an
-  admin alert is raised, and the booking stays on the host's list.
-
-  A refund that no retry can make is discarded at once, with one log line,
-  rather than retried for four hours towards an alert:
-
-    * `:under_dispute`: Stripe holds the money until the dispute is decided.
-      A dispute the attendee wins in full returns it to them. One the host
-      wins sets the payment back to `paid` (or `partially_refunded`), and
-      one the attendee wins only in part leaves it `partially_refunded`;
-      either way the rest is still owed, so the job is scheduled again
-      (`new_after_dispute/1`) and refunds what is left, the booking on the
-      host's outstanding-refunds list until it has run.
-    * `:outside_refund_window` and `:not_paid`: the payment is `paid` and
-      its booking expired, so it stays on the host's outstanding-refunds
-      list, offered as a refund to make in Stripe.
-
-  Inserted at most once per booking payment and reason: the uniqueness
-  covers every state, completed and discarded included, so a redelivered
-  completion (or dispute outcome) can never refund twice. The job a decided
-  dispute schedules carries `reason: "after_dispute"`, so the first job,
-  discarded while the dispute was open, does not swallow it.
+  Any other failure (another refund of the payment still pending, a raise)
+  is retried over about four hours; when the last attempt fails too, a
+  `:late_payment_refund_failed` admin alert is raised, as nobody else
+  learns that the attendee is still owed the money.
   """
 
   use Oban.Worker,
@@ -63,68 +43,33 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePayment do
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.MeetingPayments
+
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
-  alias Tymeslot.MeetingPayments.ChargeBackfill
   alias Tymeslot.MeetingPayments.Refunds
+  alias Tymeslot.Repo
   alias Tymeslot.Workers.Backoff
+  alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.SendBookingPaymentRefunded
 
-  # Sixty seconds, doubling, capped at an hour: nine waits between ten
-  # attempts add up to 14_580 seconds (4h03m).
+  @claim "late_payment_refund_requested"
+
   @base_backoff_seconds 60
   @max_backoff_seconds 3_600
 
-  # Refusals no retry can turn round; see the moduledoc for where each
-  # leaves the money owed.
-  @unretryable [:not_paid, :outside_refund_window, :under_dispute]
+  # Refusals no retry can turn round: the booking stays with the host.
+  @unretryable [:not_paid, :outside_refund_window, :under_dispute, :invalid_amount]
 
   @behaviour ExpectedJobOutcome
 
-  # The booking is left with the host or with Stripe's dispute, as the
-  # moduledoc describes, so the discard is not a failure to record.
   @impl ExpectedJobOutcome
   def expected_outcome?(reason), do: reason in @unretryable
 
-  @doc """
-  Builds the job for `booking_payment_id`. Insert it in the transaction that
-  records the payment as paid.
-  """
-  @spec new_for(Ecto.UUID.t()) :: Oban.Job.changeset()
-  def new_for(booking_payment_id), do: new(%{booking_payment_id: booking_payment_id})
-
-  @doc """
-  Builds the job for `booking_payment_id` once a decided dispute has left
-  part or all of the payment with the host: a won dispute, or one lost only
-  in part. Insert it in the transaction that records the outcome.
-  """
-  @spec new_after_dispute(Ecto.UUID.t()) :: Oban.Job.changeset()
-  def new_after_dispute(booking_payment_id),
-    do: new(%{booking_payment_id: booking_payment_id, reason: "after_dispute"})
-
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"booking_payment_id" => id} = args} = job) do
-    case refund(id, Map.get(args, "reason", "late")) do
-      {:ok, _refunded} ->
-        :ok
-
-      {:error, :already_refunded} ->
-        notify_attendee_once(id)
-
-      {:error, :not_found} ->
-        {:discard, "booking_payment not found"}
-
-      {:error, reason} when reason in @unretryable ->
-        Logger.warning("Late payment refund cannot be made automatically, left to the host",
-          booking_payment_id: id,
-          reason: reason
-        )
-
-        {:discard, reason}
-
-      {:error, reason} ->
-        if job.attempt >= job.max_attempts, do: alert(job, id, reason)
-        {:error, reason}
+    case BookingPayments.get_payment(id) do
+      %BookingPaymentSchema{} = payment -> payment |> request(job, args) |> result(job, id)
+      nil -> {:discard, :not_found}
     end
   end
 
@@ -132,35 +77,60 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePayment do
   def backoff(%Oban.Job{attempt: attempt}),
     do: Backoff.exponential(attempt, @base_backoff_seconds, @max_backoff_seconds)
 
-  # A raise (a dropped connection, say) is an attempt failing like any other,
-  # so it is returned rather than raised, and the last one is alerted on.
-  defp refund(id, reason) do
-    with %BookingPaymentSchema{} = payment <- MeetingPayments.get_payment(id),
-         :ok <- Refunds.refusal(payment),
-         {:ok, payment} <- ensure_charge(payment) do
-      amount = Refunds.refundable_remaining_cents(payment)
-      Refunds.issue_refund(payment, amount, "late_payment_refund:#{id}:#{reason}:#{amount}")
-    else
-      nil -> {:error, :not_found}
-      {:error, _reason} = error -> error
-    end
+  # A raise (a dropped connection, say) is an attempt failing like any
+  # other, so the last one is still alerted on.
+  defp request(payment, job, args) do
+    if DeliveryClaims.claimed?(job.id, @claim),
+      do: {:ok, :requested},
+      else: request_once(payment, job, Map.get(args, "reason", "late"))
   rescue
     exception -> {:error, exception}
   end
 
-  defp ensure_charge(%{stripe_charge_id: charge} = payment)
-       when is_binary(charge) and charge != "",
-       do: {:ok, payment}
+  # The claim and the refund commit together; a refusal rolls both back.
+  defp request_once(payment, job, reason) do
+    amount = Refunds.refundable_remaining_cents(payment)
 
-  defp ensure_charge(payment),
-    do: ChargeBackfill.backfill(payment, payment.stripe_payment_intent_id)
+    Repo.transaction(fn ->
+      with :claimed <- claim(job.id),
+           {:ok, refund} <-
+             Refunds.request_refund(payment, amount, :late_payment,
+               legacy_idempotency_key: "late_payment_refund:#{payment.id}:#{reason}:#{amount}",
+               legacy_since: job.inserted_at,
+               enqueue_now: true
+             ) do
+        refund
+      else
+        :already_claimed -> :requested
+        {:error, refusal} -> Repo.rollback(refusal)
+      end
+    end)
+  end
 
-  # The payment is refunded already, by the host from the dashboard, or by
-  # an earlier attempt whose refund Stripe accepted and `charge.refunded`
-  # recorded after that attempt's own transaction rolled back. The host's
-  # refund and a committed attempt each enqueued the email; the rolled-back
-  # attempt did not. Unique over every state, the insert sends it only in
-  # that last case.
+  # A job with no id (built by hand) cannot run twice.
+  defp claim(nil), do: :claimed
+  defp claim(job_id), do: DeliveryClaims.claim(job_id, @claim)
+
+  defp result({:ok, _requested}, _job, _id), do: :ok
+  defp result({:error, :already_refunded}, _job, id), do: notify_attendee_once(id)
+  defp result({:error, :not_found}, _job, _id), do: {:discard, :not_found}
+
+  defp result({:error, reason}, _job, id) when reason in @unretryable do
+    Logger.warning("Late payment refund cannot be made automatically, left to the host",
+      booking_payment_id: id,
+      reason: reason
+    )
+
+    {:discard, reason}
+  end
+
+  defp result({:error, reason}, job, id) do
+    if job.attempt >= job.max_attempts, do: alert(job, id, reason)
+    {:error, reason}
+  end
+
+  # Unique over every state, the insert sends the email only if nothing
+  # sent it for this payment before.
   defp notify_attendee_once(id) do
     email =
       SendBookingPaymentRefunded.new(%{booking_payment_id: id},

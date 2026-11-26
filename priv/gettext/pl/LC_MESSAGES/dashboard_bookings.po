@@ -48,35 +48,15 @@ msgstr "E-mail uczestnika"
 msgid "Cancel"
 msgstr "Odwołaj"
 
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Cancel Meeting"
-msgstr "Odwołaj spotkanie"
-
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Cancel without refund."
-msgstr "Odwołaj bez zwrotu."
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
 #, elixir-autogen, elixir-format
 msgid "Cancelled"
 msgstr "Odwołane"
 
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Cancelling..."
-msgstr "Odwoływanie…"
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
 #, elixir-autogen, elixir-format
 msgid "Completed"
 msgstr "Zakończone"
-
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Confirm cancellation"
-msgstr "Potwierdź odwołanie"
 
 #: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
 #, elixir-autogen, elixir-format
@@ -93,16 +73,6 @@ msgstr "Data i godzina"
 msgid "Dismiss"
 msgstr "Zamknij"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Enter a valid partial refund amount."
-msgstr "Podaj prawidłową kwotę częściowego zwrotu."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to cancel meeting. Please try again."
-msgstr "Nie udało się odwołać spotkania. Spróbuj ponownie."
-
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to load meetings"
@@ -117,21 +87,6 @@ msgstr "Nie udało się wczytać kolejnych spotkań"
 #, elixir-autogen, elixir-format
 msgid "Failed to send reschedule request. Please try again."
 msgstr "Nie udało się wysłać prośby o zmianę terminu. Spróbuj ponownie."
-
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Full refund."
-msgstr "Pełny zwrot."
-
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "I understand the attendee will not receive a refund."
-msgstr "Rozumiem, że uczestnik nie otrzyma zwrotu."
-
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Keep Meeting"
-msgstr "Nie odwołuj"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
@@ -148,21 +103,6 @@ msgstr "Wczytywanie…"
 msgid "Meeting Notes"
 msgstr "Notatki ze spotkania"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting cancelled and refund issued."
-msgstr "Spotkanie odwołane, zwrot zrealizowany."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
-msgstr "Spotkanie odwołane, ale nie udało się zrealizować zwrotu. Wykonaj zwrot ręcznie w panelu Stripe."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting cancelled successfully"
-msgstr "Spotkanie zostało odwołane"
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
 msgid "No cancelled meetings"
@@ -178,35 +118,10 @@ msgstr "Brak minionych spotkań"
 msgid "No upcoming meetings"
 msgstr "Brak nadchodzących spotkań"
 
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Partial amount"
-msgstr "Kwota częściowa"
-
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Partial refund."
-msgstr "Zwrot częściowy."
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Processing..."
 msgstr "Przetwarzanie…"
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Refund amount exceeds the remaining refundable balance."
-msgstr "Kwota zwrotu przekracza pozostałą kwotę do zwrotu."
-
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Refund only part of the booking amount."
-msgstr "Zwróć tylko część kwoty rezerwacji."
-
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Refunds the remaining balance (%{amount})."
-msgstr "Zwraca pozostałą kwotę (%{amount})."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
 #: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
@@ -244,11 +159,6 @@ msgstr "Wyślij prośbę o zmianę terminu"
 msgid "Sending..."
 msgstr "Wysyłanie…"
 
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "The attendee keeps no money. Use only if the attendee already agreed."
-msgstr "Uczestnik nie odzyska pieniędzy. Użyj tylko wtedy, gdy uczestnik już się na to zgodził."
-
 #: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
 #, elixir-autogen, elixir-format
 msgid "The current meeting will be cancelled immediately"
@@ -258,11 +168,6 @@ msgstr "Obecne spotkanie zostanie natychmiast odwołane"
 #, elixir-autogen, elixir-format
 msgid "They can choose a new time from your availability"
 msgstr "Uczestnik wybierze nowy termin spośród twoich wolnych terminów"
-
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "This action cannot be undone. The attendee will be notified of the cancellation."
-msgstr "Tej operacji nie można cofnąć. Uczestnik otrzyma powiadomienie o odwołaniu."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
@@ -274,11 +179,6 @@ msgstr "Wydarzenie tego spotkania zostało usunięte z zewnętrznego kalendarza.
 #, elixir-autogen, elixir-format
 msgid "This meeting's event was rescheduled in your external calendar."
 msgstr "Wydarzenie tego spotkania zostało przeniesione na inny termin w zewnętrznym kalendarzu."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Tick the acknowledgement to cancel without refunding the attendee."
-msgstr "Zaznacz potwierdzenie, aby odwołać bez zwrotu dla uczestnika."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
@@ -310,11 +210,6 @@ msgstr "Gdy nowy termin zostanie wybrany, potwierdzenie otrzymacie ty i uczestni
 msgid "Your upcoming appointments will appear here automatically."
 msgstr "Nadchodzące spotkania pojawią się tu automatycznie."
 
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Are you sure you want to cancel the meeting with %{name} scheduled for %{when}?"
-msgstr "Na pewno chcesz odwołać spotkanie z uczestnikiem %{name} zaplanowane na %{when}?"
-
 #: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Send a reschedule request to %{name}?"
@@ -327,11 +222,6 @@ msgid_plural "%{duration} minutes"
 msgstr[0] "%{duration} minuta"
 msgstr[1] "%{duration} minuty"
 msgstr[2] "%{duration} minut"
-
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "This booking was paid. Choose how to handle the refund - the attendee always receives the full amount you refund."
-msgstr "Ta rezerwacja została opłacona. Wybierz sposób zwrotu – uczestnik zawsze otrzymuje całą zwracaną kwotę."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_actions.ex
 #, elixir-autogen, elixir-format
@@ -656,14 +546,6 @@ msgstr "Rezerwacja grupowa"
 msgid "Participants"
 msgstr "Uczestnicy"
 
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Are you sure you want to cancel this group meeting with %{count} participant scheduled for %{when}?"
-msgid_plural "Are you sure you want to cancel this group meeting with %{count} participants scheduled for %{when}?"
-msgstr[0] "Czy na pewno chcesz odwołać to spotkanie grupowe z %{count} uczestnikiem zaplanowane na %{when}?"
-msgstr[1] "Czy na pewno chcesz odwołać to spotkanie grupowe z %{count} uczestnikami zaplanowane na %{when}?"
-msgstr[2] "Czy na pewno chcesz odwołać to spotkanie grupowe z %{count} uczestnikami zaplanowane na %{when}?"
-
 #: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Each participant will receive an email explaining you need to reschedule"
@@ -685,11 +567,6 @@ msgstr[0] "Wysłać prośbę o zmianę terminu do %{count} uczestnika tego spotk
 msgstr[1] "Wysłać prośbę o zmianę terminu do %{count} uczestników tego spotkania grupowego?"
 msgstr[2] "Wysłać prośbę o zmianę terminu do %{count} uczestników tego spotkania grupowego?"
 
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "This action cannot be undone. Every participant will be notified of the cancellation."
-msgstr "Tej czynności nie można cofnąć. Każdy uczestnik zostanie powiadomiony o odwołaniu."
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} person was booked"
@@ -707,11 +584,6 @@ msgstr "Wszystkie miejsca zostały zwolnione"
 #, elixir-autogen, elixir-format
 msgid "Left this slot"
 msgstr "Opuścił(a) ten termin"
-
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Cancel meeting"
-msgstr "Odwołaj spotkanie"
 
 #: lib/tymeslot_web/components/dashboard/meetings/host_move_modal.ex
 #, elixir-autogen, elixir-format
@@ -762,16 +634,6 @@ msgstr "Nowy termin musi być w przyszłości."
 #, elixir-autogen, elixir-format
 msgid "Poll"
 msgstr "Ankieta"
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "This booking was already cancelled, so no refund was issued."
-msgstr "Ta rezerwacja została już anulowana, więc nie zrealizowano zwrotu."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "This booking was already cancelled."
-msgstr "Ta rezerwacja została już anulowana."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
@@ -897,25 +759,10 @@ msgstr "przez %{page}"
 msgid "Location"
 msgstr "Lokalizacja"
 
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Are you sure you want to cancel “%{title}” scheduled for %{when}? Every guest is told."
-msgstr "Na pewno chcesz odwołać „%{title}” zaplanowane na %{when}? Wszyscy goście zostaną powiadomieni."
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
 msgid "Managed by you"
 msgstr "Zarządzasz ty"
-
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Refund this session."
-msgstr "Zwrot za tę sesję."
-
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Refunds one session's share of the series payment (%{amount})."
-msgstr "Zwraca część płatności za serię przypadającą na jedną sesję (%{amount})."
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_card.ex
 #, elixir-autogen, elixir-format
@@ -943,47 +790,20 @@ msgstr "Oczekiwanie, aż %{name} wybierze nowy termin"
 msgid "Waiting for the participants to pick a new time"
 msgstr "Oczekiwanie, aż uczestnicy wybiorą nowy termin"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#: lib/tymeslot_web/components/dashboard/meetings/participant_payment_pill.ex
 #, elixir-autogen, elixir-format
-msgid "Cancelled without a refund: the booking was not paid."
-msgstr "Odwołano bez zwrotu, ponieważ rezerwacja nie została opłacona."
+msgid "%{amount} paid"
+msgstr "Zapłacono %{amount}"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#: lib/tymeslot_web/components/dashboard/meetings/participant_payment_pill.ex
 #, elixir-autogen, elixir-format
-msgid "Cancelled without a refund: the payment is older than the 60-day refund window. You can refund it from Stripe."
-msgstr "Odwołano bez zwrotu, ponieważ płatność jest starsza niż 60-dniowy okres na zwrot. Możesz ją zwrócić w Stripe."
+msgid "%{amount} paid · %{count} seat"
+msgid_plural "%{amount} paid · %{count} seats"
+msgstr[0] "Zapłacono %{amount} · %{count} miejsce"
+msgstr[1] "Zapłacono %{amount} · %{count} miejsca"
+msgstr[2] "Zapłacono %{amount} · %{count} miejsc"
 
-#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#: lib/tymeslot_web/components/dashboard/meetings/participant_payment_pill.ex
 #, elixir-autogen, elixir-format
-msgid "Cancelled without a refund: the payment is under dispute. Settle the dispute in Stripe first."
-msgstr "Odwołano bez zwrotu, ponieważ płatność jest przedmiotem sporu. Najpierw rozstrzygnij spór w Stripe."
-
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Cancelling won't refund the attendee: the booking was not paid."
-msgstr "Odwołanie nie zwróci uczestnikowi pieniędzy, ponieważ rezerwacja nie została opłacona."
-
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Cancelling won't refund the attendee: the payment is older than the 60-day refund window. You can refund it from Stripe."
-msgstr "Odwołanie nie zwróci uczestnikowi pieniędzy, ponieważ płatność jest starsza niż 60-dniowy okres na zwrot. Możesz ją zwrócić w Stripe."
-
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Cancelling won't refund the attendee: the payment is under dispute. Settle the dispute in Stripe first."
-msgstr "Odwołanie nie zwróci uczestnikowi pieniędzy, ponieważ płatność jest przedmiotem sporu. Najpierw rozstrzygnij spór w Stripe."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "No refund can be made: the booking was not paid."
-msgstr "Zwrot nie jest możliwy, ponieważ rezerwacja nie została opłacona."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "No refund can be made: the payment is older than the 60-day refund window. You can refund it from Stripe."
-msgstr "Zwrot nie jest możliwy, ponieważ płatność jest starsza niż 60-dniowy okres na zwrot. Możesz ją zwrócić w Stripe."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "No refund can be made: the payment is under dispute. Settle the dispute in Stripe first."
-msgstr "Zwrot nie jest możliwy, ponieważ płatność jest przedmiotem sporu. Najpierw rozstrzygnij spór w Stripe."
+msgid "%{amount} refunded"
+msgstr "Zwrócono %{amount}"

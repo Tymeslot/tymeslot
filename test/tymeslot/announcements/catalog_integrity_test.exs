@@ -172,6 +172,14 @@ defmodule Tymeslot.Announcements.CatalogIntegrityTest do
       assert DateTime.after?(entry.expires_at, entry.published_at)
     end
 
+    test "the paid group sessions announcement is listed first", %{entries: entries} do
+      entry = hd(entries)
+
+      assert entry.key == "paid_group_sessions"
+      assert entry.cta_docs_slug == "payments"
+      assert DateTime.after?(entry.expires_at, entry.published_at)
+    end
+
     test "the catalogue announces the Spanish translation", %{entries: entries} do
       entry = Enum.find(entries, &(&1.key == "spanish_language"))
 

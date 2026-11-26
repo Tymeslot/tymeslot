@@ -40,9 +40,10 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias Tymeslot.CustomFields
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
+  alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Meetings.SeatView
   alias Tymeslot.Security.Honeypot
   alias Tymeslot.Security.InputProcessor
@@ -59,7 +60,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   require Logger
 
   # Refusals the booking flow makes as designed; not failures worth an error log.
-  @expected_refusals [:invitation_required, :invitation_unavailable, :slot_taken]
+  @expected_refusals [:invitation_required, :invitation_unavailable, :slot_taken, :seat_held]
 
   @doc """
   Submits a booking using the booking orchestrator.
@@ -78,7 +79,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       from inside an embed iframe)
     * `{:awaiting_payment, socket}` — paid booking inside an embed iframe;
       the socket has been told to open Stripe Checkout in a new tab and
-      carries the meeting + checkout URL for the in-iframe wait screen
+      carries the meeting + checkout URL for the in-iframe wait screen, and
+      for a held group seat the hold (`:awaiting_payment_hold`), whose topic
+      the page listens on
     * `{:slot_taken, socket}` — the chosen slot was booked by someone else
       between selection and submit; the caller should return the booker to
       the schedule step with a fresh slot list rather than strand them on
@@ -336,6 +339,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
 
   defp handle_submit_result(socket, result, sanitized_params, orchestrator) do
     case result do
+      {:ok, :payment_required, %{meeting: meeting, seat_hold: hold, checkout_url: url}} ->
+        handle_seat_payment_required(socket, meeting, hold, url, sanitized_params)
+
       {:ok, :payment_required, %{meeting: meeting, checkout_url: url} = held} ->
         socket
         |> assign_series(held)
@@ -535,6 +541,23 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     end
   end
 
+  # A held group seat pays as a meeting does, but its outcome comes on the
+  # hold's own topic (`SeatHolds.topic/1`): the group meeting is shared, so
+  # its topic is no booker's. The wait keeps the meeting for the
+  # confirmation's location and the hold for what the payment books.
+  defp handle_seat_payment_required(socket, meeting, hold, url, sanitized_params) do
+    if socket.assigns[:embedded] do
+      if LiveView.connected?(socket),
+        do: Phoenix.PubSub.subscribe(Tymeslot.PubSub, SeatHolds.topic(hold.id))
+
+      socket
+      |> assign(:awaiting_payment_hold, hold)
+      |> await_payment_in_new_tab(meeting, url, sanitized_params)
+    else
+      handle_payment_required_top_level(socket, url)
+    end
+  end
+
   defp handle_payment_required_top_level(socket, url) do
     Logger.info("Booking redirecting to Stripe Checkout for payment", checkout_url: url)
 
@@ -552,14 +575,18 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   # the confirmation view when the webhook broadcasts `:paid`, or back to
   # the booking form on `:expired`.
   defp handle_payment_required_embedded(socket, meeting, url, sanitized_params) do
+    if LiveView.connected?(socket) do
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, Checkout.payment_topic(meeting.id))
+    end
+
+    await_payment_in_new_tab(socket, meeting, url, sanitized_params)
+  end
+
+  defp await_payment_in_new_tab(socket, meeting, url, sanitized_params) do
     Logger.info("Embedded booking awaiting payment in new tab",
       meeting_id: meeting.id,
       checkout_url: url
     )
-
-    if LiveView.connected?(socket) do
-      Phoenix.PubSub.subscribe(Tymeslot.PubSub, MeetingPayments.payment_topic(meeting.id))
-    end
 
     # Seed the custom-answer assigns now so the confirmation view can render
     # when the `:paid` webhook flips this socket to `:confirmation` — that

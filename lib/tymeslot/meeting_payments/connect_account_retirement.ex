@@ -16,15 +16,20 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountRetirement do
 
   require Logger
 
+  alias Tymeslot.Bookings.SeatRelease
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Stripe.CheckoutSessions, as: StripeCheckoutSessions
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.Currency
   alias Tymeslot.MeetingPayments.HeldMeetings
-  alias Tymeslot.MeetingPayments.StripeAdapter
+  alias Tymeslot.MeetingPayments.OutstandingRefundQueries
   alias Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount
+  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.SeatHolds
+  alias Tymeslot.Meetings.SeatHoldSchema
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
 
@@ -46,7 +51,9 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountRetirement do
        UPDATE — only when `status = 'pending'`, so a concurrent
        `checkout.session.completed` webhook that has already moved the row to
        `paid` is not overwritten), transition the linked `awaiting_payment`
-       meeting to `expired`, then soft-delete the connect_account row.
+       meeting to `expired` (a group seat's payment releases its seat hold
+       as `:failed` instead, never expiring the meeting other seats share),
+       then soft-delete the connect_account row.
 
   The removal also schedules the revocation of Tymeslot's access to the
   host's Stripe account, 35 minutes later (see `schedule_revocation/1`); a reconnection in the meantime cancels
@@ -94,8 +101,8 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountRetirement do
   The form does not clear them by omission
   (`Tymeslot.MeetingTypes.FormMapper.build_attrs/3`), the changeset does not
   fail unrelated saves over the stored flag
-  (`MeetingTypeSchema.validate_payment_fields/2`), and `Bookings.Create`
-  refuses a paid booking outright while charges are off, so nothing is taken
+  (`Tymeslot.MeetingTypes.PaymentValidation.validate_changeset/2`), and
+  `Bookings.Create` refuses a paid booking outright while charges are off, so nothing is taken
   in the meantime. Clearing them here, as `MeetingPayments.change_default_currency/2`
   does for a currency change, would destroy that state for the far more common
   case of a temporary disconnect.
@@ -106,7 +113,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountRetirement do
           | {:error, term()}
   def disconnect(user) do
     pending = BookingPaymentQueries.list_pending_for_host(user.id)
-    outstanding = BookingPaymentQueries.outstanding_refunds_summary_for_host(user.id)
+    outstanding = OutstandingRefundQueries.outstanding_refunds_summary_for_host(user.id)
     account = ConnectAccountQueries.live_for_user(user.id)
 
     expire_stripe_sessions(pending, account)
@@ -251,24 +258,28 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountRetirement do
 
   def schedule_revocation(_account), do: :ok
 
-  # Returns the number of bookings cancelled and the meetings whose hold was
-  # released, which are announced only once the transaction has committed.
+  # Returns the number of bookings cancelled and what each released (an
+  # expired meeting, or a released seat hold), which is announced only once
+  # the transaction has committed.
   defp cancel_pending_bookings(pending, now) do
-    Enum.reduce(pending, {0, []}, fn payment, {count, expired} ->
+    Enum.reduce(pending, {0, []}, fn payment, {count, released} ->
       case cancel_pending_booking(payment, now) do
-        {:ok, nil} -> {count + 1, expired}
-        {:ok, meeting} -> {count + 1, [meeting | expired]}
-        :skipped -> {count, expired}
+        {:ok, nil} -> {count + 1, released}
+        {:ok, release} -> {count + 1, [release | released]}
+        :skipped -> {count, released}
       end
     end)
   end
 
-  defp announce_after_commit({:ok, {result, expired}}) do
-    Enum.each(expired, &HeldMeetings.announce_expired/1)
+  defp announce_after_commit({:ok, {result, released}}) do
+    Enum.each(released, &announce_released/1)
     {:ok, result}
   end
 
   defp announce_after_commit({:error, _reason} = error), do: error
+
+  defp announce_released({:seat, release}), do: SeatRelease.announce_released(release)
+  defp announce_released(%MeetingSchema{} = meeting), do: HeldMeetings.announce_expired(meeting)
 
   # Cancel a pending booking_payment and, if it has a linked awaiting_payment
   # meeting, transition that meeting to expired so the slot is released.
@@ -278,7 +289,8 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountRetirement do
   # row to 'paid' is not overwritten. The meeting is locked only after that
   # claim, the same order the webhooks take their locks in.
   #
-  # Returns `{:ok, expired_meeting | nil}` when the row was cancelled, and
+  # Returns `{:ok, expired_meeting | {:seat, release} | nil}` when the row
+  # was cancelled, and
   # :skipped when it was already in a terminal state (a concurrent webhook
   # beat us to it).
   defp cancel_pending_booking(payment, now) do
@@ -299,6 +311,25 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountRetirement do
   # payment's own `checkout.session.expired` event later expires a meeting
   # still awaiting payment behind a cancelled payment
   # (`Webhooks.FailAndExpire`).
+  #
+  # A seat payment releases its hold as `:failed` instead, the hold's meeting
+  # locked before it (`SeatRelease.release_hold/2`), after the payment row
+  # the cancellation above holds: the order every seat writer keeps. The
+  # group meeting is only settled as a hold's release settles it, never
+  # expired outright, as other seats may share it. A payment whose hold is
+  # gone has nothing left to release.
+  defp expire_held(%{seat_payment: true, seat_hold_id: hold_id}) when is_binary(hold_id) do
+    with %SeatHoldSchema{} = hold <- SeatHolds.get(hold_id),
+         {:ok, release} <- SeatRelease.release_hold(hold, :failed) do
+      {:seat, release}
+    else
+      nil -> nil
+      {:error, reason} -> log_meeting_expire_failure(reason, seat_hold_id: hold_id)
+    end
+  end
+
+  defp expire_held(%{seat_payment: true}), do: nil
+
   defp expire_held(%{series_id: series_id}) when is_binary(series_id) do
     case HeldMeetings.expire_series(series_id) do
       {:ok, :expired, first} -> first
@@ -333,7 +364,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountRetirement do
   # Isolated per session: one that raises is logged like one that fails, so
   # the rest are still expired and every booking is still cancelled locally.
   defp expire_stripe_session(session_id, stripe_account_id) do
-    case StripeAdapter.expire_checkout_session(session_id, connect_account: stripe_account_id) do
+    case StripeCheckoutSessions.expire(session_id, connect_account: stripe_account_id) do
       {:ok, _session} -> :ok
       {:error, reason} -> log_expire_failure(session_id, reason)
     end

@@ -236,12 +236,12 @@ defmodule Tymeslot.CalendarGrid.IcsImportTest do
                plan.events
     end
 
-    test "rejects a file with more events than one import writes" do
+    test "sums up a file with more events than one import writes instead of planning it" do
       events =
         for n <- 0..IcsImport.max_events(),
             do: timed("e#{n}@x", "E#{n}", "20261105T090000Z", "20261105T100000Z")
 
-      assert IcsImport.plan(ics(events)) == {:error, :too_many_events}
+      assert {:error, {:too_many_events, %{events: 1_001}}} = IcsImport.plan(ics(events))
     end
   end
 

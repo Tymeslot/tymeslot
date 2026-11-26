@@ -38,13 +38,13 @@ msgstr "Confirmando seu pagamento…"
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
-msgid "If there's no answer by %{deadline}, the request lapses and you're refunded automatically."
-msgstr "Se não houver resposta até %{deadline}, o pedido expira e o reembolso é feito automaticamente."
+msgid "If there's no answer by %{by_deadline}, the request lapses and you're refunded automatically."
+msgstr "Se não houver resposta até %{by_deadline}, o pedido expira e o reembolso é feito automaticamente."
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
-msgid "If there's no answer by %{deadline}, the request lapses."
-msgstr "Se não houver resposta até %{deadline}, o pedido expira."
+msgid "If there's no answer by %{by_deadline}, the request lapses."
+msgstr "Se não houver resposta até %{by_deadline}, o pedido expira."
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
@@ -83,8 +83,8 @@ msgstr "Voltar ao agendamento"
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
-msgid "Thank you, your booking is confirmed for %{date}."
-msgstr "Obrigado, seu agendamento está confirmado para %{date}."
+msgid "Thank you, your booking is confirmed for %{for_date}."
+msgstr "Obrigado, seu agendamento está confirmado para %{for_date}."
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
@@ -135,7 +135,28 @@ msgstr[1] "%{name}, %{count} sessões"
 
 #: lib/tymeslot_web/themes/shared/payment_return_components.ex
 #, elixir-autogen, elixir-format
-msgid "Thank you, your %{count} session is confirmed, the first on %{date}."
-msgid_plural "Thank you, your %{count} sessions are confirmed, the first on %{date}."
-msgstr[0] "Obrigado, sua %{count} sessão está confirmada, a primeira em %{date}."
-msgstr[1] "Obrigado, suas %{count} sessões estão confirmadas, a primeira em %{date}."
+msgid "Thank you, your %{count} session is confirmed, the first on %{on_date}."
+msgid_plural "Thank you, your %{count} sessions are confirmed, the first on %{on_date}."
+msgstr[0] "Obrigado, sua %{count} sessão está confirmada, a primeira em %{on_date}."
+msgstr[1] "Obrigado, suas %{count} sessões estão confirmadas, a primeira em %{on_date}."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "The payment wasn't completed in time, so the seat held for you was released. You can return and book again."
+msgid_plural "The payment wasn't completed in time, so the seats held for you were released. You can return and book again."
+msgstr[0] "O pagamento não foi concluído a tempo, então a vaga reservada para você foi liberada. Você pode voltar e agendar de novo."
+msgstr[1] "O pagamento não foi concluído a tempo, então as vagas reservadas para você foram liberadas. Você pode voltar e agendar de novo."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Your payment arrived after the seat held for you was released, and the session had no room left. Your payment is being refunded."
+msgid_plural "Your payment arrived after the seats held for you were released, and the session had no room left. Your payment is being refunded."
+msgstr[0] "Seu pagamento chegou depois que a vaga reservada para você foi liberada, e não restavam mais vagas na sessão. Seu pagamento está sendo reembolsado."
+msgstr[1] "Seu pagamento chegou depois que as vagas reservadas para você foram liberadas, e não restavam mais vagas na sessão. Seu pagamento está sendo reembolsado."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Your seat was released"
+msgid_plural "Your seats were released"
+msgstr[0] "Sua vaga foi liberada"
+msgstr[1] "Suas vagas foram liberadas"

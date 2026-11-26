@@ -5,14 +5,11 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccountTest do
   @moduletag :payments
   @moduletag :integration
 
-  import Mox
-
+  alias Tymeslot.Integrations.Stripe.Error, as: StripeError
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Workers.ResyncConnectAccount
-
-  setup :verify_on_exit!
-  setup :set_mox_from_context
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
   defp insert_active_account(stripe_account_id) do
     user = insert(:user)
@@ -34,47 +31,23 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccountTest do
     test "retrieves the Stripe account and applies the event" do
       {user, _account} = insert_active_account("acct_GO")
 
-      expect(StripeAdapterMock, :retrieve_account, fn "acct_GO" ->
-        {:ok,
-         %{
-           "id" => "acct_GO",
-           "created" => DateTime.to_unix(DateTime.utc_now()),
-           "charges_enabled" => true,
-           "payouts_enabled" => true,
-           "details_submitted" => true,
-           "requirements" => %{"disabled_reason" => nil}
-         }}
-      end)
+      StripeStub.expect(
+        :retrieve_account,
+        StripeFixtures.object("account", %{
+          "id" => "acct_GO",
+          "created" => DateTime.to_unix(DateTime.utc_now()),
+          "charges_enabled" => true,
+          "payouts_enabled" => true,
+          "details_submitted" => true,
+          "requirements" => %{"disabled_reason" => nil}
+        })
+      )
 
       assert :ok =
                perform_job(ResyncConnectAccount, %{"stripe_account_id" => "acct_GO"})
 
-      reloaded = ConnectAccountQueries.live_for_user(user.id)
-      assert reloaded.charges_enabled == true
-      assert reloaded.payouts_enabled == true
-      assert reloaded.details_submitted == true
-    end
-
-    test "applies the event when Stripe returns a real stripity struct" do
-      # Regression: production stripity_stripe returns an atom-keyed
-      # %Stripe.Account{} struct. Before the adapter-seam normalisation, feeding
-      # it into ConnectAccounts.apply_account_event/2 (which only matches
-      # %{"id" => _}) raised FunctionClauseError on every onboarding return.
-      {user, _account} = insert_active_account("acct_STRUCT")
-
-      expect(StripeAdapterMock, :retrieve_account, fn "acct_STRUCT" ->
-        {:ok,
-         %Stripe.Account{
-           id: "acct_STRUCT",
-           charges_enabled: true,
-           payouts_enabled: true,
-           details_submitted: true,
-           requirements: %{disabled_reason: nil}
-         }}
-      end)
-
-      assert :ok =
-               perform_job(ResyncConnectAccount, %{"stripe_account_id" => "acct_STRUCT"})
+      assert [%{path: "/v1/account", headers: headers}] = StripeStub.requests(:retrieve_account)
+      assert headers["stripe-account"] == "acct_GO"
 
       reloaded = ConnectAccountQueries.live_for_user(user.id)
       assert reloaded.charges_enabled == true
@@ -90,12 +63,84 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccountTest do
     test "errors when Stripe rejects the request" do
       _ctx = insert_active_account("acct_BOOM")
 
-      expect(StripeAdapterMock, :retrieve_account, fn "acct_BOOM" ->
-        {:error, %{message: "boom"}}
-      end)
+      StripeStub.stub(:retrieve_account, {:error_fixture, "api_error"})
 
-      assert {:error, _reason} =
+      assert {:error, %StripeError{type: "api_error"}} =
                perform_job(ResyncConnectAccount, %{"stripe_account_id" => "acct_BOOM"})
+    end
+
+    test "a transient Stripe error is retried" do
+      {_user, account} = insert_active_account("acct_TRANSIENT")
+      StripeStub.stub(:retrieve_account, {:transport_error, :timeout})
+
+      assert {:error, %StripeError{type: "api_connection_error"}} =
+               perform_job(ResyncConnectAccount, %{"stripe_account_id" => "acct_TRANSIENT"})
+
+      assert ConnectAccountQueries.get(account.id).charges_enabled == false
+    end
+
+    test "a permanent Stripe error cancels the job and leaves the row alone" do
+      {user, _account} = insert_active_account("acct_GONE")
+      StripeStub.stub(:retrieve_account, {:error_fixture, "resource_missing"})
+
+      assert {:cancel, %StripeError{code: "resource_missing"} = error} =
+               perform_job(ResyncConnectAccount, %{"stripe_account_id" => "acct_GONE"})
+
+      assert ResyncConnectAccount.expected_outcome?(error)
+      reloaded = ConnectAccountQueries.live_for_user(user.id)
+      assert reloaded.status == :active
+      assert reloaded.charges_enabled == false
+    end
+
+    test "an account that revoked the platform's access cancels the job as an expected outcome" do
+      {user, _account} = insert_active_account("acct_REVOKED")
+
+      StripeStub.stub(
+        :retrieve_account,
+        {403,
+         %{
+           "error" => %{
+             "type" => "invalid_request_error",
+             "code" => "account_invalid",
+             "message" =>
+               "The provided key does not have access to account 'acct_REVOKED' (or that account does not exist). Application access may have been revoked."
+           }
+         }}
+      )
+
+      assert {:cancel, %StripeError{code: "account_invalid"} = error} =
+               perform_job(ResyncConnectAccount, %{"stripe_account_id" => "acct_REVOKED"})
+
+      assert ResyncConnectAccount.expected_outcome?(error)
+      assert ConnectAccountQueries.live_for_user(user.id).status == :active
+    end
+
+    test "a 403 permission error cancels the job and is not an expected outcome" do
+      insert_active_account("acct_FORBIDDEN")
+
+      StripeStub.stub(
+        :retrieve_account,
+        {403,
+         %{
+           "error" => %{
+             "type" => "invalid_request_error",
+             "message" => "The provided key does not have access to account"
+           }
+         }}
+      )
+
+      assert {:cancel, %StripeError{status: 403} = error} =
+               perform_job(ResyncConnectAccount, %{"stripe_account_id" => "acct_FORBIDDEN"})
+
+      refute ResyncConnectAccount.expected_outcome?(error)
+    end
+
+    test "a 500 is retried" do
+      insert_active_account("acct_500")
+      StripeStub.stub(:retrieve_account, {:error_fixture, "api_error"})
+
+      assert {:error, %StripeError{status: 500}} =
+               perform_job(ResyncConnectAccount, %{"stripe_account_id" => "acct_500"})
     end
 
     test "applies the snapshot even when the account's created matches the stored event time" do
@@ -119,17 +164,17 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccountTest do
           last_account_event_at: DateTime.from_unix!(account_created)
         })
 
-      expect(StripeAdapterMock, :retrieve_account, fn "acct_RESTAMP" ->
-        {:ok,
-         %{
-           "id" => "acct_RESTAMP",
-           "created" => account_created,
-           "charges_enabled" => true,
-           "payouts_enabled" => true,
-           "details_submitted" => true,
-           "requirements" => %{"disabled_reason" => nil}
-         }}
-      end)
+      StripeStub.expect(
+        :retrieve_account,
+        StripeFixtures.object("account", %{
+          "id" => "acct_RESTAMP",
+          "created" => account_created,
+          "charges_enabled" => true,
+          "payouts_enabled" => true,
+          "details_submitted" => true,
+          "requirements" => %{"disabled_reason" => nil}
+        })
+      )
 
       assert :ok = perform_job(ResyncConnectAccount, %{"stripe_account_id" => "acct_RESTAMP"})
 

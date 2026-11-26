@@ -1,7 +1,8 @@
 defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
   @moduledoc """
   The organiser's email about one seat of a group meeting: a spot was booked,
-  a participant cancelled their spot, or a participant moved their spot to
+  a spot was taken on a slot the organiser was told had been cancelled, a
+  participant cancelled their spot, or a participant moved their spot to
   another time.
 
   The solo templates cannot say any of this. They are about *the* booking: a
@@ -14,6 +15,11 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
   participant's seat links are theirs alone. A move also carries
   `:original_start_time_owner_tz`, the time the spot moved from.
 
+  When the seat was paid for (`:booking_payment` in the payload), the booked
+  email adds what the organiser received (`PaymentBlocks`), and the cancelled
+  one says the money is still theirs to refund (`RefundNotice`): a participant
+  leaving refunds nothing on its own.
+
   Like every organiser email, it carries no calendar file: the organiser's
   calendar holds the slot as one provider event that Tymeslot keeps up to
   date itself, and an attachment would be imported on top of it as a second
@@ -23,6 +29,8 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
   import Swoosh.Email
 
   alias Tymeslot.Emails.RecipientLocale
+  alias Tymeslot.Emails.Templates.AppointmentCancellation.RefundNotice
+  alias Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks
 
   alias Tymeslot.Emails.Shared.{
     Formatting,
@@ -35,11 +43,12 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  @type variant :: :booked | :cancelled | :moved
+  @type variant :: :booked | :revived | :cancelled | :moved
 
   @spec render(variant(), String.t(), Tymeslot.Emails.EmailService.appointment_details()) ::
           Swoosh.Email.t()
-  def render(variant, organizer_email, details) when variant in [:booked, :cancelled, :moved] do
+  def render(variant, organizer_email, details)
+      when variant in [:booked, :revived, :cancelled, :moved] do
     details = Formatting.without_location_note(details)
     locale = RecipientLocale.organizer_locale(details)
 
@@ -47,6 +56,7 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
       intent = intent(variant)
       copy = copy(variant, details)
       meeting_details = TemplateHelper.organizer_meeting_details(details)
+      payment = payment_block(variant, details)
 
       mjml_content = """
       #{Text.centered_text(copy.lead, padding: "8px 0 16px 0")}
@@ -58,6 +68,8 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
       #{MeetingComponents.custom_answers_section(details)}
+
+      #{payment.html}
 
       #{if line = seats_line(details), do: Text.centered_text(line, font_size: "14px", padding: "8px 0 8px 0")}
 
@@ -79,11 +91,36 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
       |> MjmlEmail.put_reply_to(details.attendee_name, details.attendee_email)
       |> subject(copy.subject)
       |> html_body(TemplateHelper.compile_template(mjml_content, stage))
-      |> text_body(text_body(details, meeting_details, copy, locale))
+      |> text_body(text_body(details, meeting_details, copy, locale, payment.text))
     end)
   end
 
+  # What the money did, for a seat that was paid for: the payout when the
+  # spot is booked, the balance still held when it is cancelled. Nothing for a
+  # free seat or a move (the seat keeps its payment).
+  defp payment_block(:booked, details) do
+    case PaymentBlocks.organizer_summary(details) do
+      nil ->
+        %{html: "", text: ""}
+
+      summary ->
+        %{
+          html: PaymentBlocks.organizer_summary_html(summary),
+          text: "\n" <> PaymentBlocks.organizer_summary_text(summary) <> "\n"
+        }
+    end
+  end
+
+  defp payment_block(:cancelled, details) do
+    notice = RefundNotice.build(details)
+    %{html: RefundNotice.html(notice), text: RefundNotice.text(notice)}
+  end
+
+  defp payment_block(variant, _details) when variant in [:moved, :revived],
+    do: %{html: "", text: ""}
+
   defp intent(:booked), do: :confirmed
+  defp intent(:revived), do: :confirmed
   defp intent(:cancelled), do: :cancelled
   defp intent(:moved), do: :alert
 
@@ -99,6 +136,53 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
         ),
       subject:
         dgettext("emails_booking_changes", "Spot booked: %{name} - %{date}",
+          name: name,
+          date: short_date(details)
+        )
+    }
+  end
+
+  # A seat on a slot held again after its last confirmed seat left: the
+  # organiser was told the meeting had been cancelled (the `slot_held`
+  # cancellation below), so this says first that it is on again.
+  defp copy(:revived, details) do
+    name = details.attendee_name
+
+    %{
+      eyebrow: dgettext("emails_booking_changes", "Back on"),
+      title: dgettext("emails_booking_changes", "Your group meeting is on again"),
+      lead:
+        dgettext(
+          "emails_booking_changes",
+          "%{name} took a spot on this slot, so the meeting you were told had been cancelled goes ahead after all.",
+          name: name
+        ),
+      subject:
+        dgettext("emails_booking_changes", "Meeting back on: %{name} - %{date}",
+          name: name,
+          date: short_date(details)
+        )
+    }
+  end
+
+  # The last confirmed seat, beside seats still awaiting their bookers' email
+  # verification: the meeting is off for the organiser, but the held seats
+  # still occupy the time, so it is not called free. The organiser never sees
+  # a held seat, so nothing more is said of them.
+  defp copy(:cancelled, %{slot_held: true} = details) do
+    name = details.attendee_name
+
+    %{
+      eyebrow: dgettext("emails_booking_changes", "Cancelled"),
+      title: dgettext("emails_booking_changes", "The last participant cancelled their spot"),
+      lead:
+        dgettext(
+          "emails_booking_changes",
+          "%{name} cancelled their spot. No one else has confirmed a spot on this slot, so the meeting has been cancelled.",
+          name: name
+        ),
+      subject:
+        dgettext("emails_booking_changes", "Meeting cancelled: %{name} cancelled - %{date}",
           name: name,
           date: short_date(details)
         )
@@ -195,6 +279,16 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
     )
   end
 
+  # As for a cancellation (`copy/2`): held seats keep the earlier time
+  # occupied, so it is not called free.
+  defp old_slot_freed_note(%{old_slot_held: true}) do
+    " " <>
+      dgettext(
+        "emails_booking_changes",
+        "No one else has confirmed a spot at the earlier time, so that meeting has been cancelled."
+      )
+  end
+
   defp old_slot_freed_note(%{old_slot_freed: true}) do
     " " <>
       dgettext(
@@ -229,14 +323,14 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
     )
   end
 
-  defp text_body(details, meeting_details, copy, locale) do
+  defp text_body(details, meeting_details, copy, locale, payment_text) do
     """
     #{copy.title}
 
     #{copy.lead}
     #{TextBodyHelper.format_attendee_info(details, locale)}
     #{dgettext("emails_booking_changes", "MEETING DETAILS:")}
-    #{TextBodyHelper.format_meeting_details(meeting_details, locale)}#{TextBodyHelper.format_custom_answers(details, locale)}
+    #{TextBodyHelper.format_meeting_details(meeting_details, locale)}#{TextBodyHelper.format_custom_answers(details, locale)}#{payment_text}
 
     #{seats_line(details)}
     #{dgettext("emails_booking_changes", "Open in dashboard")}: #{details.dashboard_url}

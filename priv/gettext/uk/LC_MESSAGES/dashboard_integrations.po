@@ -89,7 +89,7 @@ msgstr "Додати тип зустрічі"
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #, elixir-autogen, elixir-format
 msgid "Adding..."
-msgstr "Додавання..."
+msgstr "Додавання…"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format

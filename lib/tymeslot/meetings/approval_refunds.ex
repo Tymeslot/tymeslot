@@ -13,6 +13,7 @@ defmodule Tymeslot.Meetings.ApprovalRefunds do
   alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.Meetings.ApprovalRelease
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
@@ -27,10 +28,10 @@ defmodule Tymeslot.Meetings.ApprovalRefunds do
   the attendee did get to have and lets the host choose none, partial, or
   full). That contrast breaks for a request that re-entered the gate: a
   reschedule of an already-`:confirmed`, paid meeting resets it to
-  `:awaiting_approval` (`Tymeslot.Bookings.Reschedule.reenters_gate?/1`), and if that
-  re-request is then declined or expires, there genuinely *is* a confirmed
-  meeting to weigh against a partial refund — the one the attendee already
-  had, activated, and were told about. Auto-refunding it in full would make
+  `:awaiting_approval` (`Tymeslot.Bookings.RescheduleGate.attributes/3`),
+  and if that re-request is then declined or expires, there genuinely *is*
+  a confirmed meeting to weigh against a partial refund — the one the
+  attendee already had, activated, and were told about. Auto-refunding it in full would make
   that choice for the host silently, so this checks `first_announced_at` and
   skips the automatic refund when it is set, leaving the payment refundable
   from the dashboard's payments screen instead. A payment row that was never
@@ -45,13 +46,13 @@ defmodule Tymeslot.Meetings.ApprovalRefunds do
   `Tymeslot.Meetings.ApprovalRelease` calls it for every way a held request stops
   being held: `decline/2` and `expire/1` (via its `after_release/1`), and
   `withdraw/2`, for an invitee's own withdrawal and for an externally-deleted
-  hold. A failed
-  refund is logged and never fails the caller's transition, which is already
-  committed.
+  hold. The refund is recorded and made by its job, so it is retried
+  however the release was reached; a refusal is reported and never fails
+  the caller's transition, which is already committed.
   """
   @spec refund_unapproved_request(Meeting.t()) :: :ok
   def refund_unapproved_request(meeting) do
-    case MeetingPayments.payment_for_meeting(meeting.id) do
+    case BookingPayments.payment_for_meeting(meeting.id) do
       # One payment paid for every session of a series, so releasing one
       # session must never refund it whole. A series is released whole, and
       # refunded once, by `refund_unapproved_series/2`.
@@ -74,7 +75,7 @@ defmodule Tymeslot.Meetings.ApprovalRefunds do
   """
   @spec refund_unapproved_series(SeriesSchema.t(), [Meeting.t()]) :: :ok
   def refund_unapproved_series(%SeriesSchema{id: series_id}, [first | _rest] = released) do
-    case MeetingPayments.payment_for_series(series_id) do
+    case BookingPayments.payment_for_series(series_id) do
       %{paid_at: %DateTime{}} = payment ->
         case Enum.reject(released, &ApprovalRelease.refunds_on_release?/1) do
           [] -> refund_remaining(payment, first)
@@ -110,23 +111,34 @@ defmodule Tymeslot.Meetings.ApprovalRefunds do
     end
   end
 
-  # A payment is released, and refunded automatically, at most once, so the
-  # payment and the amount name the refund.
+  # Recorded with its job enqueued at once, so the refund is made, retried
+  # and alerted on by `ExecuteRefund` whatever called the release: a
+  # LiveView task or a job that is not retried. A refund still pending
+  # holds its share of the balance, so a second release records nothing.
   defp issue_release_refund(payment, remaining_cents, meeting) do
-    key = "approval_refund:#{payment.id}:#{remaining_cents}"
-
-    case MeetingPayments.issue_refund(payment, remaining_cents, key) do
-      {:ok, _refunded} ->
+    case MeetingPayments.request_refund(payment, remaining_cents, :approval_release,
+           enqueue_now: true
+         ) do
+      {:ok, _refund} ->
         :ok
 
+      # Stripe holds the money until the dispute closes, and its close
+      # refunds what is left of a request released unapproved
+      # (`MeetingPayments.Webhooks.ChargeDisputeClosed`), so nobody needs
+      # telling.
+      {:error, :under_dispute} ->
+        Logger.info("Refund of a released request left to its dispute's close",
+          meeting_id: meeting.id,
+          payment_id: payment.id
+        )
+
       {:error, reason} ->
-        # A failed refund must not undo the already-committed release (see
-        # module docs on ordering). The approval window can run up to 336
-        # hours, so an expired request can plausibly fall outside Stripe's own
-        # refund window; that, and any other Stripe-side failure, ends up
-        # here rather than crashing the caller. The attendee has paid for a
-        # booking that will not happen, so it is recorded for the operator
-        # to refund by hand; a new error raises an admin alert.
+        # A refusal must not undo the already-committed release (see module
+        # docs on ordering). The approval window can run up to 336 hours, so
+        # an expired request can plausibly fall outside Stripe's own refund
+        # window. The attendee has paid for a booking that will not happen,
+        # so it is recorded for the operator to refund by hand; a new error
+        # raises an admin alert.
         ErrorTracking.report_error(reason, nil, %{
           meeting_id: meeting.id,
           payment_id: payment.id,

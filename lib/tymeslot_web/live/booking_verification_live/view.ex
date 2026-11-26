@@ -8,7 +8,8 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
   reports where it ended up: confirmed, sent to the host for approval,
   already confirmed, released by the attendee, expired, or a link we cannot
   read. Times are shown in the attendee's own timezone, since the attendee is
-  the one reading.
+  the one reading. For a seat on a group meeting, `meeting` is its slot and
+  the timezone and hold are the seat's own.
   """
 
   use TymeslotWeb, :html
@@ -19,6 +20,7 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
 
   attr :state, :atom, required: true
   attr :meeting, :map, default: nil
+  attr :seat, :map, default: nil
   attr :rebook_path, :string, default: nil
 
   # The booking's language, set once the token is read. The token read waits
@@ -33,11 +35,12 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
       <div class="mx-auto w-full max-w-2xl">
         <.glass_morphism_card>
           <div class="p-6 sm:p-8">
-            <.held_booking :if={@state in [:awaiting, :failed]} meeting={@meeting} />
+            <.held_booking :if={@state in [:awaiting, :failed]} meeting={@meeting} seat={@seat} />
             <.outcome
               :if={@state not in [:awaiting, :failed]}
               state={@state}
               meeting={@meeting}
+              seat={@seat}
               rebook_path={@rebook_path}
             />
           </div>
@@ -48,8 +51,17 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
   end
 
   attr :meeting, :map, required: true
+  attr :seat, :map, default: nil
 
   defp held_booking(assigns) do
+    held = assigns.seat || assigns.meeting
+
+    assigns =
+      assign(assigns,
+        timezone: timezone(assigns.meeting, assigns.seat),
+        held_until: held.verification_deadline_at
+      )
+
     ~H"""
     <div>
       <.section_header
@@ -63,10 +75,7 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
           {title(@meeting)}
         </.detail_line>
         <.detail_line icon="hero-calendar" label={dgettext("booking_manage", "When")}>
-          {LocalizationHelpers.format_meeting_datetime(
-            @meeting.start_time,
-            @meeting.attendee_timezone
-          )}
+          {LocalizationHelpers.format_meeting_datetime(@meeting.start_time, @timezone)}
         </.detail_line>
         <.detail_line
           :if={@meeting.organizer_name not in [nil, ""]}
@@ -77,13 +86,9 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
         </.detail_line>
       </div>
 
-      <.info_box :if={@meeting.verification_deadline_at} variant={:info} class="mt-6">
+      <.info_box :if={@held_until} variant={:info} class="mt-6">
         {dgettext("booking_manage", "Your booking is held until %{time}.",
-          time:
-            LocalizationHelpers.format_meeting_datetime(
-              @meeting.verification_deadline_at,
-              @meeting.attendee_timezone
-            )
+          time: LocalizationHelpers.format_meeting_datetime(@held_until, @timezone)
         )}
       </.info_box>
 
@@ -112,6 +117,7 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
 
   attr :state, :atom, required: true
   attr :meeting, :map, default: nil
+  attr :seat, :map, default: nil
   attr :rebook_path, :string, default: nil
 
   defp outcome(assigns) do
@@ -119,10 +125,10 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
     <div class="text-center">
       <Containers.icon_badge icon={outcome_icon(@state)} />
 
-      <h1 class="display-md mt-6">{outcome_title(@state)}</h1>
+      <h1 class="display-md mt-6">{outcome_title(@state, @seat)}</h1>
 
       <p class="mt-3 text-token-base text-tymeslot-600">
-        {outcome_body(@state, @meeting)}
+        {outcome_body(@state, @meeting, @seat)}
       </p>
 
       <div :if={@state == :expired and @rebook_path} class="mt-8 flex justify-center">
@@ -134,6 +140,9 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
     """
   end
 
+  defp timezone(_meeting, %{timezone: timezone}), do: timezone
+  defp timezone(meeting, nil), do: meeting.attendee_timezone
+
   defp title(%{title: title}) when is_binary(title) and title != "", do: title
   defp title(%{meeting_type: type}) when is_binary(type) and type != "", do: type
   defp title(_meeting), do: dgettext("booking_manage", "Meeting")
@@ -144,6 +153,14 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
   defp outcome_icon(:expired), do: "hero-clock"
   defp outcome_icon(:loading), do: "hero-envelope"
   defp outcome_icon(_state), do: "hero-question-mark-circle"
+
+  # A seat's release and its lapse write the same row (`cancelled_at`, no
+  # status of its own), so a seat that is gone reads the same whichever it
+  # was, in words true of both.
+  defp outcome_title(:expired, %{}),
+    do: dgettext("booking_manage", "This booking is no longer held")
+
+  defp outcome_title(state, _seat), do: outcome_title(state)
 
   defp outcome_title(:verified), do: dgettext("booking_manage", "Your booking is confirmed")
 
@@ -157,6 +174,18 @@ defmodule TymeslotWeb.BookingVerificationLive.View do
   defp outcome_title(:expired), do: dgettext("booking_manage", "This booking has expired")
   defp outcome_title(:loading), do: dgettext("booking_manage", "Checking your link…")
   defp outcome_title(_state), do: dgettext("booking_manage", "This link is not valid")
+
+  # A seat that is released or gone frees a place on its slot, not the
+  # slot's time, which other attendees may still hold.
+  defp outcome_body(:released, _meeting, %{}) do
+    dgettext("booking_manage", "The booking was cancelled and your place released.")
+  end
+
+  defp outcome_body(:expired, _meeting, %{}) do
+    dgettext("booking_manage", "This booking is no longer available, so your place was released.")
+  end
+
+  defp outcome_body(state, meeting, _seat), do: outcome_body(state, meeting)
 
   defp outcome_body(:verified, _meeting) do
     dgettext("booking_manage", "We have emailed you the details and a calendar invitation.")

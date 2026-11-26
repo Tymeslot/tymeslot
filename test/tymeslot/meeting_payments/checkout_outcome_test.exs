@@ -11,20 +11,19 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
 
   use Tymeslot.DataCase, async: true
 
-  import Mox
-
   @moduletag :payments
   @moduletag :bookings
 
   alias Ecto.Changeset
-  alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.MeetingPayments.Webhooks.FailAndExpire
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingSchema
-
-  setup :verify_on_exit!
+  alias Tymeslot.Meetings.SeatHoldSchema
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
   defp held_paid_meeting(attrs \\ %{}) do
     user = insert(:user)
@@ -60,14 +59,23 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
   end
 
   defp outcome(meeting) do
-    MeetingPayments.checkout_outcome(
+    Checkout.checkout_outcome(
       BookingPaymentQueries.by_meeting_id(meeting.id),
       Repo.get!(MeetingSchema, meeting.id)
     )
   end
 
-  defp expect_refund(result \\ {:ok, %{id: "re_TEST"}}) do
-    expect(StripeAdapterMock, :create_refund, fn _params, _opts -> result end)
+  defp expect_refund(result \\ nil) do
+    StripeStub.expect(
+      :create_refund,
+      1,
+      result ||
+        StripeFixtures.object("refund_with_charge", %{
+          "id" => "re_TEST",
+          "amount" => 5000,
+          "charge" => %{"amount_refunded" => 5000}
+        })
+    )
   end
 
   describe "before the payment completes" do
@@ -79,7 +87,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
     end
 
     test "nothing loaded yet is processing" do
-      assert MeetingPayments.checkout_outcome(nil, nil) == :processing
+      assert Checkout.checkout_outcome(nil, nil) == :processing
     end
 
     test "an asynchronous payment failure is failed, not processing" do
@@ -145,7 +153,6 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
 
     test "a held request the attendee withdrew is cancelled, not confirmed" do
       meeting = held_paid_meeting()
-      expect_refund()
 
       assert {:ok, _withdrawn} = Approval.withdraw(meeting)
 
@@ -168,6 +175,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
       expect_refund()
 
       assert {:ok, _declined} = Approval.decline(meeting, nil)
+      assert %{success: 1} = Oban.drain_queue(queue: :payments, with_scheduled: true)
 
       assert BookingPaymentQueries.by_meeting_id(meeting.id).status == :refunded
       assert outcome(meeting) == :declined
@@ -175,9 +183,10 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
 
     test "a declined request is still declined when its refund failed and left it paid" do
       meeting = held_paid_meeting()
-      expect_refund({:error, :outside_refund_window})
+      expect_refund({:error_fixture, "invalid_request_error"})
 
       assert {:ok, _declined} = Approval.decline(meeting, nil)
+      assert %{cancelled: 1} = Oban.drain_queue(queue: :payments, with_scheduled: true)
 
       assert BookingPaymentQueries.by_meeting_id(meeting.id).status == :paid
       assert outcome(meeting) == :declined
@@ -188,10 +197,11 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
       test_pid = self()
 
       # A stub rather than a missing expectation: the release runs its refund
-      # step inside a rescue, so an unexpected Mox call would be swallowed.
-      stub(StripeAdapterMock, :create_refund, fn _params, _opts ->
+      # step inside a rescue, so an unexpected Stripe request would be
+      # swallowed.
+      StripeStub.stub(:create_refund, fn _request ->
         send(test_pid, :refund_attempted)
-        {:ok, %{id: "re_unexpected"}}
+        StripeFixtures.object("refund_with_charge", %{"id" => "re_unexpected"})
       end)
 
       assert {:ok, _declined} = Approval.decline(meeting, nil)
@@ -202,11 +212,71 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
 
     test "a request nobody answered in time is expired" do
       meeting = held_paid_meeting()
-      expect_refund()
 
       assert {:ok, _expired} = Approval.expire(meeting)
 
       assert outcome(meeting) == :expired
+    end
+  end
+
+  # A seat's outcome is its hold's: the shared meeting says nothing about
+  # whether this booker's seats were paid, so the rows here are the hold and
+  # its payment only.
+  describe "seat_checkout_outcome/2" do
+    defp seat_outcome(hold_attrs, payment_attrs \\ %{status: :pending, paid_at: nil}) do
+      Checkout.seat_checkout_outcome(
+        struct(SeatHoldSchema, hold_attrs),
+        payment_attrs && struct(BookingPaymentSchema, payment_attrs)
+      )
+    end
+
+    defp paid, do: %{status: :paid, paid_at: DateTime.utc_now(:second)}
+
+    test "no hold to judge is still processing" do
+      assert Checkout.seat_checkout_outcome(nil, nil) == :processing
+    end
+
+    test "a hold that became a seat is confirmed" do
+      assert seat_outcome(%{status: :converted}, paid()) == :confirmed
+    end
+
+    # The page reports the checkout, which did book the seat; what became of
+    # the seat afterwards is the seat's own confirmation and emails' story.
+    test "a seat cancelled since its payment still reads as confirmed" do
+      assert seat_outcome(%{status: :converted}, %{status: :refunded, paid_at: paid().paid_at}) ==
+               :confirmed
+    end
+
+    test "a hold released because its session was cancelled is cancelled" do
+      assert seat_outcome(%{status: :released, released_reason: :meeting_cancelled}) ==
+               :cancelled
+    end
+
+    test "a hold released because its payment failed is failed" do
+      assert seat_outcome(%{status: :released, released_reason: :failed}, %{
+               status: :failed,
+               paid_at: nil
+             }) == :failed
+    end
+
+    # Its payment came after the hold had gone and found no room: refunded.
+    test "a released hold whose payment completed late is expired" do
+      assert seat_outcome(%{status: :released, released_reason: :expired}, paid()) == :expired
+      assert seat_outcome(%{status: :released, released_reason: :failed}, paid()) == :expired
+    end
+
+    test "any other release is expired" do
+      assert seat_outcome(%{status: :released, released_reason: :expired}) == :expired
+      assert seat_outcome(%{status: :released, released_reason: :abandoned}) == :expired
+    end
+
+    test "a held seat whose payment failed is failed" do
+      assert seat_outcome(%{status: :held}, %{status: :failed, paid_at: nil}) == :failed
+    end
+
+    test "a held seat whose payment is pending is still processing" do
+      assert seat_outcome(%{status: :held}) == :processing
+      assert seat_outcome(%{status: :held}, nil) == :processing
     end
   end
 end

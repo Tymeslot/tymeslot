@@ -225,6 +225,21 @@ defmodule Tymeslot.Meetings.MeetingState do
   defp latest(a, b), do: if(DateTime.compare(a, b) == :lt, do: b, else: a)
 
   @doc """
+  When a request that lapsed at `deadline` ended, for an expiry running at
+  `now`: the deadline itself, so an expiry that runs late (a delayed job, a
+  sweep catching up) does not date the end to whenever it ran. Never after
+  `now`, and `now` for a request with no deadline. Truncated to the second,
+  as the meeting's timestamp columns hold it.
+  """
+  @spec lapsed_at(DateTime.t() | nil, DateTime.t()) :: DateTime.t()
+  def lapsed_at(nil, %DateTime{} = now), do: DateTime.truncate(now, :second)
+
+  def lapsed_at(%DateTime{} = deadline, %DateTime{} = now) do
+    earliest = if DateTime.compare(deadline, now) == :gt, do: now, else: deadline
+    DateTime.truncate(earliest, :second)
+  end
+
+  @doc """
   Query-side counterpart of `slot_void?/1`, restricted to the statuses that
   occupy a slot (`@occupying_statuses`): composes onto `query` a filter
   matching only meetings whose slot is actually live, i.e. blocking the
@@ -327,16 +342,6 @@ defmodule Tymeslot.Meetings.MeetingState do
   """
   @spec released_status?(status() | nil) :: boolean()
   def released_status?(status), do: status in @released_statuses
-
-  @doc """
-  Query-side counterpart of `released_status?/1`, for a query in which the
-  meeting is not the first binding: keeps only rows whose meeting, bound as
-  `binding` (`join: m in assoc(b, :meeting), as: :meeting`), was released.
-  """
-  @spec where_released(Ecto.Queryable.t(), atom()) :: Ecto.Query.t()
-  def where_released(query, binding) when is_atom(binding) do
-    where(query, [{^binding, m}], m.status in ^@released_statuses)
-  end
 
   @doc "Query-side counterpart of `released_status?/1`: keeps only meetings not released."
   @spec where_not_released(Ecto.Queryable.t()) :: Ecto.Query.t()
@@ -453,6 +458,14 @@ defmodule Tymeslot.Meetings.MeetingState do
   Whether the organiser may see this meeting: the single definition of
   organiser visibility, mirrored for queries by `where_visible_to_organiser/1`.
 
+  A booking held for email verification (`:awaiting_verification`) is
+  hidden while it is held. That is nearly always also the first rule below,
+  but not for a group slot held again once its last confirmed seat left
+  beside seats still awaiting verification
+  (`Tymeslot.Bookings.SeatRelease`): it keeps the `email_verified_at` of its
+  first life, so that should it end held it stays in the organiser's history
+  as the meeting they knew of.
+
   Two kinds of booking never reach the organiser, because neither became a
   booking anyone agreed to:
 
@@ -484,7 +497,8 @@ defmodule Tymeslot.Meetings.MeetingState do
   `approval_resolved_at`; both rules hide it.
   """
   @spec visible_to_organiser?(Meeting.t() | map()) :: boolean()
-  def visible_to_organiser?(meeting), do: not unverified?(meeting) and not unpaid?(meeting)
+  def visible_to_organiser?(meeting),
+    do: not awaiting_verification?(meeting) and not unverified?(meeting) and not unpaid?(meeting)
 
   defp unpaid?(%{status: @awaiting_payment}), do: true
   defp unpaid?(%{status: @expired, reschedule_requested_at: %DateTime{}}), do: false
@@ -505,15 +519,16 @@ defmodule Tymeslot.Meetings.MeetingState do
 
   @doc """
   Query-side counterpart of `visible_to_organiser?/1`, and the same rule
-  clause for clause: verified or never gated, and past payment. Assumes the
-  meeting is the query's first binding.
+  clause for clause: not held, verified or never gated, and past payment.
+  Assumes the meeting is the query's first binding.
   """
   @spec where_visible_to_organiser(Ecto.Queryable.t()) :: Ecto.Query.t()
   def where_visible_to_organiser(query) do
     where(
       query,
       [m],
-      (is_nil(m.verification_deadline_at) or not is_nil(m.email_verified_at)) and
+      m.status != @awaiting_verification and
+        (is_nil(m.verification_deadline_at) or not is_nil(m.email_verified_at)) and
         m.status != @awaiting_payment and
         (m.status != @expired or not is_nil(m.approval_resolved_at) or
            not is_nil(m.reschedule_requested_at))

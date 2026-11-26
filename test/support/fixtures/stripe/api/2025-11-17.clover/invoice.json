@@ -1,0 +1,151 @@
+{
+  "customer_address": null,
+  "customer_tax_exempt": "none",
+  "last_finalization_error": null,
+  "webhooks_delivered_at": 1795683207,
+  "attempt_count": 1,
+  "customer_name": "Stripe live suite",
+  "shipping_cost": null,
+  "invoice_pdf": "redacted",
+  "livemode": false,
+  "customer": "cus_test1",
+  "statement_descriptor": null,
+  "amount_shipping": 0,
+  "collection_method": "charge_automatically",
+  "post_payment_credit_notes_amount": 0,
+  "auto_advance": false,
+  "account_tax_ids": null,
+  "created": 1795683204,
+  "subtotal_excluding_tax": 500,
+  "effective_at": 1795683204,
+  "rendering": null,
+  "application": null,
+  "account_name": "Diletta Luna Test",
+  "pre_payment_credit_notes_amount": 0,
+  "status": "paid",
+  "customer_phone": null,
+  "description": null,
+  "id": "in_test1",
+  "customer_account": null,
+  "period_end": 1795683204,
+  "footer": null,
+  "due_date": null,
+  "status_transitions": {
+    "finalized_at": 1795683204,
+    "marked_uncollectible_at": null,
+    "paid_at": 1795683204,
+    "voided_at": null
+  },
+  "subtotal": 500,
+  "number": "FB9296FD-0044",
+  "default_tax_rates": [],
+  "total_discount_amounts": [],
+  "automatic_tax": {
+    "disabled_reason": null,
+    "enabled": false,
+    "liability": null,
+    "provider": null,
+    "status": null
+  },
+  "issuer": {
+    "type": "self"
+  },
+  "customer_tax_ids": [],
+  "latest_revision": null,
+  "billing_reason": "subscription_create",
+  "total_pretax_credit_amounts": [],
+  "currency": "eur",
+  "ending_balance": 0,
+  "default_source": null,
+  "amount_paid": 500,
+  "object": "invoice",
+  "amount_overpaid": 0,
+  "on_behalf_of": null,
+  "period_start": 1795683204,
+  "attempted": true,
+  "discounts": [],
+  "shipping_details": null,
+  "lines": {
+    "data": [
+      {
+        "amount": 500,
+        "currency": "eur",
+        "description": "1 × Tymeslot live suite 1795683200 (at €5.00 / month)",
+        "discount_amounts": [],
+        "discountable": true,
+        "discounts": [],
+        "id": "il_test1",
+        "invoice": "in_test1",
+        "livemode": false,
+        "metadata": {},
+        "object": "line_item",
+        "parent": {
+          "invoice_item_details": null,
+          "license_fee_subscription_details": null,
+          "subscription_item_details": {
+            "invoice_item": null,
+            "proration": false,
+            "proration_details": {
+              "credited_items": null
+            },
+            "subscription": "sub_test1",
+            "subscription_item": "si_Na6dzxczY5fwHx"
+          },
+          "type": "subscription_item_details"
+        },
+        "period": {
+          "end": 1798275204,
+          "start": 1795683204
+        },
+        "pretax_credit_amounts": [],
+        "pricing": {
+          "price_details": {
+            "price": "price_1MowQULkdIwHu7ixraBm864M",
+            "product": "prod_Na6dGcTsmU0I4R"
+          },
+          "type": "price_details",
+          "unit_amount_decimal": "500"
+        },
+        "quantity": 1,
+        "quantity_decimal": "1",
+        "subtotal": 500,
+        "taxes": []
+      }
+    ],
+    "has_more": false,
+    "object": "list",
+    "total_count": 1,
+    "url": "redacted"
+  },
+  "customer_shipping": null,
+  "customer_email": "customer@example.test",
+  "total_excluding_tax": 500,
+  "from_invoice": null,
+  "account_country": "EE",
+  "hosted_invoice_url": "redacted",
+  "total": 500,
+  "next_payment_attempt": null,
+  "receipt_number": null,
+  "test_clock": null,
+  "starting_balance": 0,
+  "default_payment_method": null,
+  "amount_remaining": 0,
+  "parent": {
+    "quote_details": null,
+    "subscription_details": {
+      "metadata": {},
+      "subscription": "sub_test1"
+    },
+    "type": "subscription_details"
+  },
+  "payment_settings": {
+    "default_mandate": null,
+    "payment_method_options": null,
+    "payment_method_types": null
+  },
+  "automatically_finalizes_at": null,
+  "custom_fields": null,
+  "metadata": {},
+  "amount_due": 500,
+  "total_taxes": []
+}

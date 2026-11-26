@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Polls.PollParticipantSchema
   alias Tymeslot.Timezones
+  alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.PollVotingLocation
   alias TymeslotWeb.Themes.Shared.SecurityFields
@@ -152,13 +153,19 @@ defmodule TymeslotWeb.Themes.Shared.PollVotingComponents do
   def deadline_banner(%{poll: %{deadline_at: nil}} = assigns), do: ~H""
 
   def deadline_banner(assigns) do
-    assigns =
-      assign(assigns, :deadline, format_datetime(assigns.poll.deadline_at, tz(assigns.poll)))
+    on_deadline =
+      assigns.poll.deadline_at
+      |> format_datetime(tz(assigns.poll))
+      |> LocaleFormat.with_article(:none, Gettext.get_locale(TymeslotWeb.Gettext))
+
+    assigns = assign(assigns, :on_deadline, on_deadline)
 
     ~H"""
     <div class="poll-deadline-banner" data-testid="poll-deadline">
       <.icon name="hero-clock" class="poll-deadline-icon" />
-      <span>{dgettext("booking_polls", "Voting closes %{deadline}", deadline: @deadline)}</span>
+      <span>
+        {dgettext("booking_polls", "Voting closes %{on_deadline}", on_deadline: @on_deadline)}
+      </span>
     </div>
     """
   end

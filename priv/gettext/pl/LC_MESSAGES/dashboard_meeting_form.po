@@ -527,16 +527,6 @@ msgstr "Limit uczestników musi być prawidłową liczbą"
 msgid "Participant limit must be at least %{min}"
 msgstr "Limit uczestników musi wynosić co najmniej %{min}"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off group bookings to require payment."
-msgstr "Wyłącz rezerwacje grupowe, aby wymagać płatności."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off payments to enable group bookings."
-msgstr "Wyłącz płatności, aby włączyć rezerwacje grupowe."
-
 #: lib/tymeslot_web/helpers/context_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Group bookings are not included in your current plan."
@@ -913,11 +903,6 @@ msgstr "Potwierdzenie adresu e-mail"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
-msgid "Turn off group bookings to ask invitees to confirm their email."
-msgstr "Wyłącz rezerwacje grupowe, aby prosić zaproszonych o potwierdzenie adresu e-mail."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
-#, elixir-autogen, elixir-format
 msgid "Turn off payments to ask invitees to confirm their email. Paying already confirms who they are."
 msgstr "Wyłącz płatności, aby prosić zaproszonych o potwierdzenie adresu e-mail. Płatność i tak potwierdza, kim są."
 
@@ -928,11 +913,6 @@ msgid_plural "Bookings count only once the invitee clicks the link we email them
 msgstr[0] "Rezerwacja liczy się dopiero wtedy, gdy zaproszona osoba kliknie link z naszego e-maila. Do tego czasu termin jest zablokowany maksymalnie przez %{count} minutę i nie dostajesz powiadomienia."
 msgstr[1] "Rezerwacja liczy się dopiero wtedy, gdy zaproszona osoba kliknie link z naszego e-maila. Do tego czasu termin jest zablokowany maksymalnie przez %{count} minuty i nie dostajesz powiadomienia."
 msgstr[2] "Rezerwacja liczy się dopiero wtedy, gdy zaproszona osoba kliknie link z naszego e-maila. Do tego czasu termin jest zablokowany maksymalnie przez %{count} minut i nie dostajesz powiadomienia."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off email confirmation to enable group bookings."
-msgstr "Wyłącz potwierdzenie adresu e-mail, aby włączyć rezerwacje grupowe."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
@@ -948,3 +928,13 @@ msgstr "Rezerwacje cykliczne nie są dostępne w Twoim obecnym planie."
 #, elixir-autogen, elixir-format
 msgid "Turn off series booking to ask invitees to confirm their email. A series confirms all its sessions at once."
 msgstr "Wyłącz rezerwowanie serii, aby prosić zaproszonych o potwierdzenie adresu e-mail. Seria potwierdza wszystkie swoje sesje jednocześnie."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
+#, elixir-autogen, elixir-format
+msgid "Each booker pays this for every seat they take, guests included."
+msgstr "Każda osoba rezerwująca płaci tę kwotę za każde zajęte miejsce, także za miejsca swoich gości."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
+#, elixir-autogen, elixir-format
+msgid "Price per seat (%{currency})"
+msgstr "Cena za miejsce (%{currency})"

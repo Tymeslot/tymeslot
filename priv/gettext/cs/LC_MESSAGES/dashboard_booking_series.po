@@ -175,14 +175,6 @@ msgstr "Dosud vráceno %{amount}"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
 #, elixir-autogen, elixir-format
-msgid "%{count} session cancelled. Refund of %{amount} issued."
-msgid_plural "%{count} sessions cancelled. Refund of %{amount} issued."
-msgstr[0] "Zrušen %{count} termín. Vráceno %{amount}."
-msgstr[1] "Zrušeny %{count} termíny. Vráceno %{amount}."
-msgstr[2] "Zrušeno %{count} termínů. Vráceno %{amount}."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
-#, elixir-autogen, elixir-format
 msgid "%{count} session cancelled. The attendee has been told."
 msgid_plural "%{count} sessions cancelled. The attendee has been told."
 msgstr[0] "Zrušen %{count} termín. Účastník byl informován."
@@ -434,3 +426,26 @@ msgstr "Platbu nelze vrátit, protože k ní probíhá spor. Nejprve ho vyřešt
 #, elixir-autogen, elixir-format
 msgid "No refund can be made: the series was not paid."
 msgstr "Vrácení platby není možné, protože série nebyla zaplacena."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} being processed"
+msgstr "%{amount} ve zpracování"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled. Refund of %{amount} is being processed."
+msgid_plural "%{count} sessions cancelled. Refund of %{amount} is being processed."
+msgstr[0] "Zrušen %{count} termín. Vrácení %{amount} se zpracovává."
+msgstr[1] "Zrušeny %{count} termíny. Vrácení %{amount} se zpracovává."
+msgstr[2] "Zrušeno %{count} termínů. Vrácení %{amount} se zpracovává."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{lost} lost in a dispute"
+msgstr "%{lost} strženo po prohraném sporu"
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{refunded} refunded so far, plus %{lost} lost in a dispute"
+msgstr "Dosud vráceno %{refunded}, navíc %{lost} strženo po prohraném sporu"

@@ -42,12 +42,13 @@ jobs:
     runs-on: ubuntu-latest
     # Only run on GitHub, not Gitea
     if: github.server_url == 'https://github.com'
-    # Roughly triple the nightly's ~1 hour, so a slow runner or a manually
-    # dispatched N of 20-odd still finishes, while a wedged run is cut at three
-    # hours rather than drifting up to the 360-minute platform default. Being
-    # cut off costs the whole report, not just the remaining iterations, which
-    # is why this is set deliberately rather than left to the default.
-    timeout-minutes: 180
+    # Nightlies have measured between 1.5 and 2.5 hours, so this leaves the
+    # slowest of them room to spare and lets a manually dispatched N of 20 or
+    # so finish, while a wedged run is still cut an hour before the 360-minute
+    # platform default. Being cut off costs the whole report, not just the
+    # remaining iterations, which is why this is set deliberately rather than
+    # left to the default.
+    timeout-minutes: 300
     services:
       postgres:
         image: postgres:16
@@ -63,11 +64,10 @@ jobs:
       ELIXIR_VERSION: "1.20.4"
       OTP_VERSION: "28.5.0.7"
       # Empty on a scheduled run, so the nightly gets the default. One run of
-      # this suite measured 284s on a 9-core machine and 407s on a contended
-      # one; the runner here has 4 vCPUs, so size on the latter. 12 runs is
-      # then a 1.5-hour nightly, which has roughly a 70% chance of catching a
-      # one-in-ten flake on any given night and is near-certain to catch one
-      # across a week of them. Raising N mostly buys a faster answer, not a
+      # this suite takes around 12 minutes on this 4-vCPU runner, so 12 runs
+      # is a nightly of 1.5 to 2.5 hours, which has roughly a 70% chance of
+      # catching a one-in-ten flake on any given night and is near-certain to
+      # catch one across a week of them. Raising N mostly buys a faster answer, not a
       # different one, and it is a manual-dispatch input for exactly that.
       RUNS: ${{ github.event.inputs.runs || '12' }}
     steps:

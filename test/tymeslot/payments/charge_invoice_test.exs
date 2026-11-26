@@ -3,13 +3,20 @@ defmodule Tymeslot.Payments.ChargeInvoiceTest do
 
   @moduletag :payments
 
-  import Mox
-
+  alias Tymeslot.Integrations.Stripe.Error
   alias Tymeslot.Payments.ChargeInvoice
-  alias Tymeslot.Payments.StripeMock
   alias Tymeslot.Payments.SubscriptionInvoiceQueries
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
-  setup :verify_on_exit!
+  defp invoice(id, overrides \\ %{}),
+    do: StripeFixtures.object("invoice", Map.put(overrides, "id", id))
+
+  defp invoice_payments(invoice_ids) do
+    invoice_ids
+    |> Enum.map(&StripeFixtures.object("invoice_payment", %{"invoice" => &1}))
+    |> StripeFixtures.list()
+  end
 
   describe "for_charge/1 with a charge that names its invoice" do
     test "a recorded invoice answers without asking Stripe" do
@@ -24,64 +31,32 @@ defmodule Tymeslot.Payments.ChargeInvoiceTest do
     end
 
     test "an invoice not recorded here is read from Stripe" do
-      expect(StripeMock, :get_invoice, fn "in_old" ->
-        {:ok, %{id: "in_old", subscription: "sub_old"}}
-      end)
+      StripeStub.expect(:retrieve_invoice, invoice("in_old", %{"subscription" => "sub_old"}))
 
       assert {:ok, %{invoice_id: "in_old", subscription_id: "sub_old"}} =
                ChargeInvoice.for_charge(%{"invoice" => "in_old"})
-    end
 
-    test "reads the subscription from where newer API versions put it" do
-      expect(StripeMock, :get_invoice, fn "in_old" ->
-        {:ok,
-         %{
-           id: "in_old",
-           subscription: nil,
-           parent: %{subscription_details: %{subscription: "sub_basil"}}
-         }}
-      end)
-
-      assert {:ok, %{invoice_id: "in_old", subscription_id: "sub_basil"}} =
-               ChargeInvoice.for_charge(%{"invoice" => "in_old"})
+      assert [%{path: "/v1/invoices/in_old"}] = StripeStub.requests(:retrieve_invoice)
     end
 
     test "an invoice that billed no subscription names none" do
-      expect(StripeMock, :get_invoice, fn "in_one_off" ->
-        {:ok, %{id: "in_one_off", subscription: nil, parent: nil}}
-      end)
+      StripeStub.expect(:retrieve_invoice, invoice("in_one_off", %{"parent" => nil}))
 
       assert {:ok, %{invoice_id: "in_one_off", subscription_id: nil}} =
                ChargeInvoice.for_charge(%{"invoice" => "in_one_off"})
     end
 
     test "a Stripe failure is an error, not a guess" do
-      expect(StripeMock, :get_invoice, fn "in_old" -> {:error, :timeout} end)
+      StripeStub.stub(:retrieve_invoice, {:error_fixture, "api_error"})
 
-      assert {:error, {:stripe_lookup_failed, :timeout}} =
+      assert {:error, {:stripe_lookup_failed, %Error{type: "api_error"}}} =
                ChargeInvoice.for_charge(%{"invoice" => "in_old"})
     end
   end
 
   describe "for_charge/1 with a charge that does not name its invoice" do
-    test "finds the invoice through the charge's payment intent" do
-      expect(StripeMock, :list_invoice_payments, fn params ->
-        assert params == %{payment: %{type: "payment_intent", payment_intent: "pi_basil"}}
-        {:ok, %{data: [%{invoice: "in_basil"}], has_more: false}}
-      end)
-
-      expect(StripeMock, :get_invoice, fn "in_basil" ->
-        {:ok, %{id: "in_basil", parent: %{subscription_details: %{subscription: "sub_basil"}}}}
-      end)
-
-      assert {:ok, %{invoice_id: "in_basil", subscription_id: "sub_basil"}} =
-               ChargeInvoice.for_charge(%{"payment_intent" => "pi_basil"})
-    end
-
     test "a payment intent that paid no invoice names neither" do
-      expect(StripeMock, :list_invoice_payments, fn _params ->
-        {:ok, %{data: [], has_more: false}}
-      end)
+      StripeStub.expect(:list_invoice_payments, invoice_payments([]))
 
       assert {:ok, %{invoice_id: nil, subscription_id: nil}} =
                ChargeInvoice.for_charge(%{"payment_intent" => "pi_one_off"})
@@ -93,35 +68,74 @@ defmodule Tymeslot.Payments.ChargeInvoiceTest do
     end
 
     test "a Stripe failure is an error" do
-      expect(StripeMock, :list_invoice_payments, fn _params -> {:error, :timeout} end)
+      StripeStub.stub(:list_invoice_payments, {:error_fixture, "api_error"})
 
-      assert {:error, {:stripe_lookup_failed, :timeout}} =
+      assert {:error, {:stripe_lookup_failed, %Error{type: "api_error"}}} =
                ChargeInvoice.for_charge(%{"payment_intent" => "pi_basil"})
     end
   end
 
   describe "for_charge_id/1" do
-    test "reads the charge from Stripe, then its invoice" do
-      expect(StripeMock, :get_charge, fn "ch_1" ->
-        {:ok, %{id: "ch_1", payment_intent: "pi_1"}}
-      end)
+    test "resolves a basil invoice's subscription from parent.subscription_details" do
+      StripeStub.expect(
+        :retrieve_charge,
+        StripeFixtures.object("charge", %{"id" => "ch_1", "invoice" => "in_1"})
+      )
 
-      expect(StripeMock, :list_invoice_payments, fn _params ->
-        {:ok, %{data: [%{invoice: %{id: "in_1"}}]}}
-      end)
+      StripeStub.expect(
+        :retrieve_invoice,
+        invoice("in_1", %{
+          "subscription" => nil,
+          "parent" => %{
+            "type" => "subscription_details",
+            "subscription_details" => %{"subscription" => "sub_basil"}
+          }
+        })
+      )
 
-      expect(StripeMock, :get_invoice, fn "in_1" ->
-        {:ok, %{id: "in_1", subscription: "sub_1"}}
-      end)
+      assert {:ok, %{invoice_id: "in_1", subscription_id: "sub_basil"}} =
+               ChargeInvoice.for_charge_id("ch_1")
 
-      assert {:ok, %{invoice_id: "in_1", subscription_id: "sub_1"}} =
+      assert [%{path: "/v1/charges/ch_1"}] = StripeStub.requests(:retrieve_charge)
+    end
+
+    test "finds the invoice through the payment intent's invoice payment" do
+      charge = StripeFixtures.object("charge", %{"id" => "ch_1", "payment_intent" => "pi_1"})
+      refute Map.has_key?(charge, "invoice")
+
+      StripeStub.expect(:retrieve_charge, charge)
+      StripeStub.expect(:list_invoice_payments, invoice_payments(["in_pi"]))
+      StripeStub.expect(:retrieve_invoice, invoice("in_pi", %{"subscription" => "sub_pi"}))
+
+      assert {:ok, %{invoice_id: "in_pi", subscription_id: "sub_pi"}} =
+               ChargeInvoice.for_charge_id("ch_1")
+
+      assert [%{query: query}] = StripeStub.requests(:list_invoice_payments)
+
+      assert query == %{"payment" => %{"type" => "payment_intent", "payment_intent" => "pi_1"}}
+    end
+
+    test "an expanded invoice on the invoice payment is read by its id" do
+      StripeStub.expect(:retrieve_charge, StripeFixtures.object("charge", %{"id" => "ch_1"}))
+
+      StripeStub.expect(
+        :list_invoice_payments,
+        StripeFixtures.list([
+          StripeFixtures.object("invoice_payment", %{"invoice" => invoice("in_expanded")})
+        ])
+      )
+
+      StripeStub.expect(:retrieve_invoice, invoice("in_expanded", %{"subscription" => "sub_1"}))
+
+      assert {:ok, %{invoice_id: "in_expanded", subscription_id: "sub_1"}} =
                ChargeInvoice.for_charge_id("ch_1")
     end
 
     test "a Stripe failure reading the charge is an error" do
-      expect(StripeMock, :get_charge, fn "ch_1" -> {:error, :timeout} end)
+      StripeStub.stub(:retrieve_charge, {:error_fixture, "api_error"})
 
-      assert {:error, {:stripe_lookup_failed, :timeout}} = ChargeInvoice.for_charge_id("ch_1")
+      assert {:error, {:stripe_lookup_failed, %Error{type: "api_error"}}} =
+               ChargeInvoice.for_charge_id("ch_1")
     end
   end
 end

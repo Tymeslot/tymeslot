@@ -209,46 +209,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
       assert msg == "New error: RuntimeError in Tymeslot.Bookings.create_booking/2: boom"
     end
 
-    test ":reconciliation_incomplete names how many subscriptions could not be looked up" do
-      assert AlertTypes.format_message(:reconciliation_incomplete, %{unresolved_count: 12}) ==
-               "Payment reconciliation could not look up 12 subscriptions at Stripe, " <>
-                 "so it did not check for subscriptions missing there"
-    end
-
-    test ":reconciliation_discrepancies includes count" do
-      msg =
-        AlertTypes.format_message(:reconciliation_discrepancies, %{discrepancies_count: 3})
-
-      assert msg =~ "3"
-      assert msg =~ "discrepancies"
-    end
-
-    test ":dunning_stalled includes the subscription ID and the days past due" do
-      metadata = %{stripe_subscription_id: "sub_stalled_1", days_past_due: 312}
-      msg = AlertTypes.format_message(:dunning_stalled, metadata)
-
-      assert msg =~ "sub_stalled_1"
-      assert msg =~ "312"
-      assert AlertTypes.dedup_key(:dunning_stalled, metadata) =~ "sub_stalled_1"
-
-      refute AlertTypes.dedup_key(:dunning_stalled, metadata) ==
-               AlertTypes.dedup_key(:dunning_stalled, %{
-                 metadata
-                 | stripe_subscription_id: "sub_stalled_2"
-               })
-    end
-
-    test ":account_deletion_billing_sync_failed names the user and the failure" do
-      msg =
-        AlertTypes.format_message(:account_deletion_billing_sync_failed, %{
-          user_id: 4242,
-          reason_message: "stripe_down"
-        })
-
-      assert msg =~ "4242"
-      assert msg =~ "stripe_down"
-    end
-
     # The daily sweep re-queues a stuck deletion, so each day's final attempt
     # raises this type again, possibly with a different refusal.
     test ":account_deletion_stalled dedups per account, whatever the refusal" do
@@ -287,29 +247,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
                AlertTypes.dedup_key(:account_deletion_stalled, held)
     end
 
-    # The daily dunning run raises this type afresh each pass, with the day
-    # count one higher. Keyed on the message, every pass looked new and the
-    # admin was emailed daily about a condition nobody had resolved yet.
-    test ":dunning_stalled dedups across runs as the day count climbs" do
-      key = fn days ->
-        AlertTypes.dedup_key(:dunning_stalled, %{
-          stripe_subscription_id: "sub_stalled_1",
-          days_past_due: days
-        })
-      end
-
-      assert key.(312) == key.(313)
-
-      refute AlertTypes.format_message(:dunning_stalled, %{
-               stripe_subscription_id: "sub_stalled_1",
-               days_past_due: 312
-             }) ==
-               AlertTypes.format_message(:dunning_stalled, %{
-                 stripe_subscription_id: "sub_stalled_1",
-                 days_past_due: 313
-               })
-    end
-
     test ":upload_delete_failed asks for the file to be removed by hand" do
       msg =
         AlertTypes.format_message(:upload_delete_failed, %{
@@ -344,25 +281,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
 
       assert key.("avatars/1/a.png", :eacces) == key.("themes/2/1/images/b.jpg", :eacces)
       refute key.("avatars/1/a.png", :eacces) == key.("avatars/1/a.png", :erofs)
-    end
-
-    test ":late_payment_refund_failed names the payment, the job and how to settle it" do
-      metadata = %{booking_payment_id: "bp_late_1", oban_job_id: 4242, reason: :stripe_down}
-      msg = AlertTypes.format_message(:late_payment_refund_failed, metadata)
-
-      assert msg =~ "bp_late_1"
-      assert msg =~ "still owed"
-      assert msg =~ "refund the booking from the host's payments settings"
-      assert msg =~ "retry Oban job 4242"
-    end
-
-    test ":subscription_not_in_database includes stripe subscription ID" do
-      msg =
-        AlertTypes.format_message(:subscription_not_in_database, %{
-          stripe_subscription_id: "sub_abc123"
-        })
-
-      assert msg =~ "sub_abc123"
     end
 
     test ":recipient_email_rejected includes the connect account identifier and reason" do

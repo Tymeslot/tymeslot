@@ -30,14 +30,14 @@ defmodule Tymeslot.BookingSeries.Cancel do
 
   A host cancelling a paid series refunds its one payment once: by default
   the remaining sessions' share (`unit_price_cents` for each session
-  cancelled, capped at what remains). The refund is a job
-  (`Tymeslot.MeetingPayments.Workers.SeriesHostRefund`) inserted in the
-  transaction that cancels the sessions, so it is recorded with them and
-  its Stripe call never runs inside that transaction. The job re-checks the
-  payment under its row lock; a refund it cannot make is recorded as an
-  error (and so alerted on), and the money stays on the payment for the
-  host to refund by hand (see the worker for what the host is shown). A booker's cancellation
-  never refunds.
+  cancelled, capped at what remains). The refund is recorded
+  (`MeetingPayments.request_refund/4`) in the transaction that cancels the
+  sessions, under the payment's row lock, so it is recorded with them or
+  not at all, and its Stripe call is made by its job, never inside that
+  transaction. A refund the payment no longer allows by then cancels
+  nothing. One Stripe fails for good is emailed to the host
+  (`Refunds.FailureNotice`), and the money stays on the payment for the
+  host to refund by hand. A booker's cancellation never refunds.
 
   Takes the organiser's schedule lock, then the series row, then its
   sessions, as every writer of a series does, and cancels inside that
@@ -64,7 +64,7 @@ defmodule Tymeslot.BookingSeries.Cancel do
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
-  alias Tymeslot.MeetingPayments.Workers.SeriesHostRefund
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingConflictQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -79,10 +79,11 @@ defmodule Tymeslot.BookingSeries.Cancel do
 
   @typedoc """
   What became of the refund: none asked for or owed (`:none`), a refund
-  job inserted for `cents` (`{:scheduled, cents}`), the default refund
-  left unmade because the payment cannot be refunded
+  of `cents` recorded for its job to make (`{:scheduled, cents}`), the
+  default refund left unmade because the payment cannot be refunded
   (`{:not_refunded, reason}`), or, for a withdrawn series request, what
-  the withdrawal refunded (`{:refunded, cents}`).
+  the withdrawal refunds (`{:refunded, cents}`), recorded and made by its
+  job too.
   """
   @type refund_outcome ::
           :none
@@ -195,7 +196,7 @@ defmodule Tymeslot.BookingSeries.Cancel do
   defp authorise(series, :organizer, opts) do
     with :ok <- owned_by(series, Keyword.get(opts, :acting_user)) do
       series.id
-      |> MeetingPayments.payment_for_series()
+      |> BookingPayments.payment_for_series()
       |> plan_refund(Keyword.get(opts, :refund, :remaining))
     end
   end
@@ -274,10 +275,11 @@ defmodule Tymeslot.BookingSeries.Cancel do
     end
   end
 
+  # Refunded or recorded to be: the withdrawal's refund is made by its job.
   defp refunded_cents(series) do
-    case MeetingPayments.payment_for_series(series.id) do
+    case BookingPayments.payment_for_series(series.id) do
       nil -> 0
-      payment -> payment.refunded_amount_cents
+      payment -> payment.refunded_amount_cents + MeetingPayments.pending_refund_cents(payment)
     end
   end
 
@@ -391,10 +393,10 @@ defmodule Tymeslot.BookingSeries.Cancel do
   defp schedule_refund(_series, _cancelled, {:not_refunded, _reason} = outcome),
     do: {:ok, outcome}
 
-  # The remaining sessions' share, read in this transaction; the job reads
-  # the payment again under its lock and refuses more than remains then.
+  # The remaining sessions' share, read in this transaction; the refund is
+  # checked again under the payment's lock as it is recorded.
   defp schedule_refund(series, cancelled, {:remaining, payment}) do
-    case MeetingPayments.get_payment(payment.id) do
+    case BookingPayments.get_payment(payment.id) do
       nil ->
         {:ok, :none}
 
@@ -408,7 +410,7 @@ defmodule Tymeslot.BookingSeries.Cancel do
   end
 
   defp schedule_refund(series, _cancelled, {:amount, payment, cents}),
-    do: insert_refund(series, MeetingPayments.get_payment(payment.id) || payment, cents)
+    do: insert_refund(series, payment, cents)
 
   @doc """
   The host's default refund for cancelling `count` sessions of a paid
@@ -446,12 +448,22 @@ defmodule Tymeslot.BookingSeries.Cancel do
 
   def resolve_refund_choice(_payment, _params), do: {:ok, :remaining}
 
+  # A refusal here aborts the cancellation's transaction (it is a nested
+  # rollback), so nothing is cancelled: an amount the balance no longer
+  # holds, a pending refund among it, reads as more than remains.
   defp insert_refund(series, payment, cents) do
-    with {:ok, _job} <-
-           payment
-           |> SeriesHostRefund.new_for(series.organizer_user_id, cents)
-           |> Oban.insert() do
-      {:ok, {:scheduled, cents}}
+    case MeetingPayments.request_refund(payment, cents, :series_host,
+           host_user_id: series.organizer_user_id,
+           enqueue_now: true
+         ) do
+      {:ok, _refund} ->
+        {:ok, {:scheduled, cents}}
+
+      {:error, reason} when reason in [:invalid_amount, :already_refunded, :refund_in_progress] ->
+        {:error, :exceeds_remaining}
+
+      {:error, _reason} = error ->
+        error
     end
   end
 

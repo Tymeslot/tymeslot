@@ -198,8 +198,8 @@ msgstr "Odrzuć wszystkie sesje"
 
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format
-msgid "Every session is held until you answer. If you haven't replied by %{deadline}, the request lapses and %{name} is told the times are free again."
-msgstr "Wszystkie sesje są zablokowane do czasu twojej odpowiedzi. Jeśli nie odpowiesz do %{deadline}, prośba wygaśnie, a %{name} dostanie informację, że terminy są znów wolne."
+msgid "Every session is held until you answer. If you haven't replied by %{by_deadline}, the request lapses and %{name} is told the times are free again."
+msgstr "Wszystkie sesje są zablokowane do czasu twojej odpowiedzi. Jeśli nie odpowiesz do %{by_deadline}, prośba wygaśnie, a %{name} dostanie informację, że terminy są znów wolne."
 
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format
@@ -213,8 +213,8 @@ msgstr "Cześć, %{name}, %{host} nie może w terminach poniższych sesji, więc
 
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format
-msgid "Hi %{name}, %{host} has your request for the sessions below. They are held for you but not booked until %{host} approves them, and you'll hear either way by %{deadline}."
-msgstr "Cześć, %{name}, %{host} ma już twoją prośbę o poniższe sesje. Są dla ciebie zablokowane, ale zostaną zarezerwowane dopiero wtedy, gdy %{host} je zatwierdzi. Odpowiedź, jakakolwiek będzie, dostaniesz do %{deadline}."
+msgid "Hi %{name}, %{host} has your request for the sessions below. They are held for you but not booked until %{host} approves them, and you'll hear either way by %{by_deadline}."
+msgstr "Cześć, %{name}, %{host} ma już twoją prośbę o poniższe sesje. Są dla ciebie zablokowane, ale zostaną zarezerwowane dopiero wtedy, gdy %{host} je zatwierdzi. Odpowiedź, jakakolwiek będzie, dostaniesz do %{by_deadline}."
 
 #: lib/tymeslot/emails/templates/series_request.ex
 #, elixir-autogen, elixir-format

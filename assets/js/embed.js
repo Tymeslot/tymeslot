@@ -247,6 +247,21 @@
   }
 
   /**
+   * Escape pressed inside the popup's booking page, relayed by
+   * iframe_embed.js: the frame's keys never reach this document's own Escape
+   * handler. Only the open popup's frame may close it; an inline embed's
+   * frame posts the same message and is ignored.
+   */
+  function closeModalFramed(source) {
+    if (pendingCloseTimeout !== null) return;
+    const modal = document.getElementById('tymeslot-modal');
+    if (!modal) return;
+    const iframe = modal.querySelector('iframe[title="Booking Widget"]');
+    if (!iframe || iframe.contentWindow !== source) return;
+    window.TymeslotBooking.close();
+  }
+
+  /**
    * Global message listener for iframe resizing.
    *
    * The embedded page posts {type: 'tymeslot-resize', height, isFirstTime}
@@ -262,6 +277,10 @@
   window.addEventListener('message', function(e) {
     if (e.origin !== BASE_URL) return;
     if (!e.data || typeof e.data !== 'object') return;
+    if (e.data.type === 'tymeslot-escape') {
+      closeModalFramed(e.source);
+      return;
+    }
     if (e.data.type !== 'tymeslot-resize') return;
 
     var h = Number(e.data.height);

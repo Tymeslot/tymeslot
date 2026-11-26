@@ -26,10 +26,12 @@ defmodule TymeslotWeb.Live.Themes.MeetingPriceTest do
 
   alias Tymeslot.CalendarMock
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.TestMocks
+  alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.BookingDriver
 
   @price "[data-testid='meeting-price']"
@@ -230,13 +232,63 @@ defmodule TymeslotWeb.Live.Themes.MeetingPriceTest do
     end
   end
 
+  # A group type charges each seat, so every listing reads its price per
+  # person; only the submit totals the seats (`paid_group_booking_test.exs`).
+  for {key, selector} <- [
+        quill: "[data-testid='meeting-price']",
+        rhythm: "[data-testid='meeting-price']",
+        paper: ".paper-type__price",
+        folio: ".folio-meeting__price"
+      ] do
+    describe "#{key}: a paid group type" do
+      setup do
+        {:ok, theme_id} = Catalog.key_to_id(unquote(key))
+
+        %{user: user, profile: profile} =
+          seed_organiser(theme_id, "group-priced-#{unquote(key)}",
+            types: [
+              [
+                name: "Group Class",
+                duration_minutes: 30,
+                max_participants: 5,
+                payment_required: true,
+                price_cents: 2000
+              ],
+              [name: "Quick Chat", duration_minutes: 30]
+            ]
+          )
+
+        insert(:connect_account,
+          user: user,
+          stripe_account_id: "acct_GROUP_PRICE",
+          default_currency: "eur",
+          charges_enabled: true
+        )
+
+        %{profile: profile}
+      end
+
+      test "a paid group type's price reads per person", %{conn: conn, profile: profile} do
+        {:ok, view, _html} = live(conn, "/#{profile.username}")
+
+        assert has_element?(
+                 view,
+                 "[data-fact='meeting_type'][data-value='group-class'] #{unquote(selector)}",
+                 "€20.00 per person"
+               )
+      end
+    end
+  end
+
   # Stripe Checkout cannot be framed, so an embedded booker waits for the
   # payment in place and reaches the confirmation on the `:paid` broadcast.
   # The referer is the parent page `allowed_embed_domains` admits.
   defp pay_embedded(conn, path, meeting_type) do
-    expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
-      {:ok, %{id: "cs_PRICE", url: "https://checkout.stripe.com/cs_PRICE"}}
-    end)
+    StripeStub.expect(
+      :create_checkout_session,
+      1,
+      StripeStubResponses.checkout_session("cs_PRICE", "https://checkout.stripe.com/cs_PRICE")
+    )
 
     conn = put_req_header(conn, "referer", "https://embedder.test/page")
     {:ok, view, _html} = live(conn, path)

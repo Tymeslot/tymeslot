@@ -19,6 +19,7 @@ defmodule Tymeslot.Test.SuiteConfig do
     backup_tests: true,
     oauth_integration: true,
     calendar_integration: true,
+    stripe_live: true,
     e2e: true,
     migrations: true,
     proxy_integration: true,

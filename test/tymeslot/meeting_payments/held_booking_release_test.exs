@@ -17,7 +17,7 @@ defmodule Tymeslot.MeetingPayments.HeldBookingReleaseTest do
   @moduletag :availability
   @moduletag :integration
 
-  import Mox, only: [stub: 3, verify_on_exit!: 1]
+  import Mox, only: [verify_on_exit!: 1]
   import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.ConfigTestHelpers
 
@@ -25,10 +25,12 @@ defmodule Tymeslot.MeetingPayments.HeldBookingReleaseTest do
   alias Tymeslot.Availability.Offer
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.TestMocks
 
   @timezone "Etc/UTC"
@@ -44,9 +46,7 @@ defmodule Tymeslot.MeetingPayments.HeldBookingReleaseTest do
     on_exit(&AvailabilityCache.clear_all/0)
     with_config(:tymeslot, account_deletion_grace_days: 14, account_deletion_hook: nil)
 
-    stub(StripeAdapterMock, :expire_checkout_session, fn session, _opts ->
-      {:ok, %{"id" => session, "status" => "expired"}}
-    end)
+    StripeStub.stub(:expire_checkout_session, StripeFixtures.object("checkout_session_expired"))
 
     %{user: host, profile: profile} =
       create_bookable_profile(
@@ -58,7 +58,7 @@ defmodule Tymeslot.MeetingPayments.HeldBookingReleaseTest do
     date = next_bookable_weekday()
     meeting = hold_slot(host, date, ~T[11:00:00])
 
-    Phoenix.PubSub.subscribe(Tymeslot.PubSub, MeetingPayments.payment_topic(meeting.id))
+    Phoenix.PubSub.subscribe(Tymeslot.PubSub, Checkout.payment_topic(meeting.id))
 
     # The booking page has already read, and cached, its month view with the
     # slot held.

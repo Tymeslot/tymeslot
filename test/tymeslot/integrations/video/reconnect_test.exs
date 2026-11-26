@@ -1,9 +1,9 @@
 defmodule Tymeslot.Integrations.Video.ReconnectTest do
   @moduledoc """
-  A proven reconnect catches the integration's rooms up on the changes they
-  missed while it needed reconnecting: live bookings' rooms are updated,
-  released bookings' rooms deleted, and only when the row was flagged and its
-  provider keeps the booking's time on the room.
+  A proven reconnect resets the integration's health row and catches its rooms
+  up on the changes they missed while it needed reconnecting: live bookings'
+  rooms are updated, released bookings' rooms deleted, and only when the row
+  was flagged and its provider keeps the booking's time on the room.
   """
 
   # Not async: one test asserts on a log line, and a `:logger` handler is
@@ -14,10 +14,14 @@ defmodule Tymeslot.Integrations.Video.ReconnectTest do
   @moduletag :integrations
   @moduletag :video
 
+  import Tymeslot.WorkerTestHelpers, only: [insert_unhealthy_health_row: 3]
+
   alias Ecto.Changeset
+  alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Video.Reconnect
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Test.LogCapture
+  alias Tymeslot.Workers.IntegrationHealthWorker
   alias Tymeslot.Workers.VideoSyncWorker
 
   setup do
@@ -38,6 +42,33 @@ defmodule Tymeslot.Integrations.Video.ReconnectTest do
     refute updated.needs_reauth
     assert queued("update") == Enum.sort([live.id, pending.id])
     assert queued("delete") == Enum.sort([cancelled.id, expired.id])
+  end
+
+  describe "health" do
+    test "a saved reconnect clears the unhealthy badge and queues a probe", %{user: user} do
+      integration = insert(:video_integration, user: user, provider: "nextcloud_talk")
+      insert_unhealthy_health_row(user, :video, integration.id)
+      assert video_health(user, integration.id).status == :unhealthy
+
+      assert {:ok, _updated} = Reconnect.save(integration, %{access_token: "new-token"})
+
+      assert video_health(user, integration.id) == nil
+
+      assert_enqueued(
+        worker: IntegrationHealthWorker,
+        args: %{"type" => "video", "integration_id" => integration.id}
+      )
+    end
+
+    test "a refused save leaves the health row unhealthy", %{user: user} do
+      integration = insert(:video_integration, user: user, provider: "nextcloud_talk")
+      insert_unhealthy_health_row(user, :video, integration.id)
+
+      assert {:error, %Changeset{}} = Reconnect.save(integration, %{name: nil})
+
+      assert video_health(user, integration.id).status == :unhealthy
+      refute_enqueued(worker: IntegrationHealthWorker)
+    end
   end
 
   test "queues nothing for an integration that was not flagged", %{user: user} do
@@ -142,4 +173,8 @@ defmodule Tymeslot.Integrations.Video.ReconnectTest do
     |> Enum.map(& &1.args["meeting_id"])
     |> Enum.sort()
   end
+
+  # The row the dashboard reads; `nil` once the integration is no longer unhealthy.
+  defp video_health(user, integration_id),
+    do: HealthCheck.health_states_for_user(user.id).video[integration_id]
 end

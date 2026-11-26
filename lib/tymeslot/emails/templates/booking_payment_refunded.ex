@@ -4,8 +4,8 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
   or partially. Built from a normalised `RefundContext` struct so raw Stripe
   payloads never reach the template layer.
 
-  Triggered synchronously by `Tymeslot.MeetingPayments.Refunds.issue_refund/4`
-  via the dedicated `Tymeslot.Workers.SendBookingPaymentRefunded` worker.
+  Sent by `Tymeslot.Workers.SendBookingPaymentRefunded` once a refund has
+  gone through.
   """
 
   import Swoosh.Email
@@ -35,6 +35,10 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
 
     Building this struct in the worker keeps the template free of any
     knowledge of database schemas or Stripe payloads.
+
+    `refunded_amount_cents` is what was refunded, without any share a lost
+    dispute took back, and `is_full_refund?` compares that with the
+    payment.
     """
 
     @enforce_keys [

@@ -530,16 +530,6 @@ msgstr "Limit účastníků musí být platné číslo"
 msgid "Participant limit must be at least %{min}"
 msgstr "Limit účastníků musí být alespoň %{min}"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off group bookings to require payment."
-msgstr "Vypněte skupinové rezervace, chcete-li vyžadovat platbu."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off payments to enable group bookings."
-msgstr "Vypněte platby, chcete-li povolit skupinové rezervace."
-
 #: lib/tymeslot_web/helpers/context_errors.ex
 #, elixir-autogen, elixir-format
 msgid "Group bookings are not included in your current plan."
@@ -916,11 +906,6 @@ msgstr "Potvrzení e-mailu"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
 #, elixir-autogen, elixir-format
-msgid "Turn off group bookings to ask invitees to confirm their email."
-msgstr "Vypněte skupinové rezervace, chcete-li žádat pozvané o potvrzení e-mailu."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/email_verification_section.ex
-#, elixir-autogen, elixir-format
 msgid "Turn off payments to ask invitees to confirm their email. Paying already confirms who they are."
 msgstr "Vypněte platby, chcete-li žádat pozvané o potvrzení e-mailu. Platba už sama potvrzuje, kdo jsou."
 
@@ -931,11 +916,6 @@ msgid_plural "Bookings count only once the invitee clicks the link we email them
 msgstr[0] "Rezervace platí, až když pozvaná osoba klikne na odkaz z našeho e-mailu. Do té doby zůstává termín rezervovaný nejvýše na %{count} minutu a nedostanete žádné upozornění."
 msgstr[1] "Rezervace platí, až když pozvaná osoba klikne na odkaz z našeho e-mailu. Do té doby zůstává termín rezervovaný nejvýše na %{count} minuty a nedostanete žádné upozornění."
 msgstr[2] "Rezervace platí, až když pozvaná osoba klikne na odkaz z našeho e-mailu. Do té doby zůstává termín rezervovaný nejvýše na %{count} minut a nedostanete žádné upozornění."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex
-#, elixir-autogen, elixir-format
-msgid "Turn off email confirmation to enable group bookings."
-msgstr "Vypněte potvrzení e-mailu, chcete-li zapnout skupinové rezervace."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
@@ -951,3 +931,13 @@ msgstr "Opakované rezervace nejsou součástí vašeho aktuálního tarifu."
 #, elixir-autogen, elixir-format
 msgid "Turn off series booking to ask invitees to confirm their email. A series confirms all its sessions at once."
 msgstr "Vypněte rezervaci sérií, chcete-li žádat pozvané o potvrzení e-mailu. Série potvrdí všechny své termíny najednou."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
+#, elixir-autogen, elixir-format
+msgid "Each booker pays this for every seat they take, guests included."
+msgstr "Každý, kdo rezervuje, zaplatí tuto částku za každé obsazené místo, včetně míst svých hostů."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
+#, elixir-autogen, elixir-format
+msgid "Price per seat (%{currency})"
+msgstr "Cena za místo (%{currency})"

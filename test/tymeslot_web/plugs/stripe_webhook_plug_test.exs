@@ -26,15 +26,12 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlugTest do
   @moduletag :plugs
   @moduletag :payments
 
-  import Mox
   import Tymeslot.ConfigTestHelpers
 
   alias Tymeslot.PaymentTestHelpers
   alias Tymeslot.Security.RateLimit
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Helpers.ClientIP
-
-  setup :verify_on_exit!
 
   describe "rate limit" do
     setup %{conn: conn} do
@@ -71,9 +68,8 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlugTest do
     end
 
     test "the Connect endpoint answers 429 and halts before verifying anything", %{conn: conn} do
-      # The secret is configured and no `StripeAdapterMock` expectation is
-      # set, so reaching signature verification would raise
-      # `Mox.UnexpectedCallError`.
+      # The secret is configured and the payload's signature is invalid, so
+      # reaching signature verification would answer 400 rather than 429.
       with_config(:tymeslot, stripe_connect_webhook_secret: "whsec_test_connect")
 
       payload = ~s({"type":"account.updated","id":"evt_connect_rate_limited"})
@@ -115,7 +111,6 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlugTest do
       secret = "whsec_e2e_valid"
 
       with_config(:tymeslot,
-        stripe_provider: Tymeslot.Payments.Stripe,
         stripe_webhook_secret: secret
       )
 
@@ -138,7 +133,6 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlugTest do
       secret = "whsec_e2e_invalid"
 
       with_config(:tymeslot,
-        stripe_provider: Tymeslot.Payments.Stripe,
         stripe_webhook_secret: secret
       )
 

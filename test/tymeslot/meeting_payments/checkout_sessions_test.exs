@@ -6,21 +6,20 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
   @moduletag :database
   @moduletag :payments
 
-  import Mox
-
   alias Ecto.Changeset
   alias Ecto.UUID
+  alias Tymeslot.Integrations.Stripe.Error, as: StripeError
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.MeetingPayments.CheckoutSessions
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Profiles
   alias Tymeslot.SignedToken
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Endpoint
-
-  setup :verify_on_exit!
 
   setup do
     # Checkout enforces server-side :meeting_payments access. Pin Core's default
@@ -82,29 +81,34 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
           status: :awaiting_payment
         )
 
-      expect(StripeAdapterMock, :create_checkout_session, fn params, opts ->
-        assert opts[:connect_account] == "acct_HOST"
-        assert opts[:idempotency_key] == "checkout:#{meeting.id}"
-        assert hd(params.line_items).price_data.currency == "eur"
-        assert hd(params.line_items).price_data.unit_amount == 5000
-        assert params.payment_intent_data.application_fee_amount == 25
-        assert params.success_url =~ "/themes/quill/payment-processing/#{meeting.id}"
-        assert params.success_url =~ "session_id={CHECKOUT_SESSION_ID}"
-        assert params.cancel_url =~ "/themes/quill/payment-cancelled/#{meeting.id}"
-        assert params.client_reference_id == meeting.id
-        # Checkout Sessions must NOT carry `automatic_payment_methods` (a
-        # PaymentIntent-only param Stripe rejects); methods come from the
-        # dashboard config when the param is omitted.
-        refute Map.has_key?(params, :automatic_payment_methods)
-        assert params.customer_email == "alice@example.com"
-        assert params.locale == "en"
-
-        {:ok,
-         %{id: "cs_TEST", url: "https://checkout.stripe.com/cs_TEST", payment_intent: "pi_TEST"}}
-      end)
+      StripeStub.expect(
+        :create_checkout_session,
+        StripeFixtures.object("checkout_session_payment", %{
+          "id" => "cs_TEST",
+          "url" => "https://checkout.stripe.com/cs_TEST",
+          "payment_intent" => "pi_TEST"
+        })
+      )
 
       assert {:ok, %{checkout_url: url, booking_payment: bp}} =
                CheckoutSessions.create_session_for_booking(meeting)
+
+      assert [%{headers: headers, form: form}] = StripeStub.requests(:create_checkout_session)
+      assert headers["stripe-account"] == "acct_HOST"
+      assert headers["idempotency-key"] == "tymeslot:checkout:#{meeting.id}"
+      assert hd(form["line_items"])["price_data"]["currency"] == "eur"
+      assert hd(form["line_items"])["price_data"]["unit_amount"] == "5000"
+      assert form["payment_intent_data"]["application_fee_amount"] == "25"
+      assert form["success_url"] =~ "/themes/quill/payment-processing/#{meeting.id}"
+      assert form["success_url"] =~ "session_id={CHECKOUT_SESSION_ID}"
+      assert form["cancel_url"] =~ "/themes/quill/payment-cancelled/#{meeting.id}"
+      assert form["client_reference_id"] == meeting.id
+      # Checkout Sessions must NOT carry `automatic_payment_methods` (a
+      # PaymentIntent-only param Stripe rejects); methods come from the
+      # dashboard config when the param is omitted.
+      refute Map.has_key?(form, "automatic_payment_methods")
+      assert form["customer_email"] == "alice@example.com"
+      assert form["locale"] == "en"
 
       assert url =~ "checkout.stripe.com"
       assert bp.amount_cents == 5000
@@ -121,6 +125,31 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
       # checkout.session.completed handler backfills the charge id.
       assert bp.stripe_payment_intent_id == "pi_TEST"
       assert bp.status == :pending
+    end
+
+    # The emails built from the snapshot greet and name the host by it, and a
+    # host's display name is usually on their profile, not the account.
+    test "snapshots the host's profile name when the account has none",
+         %{user: user, meeting_type: mt} do
+      user = user |> Changeset.change(name: nil) |> Repo.update!()
+      {:ok, profile} = Profiles.get_or_create_profile(user.id)
+      {:ok, _profile} = Profiles.update_full_name(profile, "Bob Host")
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          meeting_type_ref: mt,
+          attendee_email: "alice@example.com",
+          status: :awaiting_payment
+        )
+
+      StripeStub.expect(
+        :create_checkout_session,
+        StripeFixtures.object("checkout_session_payment", %{"id" => "cs_TEST_NAME"})
+      )
+
+      assert {:ok, %{booking_payment: bp}} = CheckoutSessions.create_session_for_booking(meeting)
+      assert bp.host_name == "Bob Host"
     end
 
     test "returns :payments_unavailable when host has no charges-enabled account",
@@ -207,14 +236,22 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
           status: :awaiting_payment
         )
 
-      expect(StripeAdapterMock, :create_checkout_session, fn params, _opts ->
-        refute Map.has_key?(params.payment_intent_data, :application_fee_amount)
-        assert params.payment_intent_data.metadata.meeting_id == meeting.id
-        {:ok, %{id: "cs_ZERO_FEE", url: "https://checkout.stripe.com/cs_ZERO_FEE"}}
-      end)
+      StripeStub.expect(
+        :create_checkout_session,
+        StripeFixtures.object("checkout_session_payment", %{
+          "id" => "cs_ZERO_FEE",
+          "url" => "https://checkout.stripe.com/cs_ZERO_FEE"
+        })
+      )
 
       assert {:ok, %{booking_payment: bp}} =
                CheckoutSessions.create_session_for_booking(meeting)
+
+      assert [%{form: %{"payment_intent_data" => intent_data}}] =
+               StripeStub.requests(:create_checkout_session)
+
+      refute Map.has_key?(intent_data, "application_fee_amount")
+      assert intent_data["metadata"]["meeting_id"] == meeting.id
 
       assert bp.application_fee_cents == 0
     end
@@ -229,11 +266,9 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
           status: :awaiting_payment
         )
 
-      expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
-        {:error, :stripe_unreachable}
-      end)
+      StripeStub.expect(:create_checkout_session, {:error_fixture, "api_error"})
 
-      assert {:error, :stripe_unreachable} =
+      assert {:error, %StripeError{type: "api_error"}} =
                CheckoutSessions.create_session_for_booking(meeting)
 
       # The Stripe call now runs OUTSIDE any DB transaction, so the row inserted
@@ -279,6 +314,76 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
     end
   end
 
+  # Stripe refuses a session expiring less than 30 minutes after it is
+  # created, so the expiry is counted from just before the call, not from
+  # when the booking began.
+  describe "session expiry" do
+    test "a booking's session expires 30 minutes after it is created", %{
+      user: user,
+      meeting_type: mt
+    } do
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          meeting_type_ref: mt,
+          status: :awaiting_payment
+        )
+
+      StripeStub.expect(
+        :create_checkout_session,
+        StripeFixtures.object("checkout_session_payment", %{
+          "id" => "cs_ONE",
+          "url" => "https://checkout.stripe.com/cs_ONE"
+        })
+      )
+
+      assert {:ok, _result} = CheckoutSessions.create_session_for_booking(meeting)
+
+      assert [%{form: %{"expires_at" => expires_at}}] =
+               StripeStub.requests(:create_checkout_session)
+
+      assert_in_delta String.to_integer(expires_at), System.os_time(:second) + 30 * 60, 5
+    end
+
+    test "a series' session expires 30 minutes after it is created", %{
+      user: user,
+      meeting_type: mt
+    } do
+      series =
+        insert(:booking_series,
+          organizer_user: nil,
+          organizer_user_id: user.id,
+          unit_price_cents: 5000
+        )
+
+      for position <- 1..2 do
+        insert(:meeting,
+          organizer_user_id: user.id,
+          meeting_type_ref: mt,
+          status: :awaiting_payment,
+          series_id: series.id,
+          series_position: position
+        )
+      end
+
+      StripeStub.expect(
+        :create_checkout_session,
+        StripeFixtures.object("checkout_session_payment", %{
+          "id" => "cs_SERIES",
+          "url" => "https://checkout.stripe.com/cs_SERIES"
+        })
+      )
+
+      assert {:ok, _result} = CheckoutSessions.create_session_for_series(series)
+
+      assert [%{form: %{"expires_at" => expires_at, "line_items" => line_items}}] =
+               StripeStub.requests(:create_checkout_session)
+
+      assert [%{"quantity" => "2"}] = line_items
+      assert_in_delta String.to_integer(expires_at), System.os_time(:second) + 30 * 60, 5
+    end
+  end
+
   describe "Stripe return URLs" do
     # Stripe keeps these URLs on every Checkout Session it creates, so a
     # session opened before a deploy still returns to them after it. Their
@@ -303,26 +408,33 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
         slug = unquote(Atom.to_string(key))
         origin = Endpoint.url()
 
-        expect(StripeAdapterMock, :create_checkout_session, fn params, _opts ->
-          success = URI.parse(params.success_url)
-          assert String.starts_with?(params.success_url, origin <> "/")
-          assert success.path == "/themes/#{slug}/payment-processing/#{meeting.id}"
-          assert success.query == "session_id={CHECKOUT_SESSION_ID}"
-
-          cancel = URI.parse(params.cancel_url)
-          assert String.starts_with?(params.cancel_url, origin <> "/")
-          assert cancel.path == "/themes/#{slug}/payment-cancelled/#{meeting.id}"
-          # Stripe fills `{CHECKOUT_SESSION_ID}` in only on the success URL,
-          # so the cancel URL carries the guest's proof of its own.
-          assert %{"return_token" => token} = URI.decode_query(cancel.query)
-          assert map_size(URI.decode_query(cancel.query)) == 1
-          assert MeetingPayments.returned_from_checkout?(meeting.id, token)
-
-          {:ok, %{id: "cs_URL", url: "https://checkout.stripe.com/cs_URL"}}
-        end)
+        StripeStub.expect(
+          :create_checkout_session,
+          StripeFixtures.object("checkout_session_payment", %{
+            "id" => "cs_URL",
+            "url" => "https://checkout.stripe.com/cs_URL"
+          })
+        )
 
         assert {:ok, %{checkout_url: "https://checkout.stripe.com/cs_URL"}} =
                  CheckoutSessions.create_session_for_booking(meeting)
+
+        assert [%{form: %{"success_url" => success_url, "cancel_url" => cancel_url}}] =
+                 StripeStub.requests(:create_checkout_session)
+
+        success = URI.parse(success_url)
+        assert String.starts_with?(success_url, origin <> "/")
+        assert success.path == "/themes/#{slug}/payment-processing/#{meeting.id}"
+        assert success.query == "session_id={CHECKOUT_SESSION_ID}"
+
+        cancel = URI.parse(cancel_url)
+        assert String.starts_with?(cancel_url, origin <> "/")
+        assert cancel.path == "/themes/#{slug}/payment-cancelled/#{meeting.id}"
+        # Stripe fills `{CHECKOUT_SESSION_ID}` in only on the success URL,
+        # so the cancel URL carries the guest's proof of its own.
+        assert %{"return_token" => token} = URI.decode_query(cancel.query)
+        assert map_size(URI.decode_query(cancel.query)) == 1
+        assert Checkout.returned_from_checkout?(meeting.id, token)
       end
     end
   end
@@ -368,12 +480,17 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
         stripe_checkout_session_id: "cs_OPEN"
       )
 
-      expect(StripeAdapterMock, :expire_checkout_session, fn "cs_OPEN", opts ->
-        assert opts[:connect_account] == "acct_HOST"
-        {:ok, %{id: "cs_OPEN", status: "expired"}}
-      end)
+      StripeStub.expect(
+        :expire_checkout_session,
+        StripeFixtures.object("checkout_session_expired", %{"id" => "cs_OPEN"})
+      )
 
       assert :ok = CheckoutSessions.abandon_checkout(meeting.id)
+
+      assert [%{path: "/v1/checkout/sessions/cs_OPEN/expire", headers: headers}] =
+               StripeStub.requests(:expire_checkout_session)
+
+      assert headers["stripe-account"] == "acct_HOST"
 
       # The local hold is left to the `checkout.session.expired` webhook.
       assert BookingPaymentQueries.by_meeting_id(meeting.id).status == :pending
@@ -389,11 +506,16 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
         stripe_checkout_session_id: "cs_DONE"
       )
 
-      expect(StripeAdapterMock, :expire_checkout_session, fn "cs_DONE", _opts ->
-        {:error, %{message: "This Checkout Session is not open."}}
-      end)
+      StripeStub.expect(
+        :expire_checkout_session,
+        {:error_fixture, "invalid_request_error"}
+      )
 
-      assert {:error, _reason} = CheckoutSessions.abandon_checkout(meeting.id)
+      assert {:error, %StripeError{type: "invalid_request_error"}} =
+               CheckoutSessions.abandon_checkout(meeting.id)
+
+      assert [%{path: "/v1/checkout/sessions/cs_DONE/expire"}] =
+               StripeStub.requests(:expire_checkout_session)
     end
 
     test "calls Stripe for nothing that is not an open checkout", %{user: user, meeting: meeting} do
@@ -407,7 +529,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
         stripe_checkout_session_id: "cs_PAID"
       )
 
-      # Mox raises on any call to the adapter here.
+      # No Stripe stub: any request fails the test.
       assert :ok = CheckoutSessions.abandon_checkout(meeting.id)
     end
   end

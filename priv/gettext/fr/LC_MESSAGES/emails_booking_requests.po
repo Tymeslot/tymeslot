@@ -68,8 +68,8 @@ msgstr "%{organizer} n’a pas pu accepter cette réservation, le créneau n’e
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
-msgid "%{organizer} will reply by %{deadline} at the latest."
-msgstr "%{organizer} répondra au plus tard le %{deadline}."
+msgid "%{organizer} will reply by %{by_deadline} at the latest."
+msgstr "%{organizer} répondra au plus tard le %{by_deadline}."
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format
@@ -463,8 +463,8 @@ msgstr "Le nouveau créneau vous est réservé en attendant, personne d’autre 
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
-msgid "The slot is held until you answer. If you haven't replied by %{deadline}, the request lapses and %{name} is told the time is free again."
-msgstr "Le créneau reste réservé jusqu’à votre réponse. Sans réponse avant le %{deadline}, la demande expire et %{name} est informé que le créneau est de nouveau libre."
+msgid "The slot is held until you answer. If you haven't replied by %{by_deadline}, the request lapses and %{name} is told the time is free again."
+msgstr "Le créneau reste réservé jusqu’à votre réponse. Sans réponse avant le %{by_deadline}, la demande expire et %{name} est informé que le créneau est de nouveau libre."
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #, elixir-autogen, elixir-format
@@ -543,8 +543,8 @@ msgstr "Veuillez confirmer votre réservation"
 
 #: lib/tymeslot/emails/templates/booking_email_verification.ex
 #, elixir-autogen, elixir-format
-msgid "Your booking is not confirmed yet. Click the button below by %{deadline} to confirm it, and we will hold the time for you until then."
-msgstr "Votre réservation n’est pas encore confirmée. Cliquez sur le bouton ci-dessous au plus tard %{deadline} pour la confirmer. D’ici là, nous vous réservons le créneau."
+msgid "Your booking is not confirmed yet. Click the button below by %{by_deadline} to confirm it, and we will hold the time for you until then."
+msgstr "Votre réservation n’est pas encore confirmée. Cliquez sur le bouton ci-dessous au plus tard le %{by_deadline} pour la confirmer. D’ici là, nous vous réservons le créneau."
 
 #: lib/tymeslot/emails/templates/reschedule_request_unanswered.ex
 #, elixir-autogen, elixir-format
@@ -617,3 +617,8 @@ msgstr "Vous avez demandé à %{name} de choisir un nouveau créneau pour cette 
 #, elixir-autogen, elixir-format
 msgid "You asked for this meeting to be moved, and the request lapsed before anyone still on it picked a new time. Its original time had already been given up, so the meeting has expired. The participants have been told and can book again from your booking page."
 msgstr "Vous avez demandé que cette réunion soit déplacée, et la demande a expiré avant que l’un des participants restants choisisse un nouveau créneau. Le créneau initial avait déjà été libéré, la réunion a donc expiré. Les participants ont reçu une notification et peuvent réserver à nouveau depuis votre page de réservation."
+
+#: lib/tymeslot/emails/templates/booking_email_verification.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking is not confirmed yet. Click the button below by %{by_deadline} to confirm it, and we will hold your place until then."
+msgstr "Votre réservation n’est pas encore confirmée. Cliquez sur le bouton ci-dessous au plus tard le %{by_deadline} pour la confirmer. D’ici là, nous gardons votre place."

@@ -5,6 +5,7 @@ defmodule Tymeslot.Factory do
 
   use ExMachina.Ecto, repo: Tymeslot.Repo
   use Tymeslot.Factory.IntegrationDeliveryFactories
+  use Tymeslot.Factory.MeetingPaymentFactories
   use Tymeslot.Factory.PollFactories
   use Tymeslot.Factory.VideoIntegrationFactories
 
@@ -21,8 +22,6 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Factory.TokenHash
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
-  alias Tymeslot.MeetingPayments.BookingPaymentSchema
-  alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.MeetingTypes.LocationOption
@@ -448,48 +447,5 @@ defmodule Tymeslot.Factory do
       metadata: %{},
       stripe_id: sequence(:stripe_id, &"sess_#{&1}")
     }
-  end
-
-  @spec connect_account_factory() :: Tymeslot.MeetingPayments.ConnectAccountSchema.t()
-  def connect_account_factory do
-    %ConnectAccountSchema{
-      stripe_account_id: sequence(:stripe_account_id, &"acct_#{&1}"),
-      country: "ch",
-      default_currency: "chf",
-      charges_enabled: false,
-      payouts_enabled: false,
-      details_submitted: false,
-      status: :active,
-      user: build(:user)
-    }
-  end
-
-  @spec booking_payment_factory() :: Tymeslot.MeetingPayments.BookingPaymentSchema.t()
-  def booking_payment_factory do
-    %BookingPaymentSchema{
-      stripe_account_id: sequence(:bp_stripe_account_id, &"acct_#{&1}"),
-      host_user_id: sequence(:bp_host_user_id, & &1),
-      host_email: sequence(:bp_host_email, &"host#{&1}@test.com"),
-      host_name: "Host",
-      attendee_email: sequence(:bp_attendee_email, &"attendee#{&1}@test.com"),
-      attendee_name: "Attendee",
-      meeting_type_name: "Consult",
-      booking_theme_id: "1",
-      amount_cents: 5000,
-      currency: "eur",
-      application_fee_cents: 25,
-      status: :pending,
-      refunded_amount_cents: 0
-    }
-  end
-
-  # A settled charge, which is what the refund flow acts on.
-  @spec paid_booking_payment_factory() :: Tymeslot.MeetingPayments.BookingPaymentSchema.t()
-  def paid_booking_payment_factory do
-    struct!(booking_payment_factory(),
-      stripe_charge_id: sequence(:bp_stripe_charge_id, &"ch_#{&1}"),
-      status: :paid,
-      paid_at: DateTime.utc_now(:second)
-    )
   end
 end

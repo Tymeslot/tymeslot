@@ -23,6 +23,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Components.CoreComponents.DateTimePicker.Value
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{Autosave, OfferedTimeHandlers}
+  alias TymeslotWeb.Helpers.LocaleFormat
+  alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   @doc "Assigns the type's planned dates, the host's time zone and the input row's state."
@@ -41,6 +43,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
     |> Component.assign_new(:session_error, fn -> nil end)
     |> Component.assign_new(:session_notice, fn -> nil end)
     |> Component.assign_new(:confirming_session_id, fn -> nil end)
+    |> Component.assign_new(:confirming_seat_refunds, fn -> nil end)
     |> Component.assign_new(:editing_session, fn -> nil end)
   end
 
@@ -179,7 +182,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
   Cancels a date nobody is booked on at once, and asks first otherwise. The
   count is read at the click, not from the rows on screen, so a date someone
   booked a moment ago asks too; the rows are refreshed with it, so the
-  question names everyone booked.
+  question names everyone booked, and the paid seats the cancellation
+  refunds (`PlannedSessions.seat_refunds/1`).
   """
   @spec ask_to_cancel(String.t(), Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def ask_to_cancel(id, socket) do
@@ -188,24 +192,41 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
         socket
 
       session ->
-        if PlannedSessions.participant_count(session) == 0,
-          do: cancel(id, socket),
-          else: socket |> Component.assign(:confirming_session_id, id) |> assign_sessions()
+        if PlannedSessions.participant_count(session) == 0 do
+          cancel(id, socket)
+        else
+          socket
+          |> Component.assign(
+            confirming_session_id: id,
+            confirming_seat_refunds: PlannedSessions.seat_refunds([session])
+          )
+          |> assign_sessions()
+        end
     end
   end
 
   @spec keep(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  def keep(socket), do: Component.assign(socket, :confirming_session_id, nil)
+  def keep(socket),
+    do: Component.assign(socket, confirming_session_id: nil, confirming_seat_refunds: nil)
 
-  @doc "Cancels a planned date of this type, telling everyone booked on it."
+  @doc """
+  Cancels a planned date of this type, telling everyone booked on it and
+  refunding every paid seat in full. A cancellation that fails says so.
+  """
   @spec cancel(String.t(), Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def cancel(id, socket) do
-    with %{} = session <- owned_session(socket, id) do
-      PlannedSessions.cancel(session, socket.assigns.current_user.id)
+    with %{} = session <- owned_session(socket, id),
+         {:error, _reason} <- PlannedSessions.cancel(session, socket.assigns.current_user.id) do
+      Flash.error(
+        dgettext(
+          "dashboard_meeting_fixed_dates",
+          "The date could not be cancelled. Please try again."
+        )
+      )
     end
 
     socket
-    |> Component.assign(:confirming_session_id, nil)
+    |> Component.assign(confirming_session_id: nil, confirming_seat_refunds: nil)
     |> assign_sessions()
   end
 
@@ -317,9 +338,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
     do:
       dgettext(
         "dashboard_meeting_fixed_dates",
-        "%{time} does not exist on %{date} because the clocks go forward, so the time was saved as %{saved}.",
+        "%{time} does not exist on %{on_date} because the clocks go forward, so the time was saved as %{saved}.",
         time: LocalizationHelpers.format_time_by_locale(time),
-        date: LocalizationHelpers.format_date(date),
+        on_date: on_date(date),
         saved: LocalizationHelpers.format_time_by_locale(just_after)
       )
 
@@ -327,13 +348,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SessionHandlers 
     do:
       dgettext(
         "dashboard_meeting_fixed_dates",
-        "%{time} happens twice on %{date} because the clocks go back, so the earlier one (%{zone}) was saved.",
+        "%{time} happens twice on %{on_date} because the clocks go back, so the earlier one (%{zone}) was saved.",
         time: LocalizationHelpers.format_time_by_locale(time),
-        date: LocalizationHelpers.format_date(date),
+        on_date: on_date(date),
         zone: first.zone_abbr
       )
 
   defp notice(_plain_or_invalid, _date, _time), do: nil
+
+  defp on_date(date) do
+    date
+    |> LocalizationHelpers.format_date()
+    |> LocaleFormat.with_article(:none, Gettext.get_locale(TymeslotWeb.Gettext))
+  end
 
   defp parse_close(value, _timezone) when value in [nil, ""], do: {:ok, nil}
 

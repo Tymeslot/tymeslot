@@ -742,13 +742,13 @@ msgstr "Głosowanie zakończone"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closed %{deadline}"
-msgstr "Głosowanie zakończyło się: %{deadline}"
+msgid "Voting closed %{on_deadline}"
+msgstr "Głosowanie zakończyło się: %{on_deadline}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
-msgid "Voting closes %{deadline}"
-msgstr "Głosowanie kończy się: %{deadline}"
+msgid "Voting closes %{on_deadline}"
+msgstr "Głosowanie kończy się: %{on_deadline}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
@@ -1021,3 +1021,23 @@ msgstr "Ta lokalizacja lub dostawca wideo nie jest już dostępny. Wybierz inną
 #, elixir-autogen, elixir-format
 msgid "Video call"
 msgstr "Rozmowa wideo"
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Keep editing"
+msgstr "Kontynuuj edycję"
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Leave without saving"
+msgstr "Wyjdź bez zapisywania"
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Leave without saving?"
+msgstr "Wyjść bez zapisywania?"
+
+#: lib/tymeslot_web/live/dashboard/polls/leave_poll_editor_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Your changes to this poll are not saved yet. Leaving now discards them."
+msgstr "Zmiany w tej ankiecie nie zostały jeszcze zapisane. Jeśli teraz wyjdziesz, zostaną utracone."

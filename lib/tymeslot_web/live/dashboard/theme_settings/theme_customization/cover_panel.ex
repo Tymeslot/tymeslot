@@ -3,7 +3,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.CoverPanel do
   The dashboard panel for an `Options.Cover` group: the group's preset
   covers (`theme:set_option` on `cover_value`, which also drops an uploaded
   cover and so deletes its file) and an upload form making an image of the
-  organiser's own the cover (`upload_asset` into `cover_path`). It keeps no
+  organiser's own the cover (saved into `cover_path` by the upload's progress
+  callback). It keeps no
   UI state, so the `Panel` defaults for `ui/3`, `handle_ui/5` and
   `telemetry/3` stand.
   """

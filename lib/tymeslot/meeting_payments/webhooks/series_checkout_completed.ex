@@ -20,8 +20,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutCompleted do
       before the money arrived): the sessions come back only if every one
       of their slots is still free, each counted under the organiser's
       schedule lock (`Scheduling.reinstate_with_conflict_check/2`). One slot
-      taken reinstates none, and the whole payment is refunded by
-      `Workers.RefundLatePayment`.
+      taken reinstates none, and a refund of the whole payment is recorded
+      (`Refunds.request_remaining_refund/2`).
     * A host whose account is pending deletion takes no booking: every
       session is left expired and the payment refunded in full.
     * Some sessions released while the rest were held: the series cannot
@@ -44,9 +44,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutCompleted do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.HeldMeetings
+  alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.MeetingPayments.Webhooks.LockedPayment
   alias Tymeslot.MeetingPayments.Webhooks.PaymentCompletion
-  alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.Scheduling
@@ -263,12 +263,12 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutCompleted do
   defp slot_checked(_transition, _slot), do: :ok
 
   # Recorded paid, as it truly was, every session still held expired (one
-  # already released keeps its status), and the whole payment refunded by a
-  # job inserted in this transaction.
+  # already released keeps its status), and a refund of the whole payment
+  # recorded in this transaction.
   defp refuse(payment, meetings, event_id, object) do
     with {:ok, paid} <- PaymentCompletion.mark_paid(payment, event_id, object),
          {:ok, [first | _rest]} <- expire_all(meetings),
-         {:ok, _job} <- Oban.insert(RefundLatePayment.new_for(paid.id)) do
+         {:ok, _refund} <- Refunds.request_remaining_refund(paid, :late_payment) do
       {:ok, {:refused, paid, first}}
     end
   end
@@ -278,7 +278,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutCompleted do
   defp refund_orphaned(%{status: status} = payment, event_id, object)
        when status in [:pending, :failed] do
     with {:ok, paid} <- PaymentCompletion.mark_paid(payment, event_id, object),
-         {:ok, _job} <- Oban.insert(RefundLatePayment.new_for(paid.id)) do
+         {:ok, _refund} <- Refunds.request_remaining_refund(paid, :late_payment) do
       {:ok, {:refused, paid, nil}}
     end
   end
@@ -303,8 +303,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutCompleted do
   defp expire(meeting), do: {:ok, meeting}
 
   # A slot of the series was taken since the expiry released it: the
-  # sessions stay expired and the whole payment goes back, by a job, as for
-  # a single late payment (`CheckoutSessionCompleted`).
+  # sessions stay expired and the whole payment goes back, recorded here and
+  # made by its job, as for a single late payment (`CheckoutSessionCompleted`).
   defp refund_late_payment(payment, event_id, object) do
     PaymentCompletion.backfill_charge_id(payment, object)
 
@@ -314,7 +314,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutCompleted do
       with [first | _rest] <- meetings,
            {:proceed, :recovered} <- check_transition(meetings, locked),
            {:ok, paid} <- PaymentCompletion.mark_paid(locked, event_id, object),
-           {:ok, _job} <- Oban.insert(RefundLatePayment.new_for(paid.id)) do
+           {:ok, _refund} <- Refunds.request_remaining_refund(paid, :late_payment) do
         {:ok, {:refund_scheduled, paid, first}}
       else
         {:error, _reason} = error -> error

@@ -103,6 +103,35 @@ defmodule Tymeslot.Meetings.MeetingTransitionQueries do
     end
   end
 
+  @doc """
+  Holds a confirmed group slot for email verification again, atomically: the
+  way back from `transition_from_awaiting_verification/3` for a slot whose
+  last counting seat has left while held seats remain on it
+  (`Tymeslot.Bookings.SeatRelease`).
+
+  Guarded on `status = 'confirmed'`; any other row is left alone and
+  `{:error, :not_confirmed}` returned. Both statuses sit in the unique index
+  on confirmed-or-held slots, so no unique violation can arise here.
+  """
+  @spec transition_to_awaiting_verification(Ecto.UUID.t(), keyword()) ::
+          {:ok, Meeting.t()} | {:error, :not_confirmed}
+  def transition_to_awaiting_verification(meeting_id, changes) when is_list(changes) do
+    now = DateTime.utc_now(:second)
+
+    query =
+      from(m in Meeting,
+        where: m.id == ^meeting_id and m.status == :confirmed,
+        select: m
+      )
+
+    changes = Keyword.merge(changes, status: :awaiting_verification, updated_at: now)
+
+    case Repo.update_all(query, set: changes) do
+      {1, [meeting]} -> {:ok, meeting}
+      {0, _none} -> {:error, :not_confirmed}
+    end
+  end
+
   defp where_deadline_after(query, nil), do: query
 
   defp where_deadline_after(query, %DateTime{} = now),
@@ -224,6 +253,11 @@ defmodule Tymeslot.Meetings.MeetingTransitionQueries do
   other finds nothing to change. A later request on the same meeting carries
   its own deadline and is not ended by an earlier one's expiry.
   `{:error, :not_lapsed}` when nothing matched.
+
+  `cancelled_at` is the request's deadline
+  (`MeetingState.reschedule_request_deadline/1`), computed from the row,
+  rather than `now`: the request ended there, and a job or sweep that runs
+  late must not date it to whenever it ran.
   """
   @spec expire_reschedule_request(Ecto.UUID.t(), DateTime.t(), DateTime.t()) ::
           {:ok, Meeting.t()} | {:error, :not_lapsed}
@@ -236,9 +270,26 @@ defmodule Tymeslot.Meetings.MeetingTransitionQueries do
         select: m
       )
 
-    query = MeetingState.where_reschedule_request_lapsed(request, now)
+    days = MeetingState.reschedule_answer_days()
 
-    case Repo.update_all(query, set: [status: :expired, cancelled_at: now, updated_at: now]) do
+    query =
+      request
+      |> MeetingState.where_reschedule_request_lapsed(now)
+      |> update([m],
+        set: [
+          status: :expired,
+          cancelled_at:
+            fragment(
+              "date_trunc('second', GREATEST(?, ? + make_interval(days => ?)))",
+              m.start_time,
+              m.reschedule_requested_at,
+              ^days
+            ),
+          updated_at: ^now
+        ]
+      )
+
+    case Repo.update_all(query, []) do
       {1, [meeting]} -> {:ok, meeting}
       {0, _none} -> {:error, :not_lapsed}
     end

@@ -323,6 +323,11 @@ defmodule Tymeslot.Notifications.Events do
 
   `integrations: false` tells no integration: a session cancelled with the
   rest of its series, announced whole by `meeting.series_cancelled`.
+
+  `seat_refund:` (`Tymeslot.Meetings.Cancellation.seat_refund/0`) is
+  passed on to the organiser's cancellation email of a group session the
+  host cancelled: whether its paid seats are refunded, how many and how
+  much.
   """
   @spec meeting_cancelled(term(), keyword()) :: {:ok, term()} | {:error, term()}
   def meeting_cancelled(meeting, opts \\ []) do
@@ -330,7 +335,10 @@ defmodule Tymeslot.Notifications.Events do
     result =
       if Keyword.get(opts, :emails, true) do
         Guard.send_notifications(:meeting_cancelled, meeting, fn ->
-          Orchestrator.send_cancellation_notifications(meeting)
+          Orchestrator.send_cancellation_notifications(
+            meeting,
+            Keyword.take(opts, [:seat_refund])
+          )
         end)
       else
         {:ok, :announced_with_series}
@@ -345,6 +353,16 @@ defmodule Tymeslot.Notifications.Events do
 
     result
   end
+
+  @doc """
+  Handles a group slot held for email verification again, its last counting
+  seat gone while held seats remain (`Tymeslot.Bookings.SeatRelease`): its
+  pending reminders are cancelled. Nothing is announced here. The leaving
+  seat's own event tells the organiser and the integrations, as it does for
+  a last leaver whose slot is cancelled, and nobody else was on the slot.
+  """
+  @spec slot_returned_to_held(term()) :: :ok
+  def slot_returned_to_held(meeting), do: cancel_reminders(meeting)
 
   @doc """
   Handles meeting rescheduling event.

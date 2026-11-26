@@ -82,9 +82,11 @@ defmodule Tymeslot.Demo.Behaviour do
               map() | nil
 
   @doc """
-  Gets the orchestrator module to use: a `Tymeslot.Bookings.Submitter`.
+  Gets the orchestrator module to use: a `Tymeslot.Bookings.Submitter`, or
+  `:default` for a booking that is not a demo, which `Tymeslot.Demo` resolves
+  to Core's real orchestrator.
   """
-  @callback get_orchestrator(context :: map()) :: module()
+  @callback get_orchestrator(context :: map()) :: module() | :default
 
   @doc """
   Gets available slots for a date.
@@ -112,14 +114,13 @@ defmodule Tymeslot.Demo.Behaviour do
             ) :: {:ok, map()} | {:error, any()}
 
   @doc """
-  Gets calendar days for a month.
+  Which days a demo profile's calendars offer: a predicate on a date, as the
+  visitor in `user_timezone` sees it, or `nil` for a profile that is not a
+  demo, whose calendars answer from its own schedule. Core builds the month
+  grid and the week strip from the predicate, so both agree and a provider
+  never assembles a calendar itself. A real availability map, once loaded,
+  takes precedence over it.
   """
-  @callback get_calendar_days(
-              user_timezone :: String.t(),
-              year :: integer(),
-              month :: integer(),
-              week_start :: :monday | :sunday,
-              organizer_profile :: map(),
-              availability_map :: map() | atom() | nil
-            ) :: [map()]
+  @callback day_available_fn(organizer_profile :: map(), user_timezone :: String.t()) ::
+              (Date.t() -> boolean()) | nil
 end

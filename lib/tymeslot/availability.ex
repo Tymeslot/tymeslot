@@ -29,12 +29,21 @@ defmodule Tymeslot.Availability do
   alias Tymeslot.Availability.AvailabilityScheduleSchema
   alias Tymeslot.Availability.BookableWindows
   alias Tymeslot.Availability.TimeOff
+  alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Availability.WeeklyHours
   alias Tymeslot.Availability.WeekPreview
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Profiles.ProfileSchema
+
+  @doc """
+  A meeting length in minutes, from a duration label such as `"45min"` or a
+  number of minutes; 30 for anything that is not a positive length. See
+  `Tymeslot.Availability.TimeSlots.parse_duration/1`.
+  """
+  @spec parse_duration(String.t() | integer()) :: integer()
+  defdelegate parse_duration(duration), to: TimeSlots
 
   @doc """
   The windows guests can book `meeting_type_id` in over `from..to`, the

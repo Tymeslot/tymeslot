@@ -362,7 +362,7 @@ msgstr "Збережено, але сервер відповів не так, я
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Saving..."
-msgstr "Збереження..."
+msgstr "Збереження…"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/provider_picker.ex
 #, elixir-autogen, elixir-format
