@@ -27,8 +27,6 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.MeetingTypes.FixedDates
-  alias Tymeslot.MeetingTypes.MeetingTypeSchema
-  alias Tymeslot.MeetingTypes.SeriesSettings
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
 
@@ -102,20 +100,10 @@ defmodule Tymeslot.Bookings.Create do
 
   defp validate_booking(booking_data) do
     with :ok <- Prepare.validate_admission(booking_data),
-         :ok <- validate_single_allowed(booking_data) do
+         :ok <- Prepare.validate_single_allowed(booking_data) do
       validate_time(booking_data, booking_data.organizer_user_id)
     end
   end
-
-  # A type booked as a series takes no single sessions unless the host lets
-  # it (`series_required: false`); a series is booked through
-  # `Tymeslot.BookingSeries`. A reschedule moves one existing session and
-  # never comes here.
-  defp validate_single_allowed(%{meeting_type: %MeetingTypeSchema{} = type}) do
-    if SeriesSettings.single_allowed?(type), do: :ok, else: {:error, :series_required}
-  end
-
-  defp validate_single_allowed(_booking_data), do: :ok
 
   # A fixed-date type offers only the sessions its host planned, so the time
   # booked must be one of them, still open for registration

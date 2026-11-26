@@ -23,6 +23,7 @@ defmodule Tymeslot.Bookings.Create.Prepare do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.Lengths
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.MeetingTypes.SeriesSettings
 
   @doc """
   The booking data for one booking at the submitted date and time: `common/2`
@@ -140,6 +141,19 @@ defmodule Tymeslot.Bookings.Create.Prepare do
       validate_payments_available(booking_data, user_id)
     end
   end
+
+  @doc """
+  Whether the booking's meeting type takes a single session: a type booked
+  as a series takes none unless the host lets it (`series_required: false`);
+  a series is booked through `Tymeslot.BookingSeries`. A reschedule moves
+  one existing session and never asks.
+  """
+  @spec validate_single_allowed(map()) :: :ok | {:error, :series_required}
+  def validate_single_allowed(%{meeting_type: %MeetingTypeSchema{} = type}) do
+    if SeriesSettings.single_allowed?(type), do: :ok, else: {:error, :series_required}
+  end
+
+  def validate_single_allowed(_booking_data), do: :ok
 
   @doc "Whether the booking's meeting type charges for it."
   @spec paid?(map()) :: boolean()

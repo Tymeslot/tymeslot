@@ -245,8 +245,9 @@ defmodule Tymeslot.Bookings.CreateGroup do
   committed (`Activation.after_commit/1`).
 
   A hold whose meeting lapsed before the payment landed takes the slot
-  again where it still has room, on a new meeting when nobody holds it,
-  except on a fixed-date type, whose sessions only its host plans.
+  again where it still has room, on a new meeting when nobody holds it while
+  its type would take the booking now and the slot has not started; never
+  on a fixed-date type, whose sessions only its host plans.
 
   Returns `GroupScheduling.convert_hold/2`'s result: a `{:refused, reason}`
   leaves the webhook's transaction usable, an `{:error, reason}` has rolled
@@ -264,18 +265,40 @@ defmodule Tymeslot.Bookings.CreateGroup do
   end
 
   # The type as it stands now decides whether it takes a new meeting, and
-  # its limit is the new meeting's capacity.
+  # its limit is the new meeting's capacity. It must take this booking were
+  # it made now (`Prepare.validate_admission/1`, `validate_single_allowed/1`:
+  # its host still taking bookings, the type active, not paused and still
+  # accepting payments, single sessions allowed), still charge for a group
+  # seat, and the slot must not have started. Its schedule, notice and limits
+  # are not asked again: the booker chose the slot while they held, and paid
+  # for it.
   defp late_slot(hold, meeting) do
-    case meeting.meeting_type_id &&
-           MeetingTypes.get_meeting_type(meeting.meeting_type_id, meeting.organizer_user_id) do
-      %MeetingTypeSchema{} = type ->
-        if FixedDates.sessions?(type),
-          do: :none,
-          else: {:ok, fn -> late_slot_attrs(meeting, hold) end, type.max_participants}
-
-      _deleted ->
-        :none
+    with %MeetingTypeSchema{} = type <- late_slot_type(meeting),
+         true <- late_slot_bookable?(type, meeting) do
+      {:ok, fn -> late_slot_attrs(meeting, hold) end, type.max_participants}
+    else
+      _not_bookable -> :none
     end
+  end
+
+  defp late_slot_type(%MeetingSchema{meeting_type_id: type_id, organizer_user_id: user_id})
+       when is_integer(type_id) and is_integer(user_id),
+       do: MeetingTypes.get_meeting_type(type_id, user_id)
+
+  defp late_slot_type(_meeting), do: nil
+
+  defp late_slot_bookable?(type, meeting) do
+    booking_data = %{
+      organizer_user_id: meeting.organizer_user_id,
+      meeting_type_id: type.id,
+      meeting_type: type
+    }
+
+    MeetingTypeSchema.group?(type) and Prepare.paid?(booking_data) and
+      not FixedDates.sessions?(type) and
+      DateTime.after?(meeting.start_time, Clock.utc_now()) and
+      Prepare.validate_admission(booking_data) == :ok and
+      Prepare.validate_single_allowed(booking_data) == :ok
   end
 
   defp late_slot_attrs(meeting, hold) do

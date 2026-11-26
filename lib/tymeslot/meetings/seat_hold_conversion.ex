@@ -12,6 +12,7 @@ defmodule Tymeslot.Meetings.SeatHoldConversion do
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.SeatHoldQueries
   alias Tymeslot.Meetings.SeatHoldSchema
@@ -40,8 +41,10 @@ defmodule Tymeslot.Meetings.SeatHoldConversion do
       hold's state, never its `expires_at`: a delayed webhook or a sweeper
       replay can arrive after the expiry for a payment made inside it.
     * A hold already converted, released because its meeting was cancelled,
-      or whose meeting has since been cancelled is refused as
-      `:hold_not_convertible`; its payment is always refunded.
+      or whose meeting its host has since cancelled is refused as
+      `:hold_not_convertible`; its payment is always refunded. A meeting
+      cancelled because its last participant left is no host's decision:
+      the hold converts onto its slot as a hold whose meeting lapsed does.
     * No room for the hold's seats, a closed registration it did not
       reserve against, or no meeting to join on a type that takes no new
       one, is refused as `:slot_full`.
@@ -120,11 +123,27 @@ defmodule Tymeslot.Meetings.SeatHoldConversion do
   defp convertible(%SeatHoldSchema{released_reason: :meeting_cancelled}, _own),
     do: {:refused, :hold_not_convertible}
 
-  defp convertible(%SeatHoldSchema{}, %Meeting{status: :cancelled}),
-    do: {:refused, :hold_not_convertible}
+  defp convertible(%SeatHoldSchema{} = hold, %Meeting{status: :cancelled} = own) do
+    if cancelled_by_host?(own, hold), do: {:refused, :hold_not_convertible}, else: :ok
+  end
 
   defp convertible(%SeatHoldSchema{}, %Meeting{}), do: :ok
   defp convertible(_hold, _own), do: {:refused, :hold_not_convertible}
+
+  # A meeting cancelled because it emptied (`Tymeslot.Bookings.SeatRelease`)
+  # has no live participant and had no open hold when it was cancelled, so
+  # this hold had lapsed already. A cancellation by its host (or its
+  # calendar) leaves its participants on it, and releases its open holds as
+  # `:meeting_cancelled`, one of which a meeting without participants must
+  # have had, or it would have emptied already; a planned session never
+  # empties.
+  defp cancelled_by_host?(%Meeting{planned: true}, _hold), do: true
+  defp cancelled_by_host?(_own, %SeatHoldSchema{status: :held}), do: true
+
+  defp cancelled_by_host?(%Meeting{id: meeting_id}, _hold),
+    do:
+      ParticipantQueries.count_live_for_meeting(meeting_id) > 0 or
+        SeatHoldQueries.released_for_meeting?(meeting_id, :meeting_cancelled)
 
   # Decided by the rule `SeatWrites.take_seat/5` applies once the hold has
   # stopped counting, so a slot found joinable here is joined without a

@@ -7,15 +7,22 @@ defmodule Tymeslot.Meetings.GroupSchedulingConvertHoldTest do
   @moduletag :bookings
   @moduletag :integration
 
+  import Tymeslot.ConfigTestHelpers, only: [setup_config: 2]
   import Tymeslot.Factory
+  import Tymeslot.StripeConnectTestHelpers, only: [enable_meeting_payments: 1]
 
+  alias Ecto.Changeset
   alias Tymeslot.Bookings.CreateGroup
+  alias Tymeslot.Bookings.SeatRelease
+  alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Repo
+
+  setup :enable_meeting_payments
 
   setup do
     # A slot rebuilt for a late payment asks for the type's calendar; these
@@ -26,7 +33,17 @@ defmodule Tymeslot.Meetings.GroupSchedulingConvertHoldTest do
 
     user = insert(:user)
     _profile = insert(:profile, user: user)
-    meeting_type = insert(:meeting_type, user: user, max_participants: 4)
+
+    meeting_type =
+      insert(:meeting_type,
+        user: user,
+        max_participants: 4,
+        payment_required: true,
+        price_cents: 2000
+      )
+
+    # A late payment takes a new meeting only on a type taking payments now.
+    insert(:connect_account, user: user, default_currency: "eur", charges_enabled: true)
 
     start_time =
       DateTime.utc_now()
@@ -126,6 +143,70 @@ defmodule Tymeslot.Meetings.GroupSchedulingConvertHoldTest do
     assert %{status: :converted, released_reason: nil} = SeatHolds.get(hold.id)
   end
 
+  describe "a lapsed hold whose type would not take the booking now" do
+    defmodule DenyGroupBookingsChecker do
+      @moduledoc false
+      @behaviour Tymeslot.Features.CheckerBehaviour
+
+      @impl Tymeslot.Features.CheckerBehaviour
+      def check_access(_user_id, :group_bookings_allowed), do: {:error, :insufficient_plan}
+      def check_access(_user_id, _feature), do: :ok
+    end
+
+    setup ctx do
+      lapsed = slot(ctx, status: :expired)
+
+      hold =
+        insert(:seat_hold,
+          meeting: lapsed,
+          email: "late@example.com",
+          status: :released,
+          released_reason: :expired
+        )
+
+      %{hold: hold}
+    end
+
+    for {case_name, change} <- [
+          {"deactivated", [is_active: false]},
+          {"no longer paid", [payment_required: false]},
+          {"no longer a group type", [max_participants: 1]}
+        ] do
+      test "is refused on a type #{case_name}", ctx do
+        ctx.meeting_type |> Changeset.change(unquote(change)) |> Repo.update!()
+        assert_refused(ctx.hold)
+      end
+    end
+
+    test "is refused on a paused group type", ctx do
+      setup_config(:tymeslot, feature_access_checker: DenyGroupBookingsChecker)
+      assert_refused(ctx.hold)
+    end
+
+    test "is refused once its host no longer takes payments", ctx do
+      Repo.delete_all(ConnectAccountSchema)
+      assert_refused(ctx.hold)
+    end
+
+    test "is refused once its slot has started", ctx do
+      past = DateTime.add(DateTime.utc_now(:second), -3600, :second)
+
+      Repo.update_all(MeetingSchema,
+        set: [start_time: past, end_time: DateTime.add(past, 30, :minute)]
+      )
+
+      assert_refused(ctx.hold)
+    end
+
+    defp assert_refused(hold) do
+      assert {:ok, {:refused, :slot_full}} =
+               Repo.transaction(fn -> CreateGroup.complete_paid_hold(hold.id) end)
+
+      assert %{status: :released, participant_id: nil} = SeatHolds.get(hold.id)
+      assert Repo.aggregate(MeetingSchema, :count) == 1
+    end
+  end
+
   test "a lapsed hold is refused when the slot filled meanwhile", ctx do
     lapsed = slot(ctx, status: :expired)
     full = slot(ctx, status: :confirmed, capacity: 2)
@@ -157,6 +238,73 @@ defmodule Tymeslot.Meetings.GroupSchedulingConvertHoldTest do
     assert {:ok, {:refused, :hold_not_convertible}} = convert(hold)
     assert SeatHolds.get(hold.id).status == :held
     assert ParticipantQueries.list_live_for_meeting(meeting.id) == []
+  end
+
+  describe "a lapsed hold whose meeting was cancelled" do
+    setup ctx do
+      meeting = slot(ctx, status: :confirmed)
+      participant = insert(:participant, meeting: meeting, email: "seated@example.com")
+
+      hold =
+        insert(:seat_hold,
+          meeting: meeting,
+          email: "late@example.com",
+          status: :released,
+          released_reason: :expired
+        )
+
+      %{meeting: meeting, participant: participant, hold: hold}
+    end
+
+    test "converts onto its slot when the meeting emptied", ctx do
+      {:ok, _left} = ParticipantQueries.cancel(ctx.participant)
+      assert {:ok, :meeting_cancelled} = SeatRelease.release(ctx.meeting)
+
+      assert {:ok, {:ok, booking}} =
+               Repo.transaction(fn -> CreateGroup.complete_paid_hold(ctx.hold.id) end)
+
+      assert booking.created_meeting?
+      assert booking.meeting.id != ctx.meeting.id
+      assert booking.meeting.start_time == ctx.start_time
+      assert Repo.get!(MeetingSchema, booking.meeting.id).status == :confirmed
+      assert SeatHolds.get(ctx.hold.id).status == :converted
+    end
+
+    test "is refused when its host cancelled it", ctx do
+      ctx.meeting |> Changeset.change(status: :cancelled) |> Repo.update!()
+      assert_not_convertible(ctx.hold)
+    end
+
+    test "is refused when its host cancelled it with only holds left on it", ctx do
+      {:ok, _left} = ParticipantQueries.cancel(ctx.participant)
+
+      insert(:seat_hold,
+        meeting: ctx.meeting,
+        email: "other@example.com",
+        status: :released,
+        released_reason: :meeting_cancelled
+      )
+
+      ctx.meeting |> Changeset.change(status: :cancelled) |> Repo.update!()
+      assert_not_convertible(ctx.hold)
+    end
+
+    test "is refused on a planned session, which never empties", ctx do
+      {:ok, _left} = ParticipantQueries.cancel(ctx.participant)
+
+      ctx.meeting
+      |> Changeset.change(status: :cancelled, planned: true)
+      |> Repo.update!()
+
+      assert_not_convertible(ctx.hold)
+    end
+
+    defp assert_not_convertible(hold) do
+      assert {:ok, {:refused, :hold_not_convertible}} =
+               Repo.transaction(fn -> CreateGroup.complete_paid_hold(hold.id) end)
+
+      assert Repo.aggregate(MeetingSchema, :count) == 1
+    end
   end
 
   test "a hold released with its cancelled meeting is never converted", ctx do

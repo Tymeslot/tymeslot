@@ -7,6 +7,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
 
   import ExUnit.CaptureLog
   import Tymeslot.Factory
+  import Tymeslot.StripeConnectTestHelpers, only: [enable_meeting_payments: 1]
 
   alias Ecto.Changeset
   alias Tymeslot.MeetingPayments.Checkout
@@ -27,6 +28,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
   @account "acct_SEAT_HOST"
   @seat_price 2500
 
+  setup :enable_meeting_payments
+
   setup do
     # A slot rebuilt for a late payment asks for the type's calendar; these
     # hosts have none.
@@ -45,6 +48,14 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
         payment_required: true,
         price_cents: @seat_price
       )
+
+    # A late payment takes a new meeting only on a type taking payments now.
+    insert(:connect_account,
+      user: user,
+      stripe_account_id: @account,
+      default_currency: "eur",
+      charges_enabled: true
+    )
 
     start_time =
       DateTime.utc_now()

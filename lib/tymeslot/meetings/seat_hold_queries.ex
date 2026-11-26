@@ -210,6 +210,15 @@ defmodule Tymeslot.Meetings.SeatHoldQueries do
     |> Repo.all()
   end
 
+  @doc "Whether any hold on the meeting `meeting_id` was released for `reason`."
+  @spec released_for_meeting?(binary(), SeatHold.release_reason()) :: boolean()
+  def released_for_meeting?(meeting_id, reason) when is_binary(meeting_id) do
+    SeatHold
+    |> where([h], h.meeting_id == ^meeting_id)
+    |> where([h], h.status == :released and h.released_reason == ^reason)
+    |> Repo.exists?()
+  end
+
   @doc """
   Whether `email` holds seats on the meeting through a `held` hold, matched
   case-insensitively as `seat_holds_live_email_index` matches it.
