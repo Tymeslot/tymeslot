@@ -67,10 +67,18 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefund do
   # refund is gone.
   @expected [:refund_failed, :missing_charge, :not_found]
 
+  # An attempt that left the refund pending (a Stripe timeout, a lease held
+  # by another attempt) is retried, and is a wait rather than a failure; a
+  # last attempt that leaves it pending reports it as stuck itself.
+  @pending :pending
+
   @behaviour ExpectedJobOutcome
 
   @impl ExpectedJobOutcome
-  def expected_outcome?(reason), do: reason in @expected
+  def expected_outcome?(reason), do: reason in [@pending | @expected]
+
+  @impl ExpectedJobOutcome
+  def expected_retry?(reason), do: reason == @pending
 
   @doc """
   Makes the job of `refund_id` run `in:` seconds from now, in place of when
@@ -123,7 +131,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefund do
 
   defp result({:pending, refund}, job) do
     if last?(job) and not RefundQueries.leased?(refund), do: FailureNotice.stuck(refund)
-    {:error, :pending}
+    {:error, @pending}
   end
 
   defp last?(%Oban.Job{attempt: attempt, max_attempts: max}), do: attempt >= max

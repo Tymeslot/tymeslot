@@ -33,6 +33,10 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.JobFailureTest do
     @impl ExpectedJobOutcome
     def expected_outcome?("Mailbox gone"), do: true
     def expected_outcome?(_reason), do: false
+
+    @impl ExpectedJobOutcome
+    def expected_retry?("Provider busy"), do: true
+    def expected_retry?(_reason), do: false
   end
 
   setup do
@@ -141,6 +145,18 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.JobFailureTest do
       assert [%Error{kind: "Elixir.Oban.PerformError"}] = errors()
       refute_receive {:send_alert, _type, _payload}
     end
+
+    test "is not recorded when the worker declares the reason an expected wait" do
+      attempt(%{"reason" => "Provider busy"}, 1)
+
+      assert errors() == []
+    end
+
+    test "a raise is recorded whatever the worker expects" do
+      attempt(%{"raise" => "Provider busy"}, 1)
+
+      assert [%Error{}] = errors()
+    end
   end
 
   describe "a job that fails on its last attempt" do
@@ -190,6 +206,14 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.JobFailureTest do
       assert_receive {:send_alert, :new_error, second}
       refute_receive {:send_alert, _type, _payload}
       assert first.error_id != second.error_id
+    end
+
+    # An expected wait is judged by `expected_outcome?/1` once the job gives up.
+    test "is recorded when its expected wait is not an expected outcome" do
+      attempt(%{"reason" => "Provider busy"}, 3)
+
+      assert [%Error{}] = errors()
+      assert_receive {:send_alert, :new_error, _payload}
     end
 
     test "is not recorded when the worker declares the reason expected" do

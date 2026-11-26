@@ -7,6 +7,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefundTest do
   @moduletag :capture_log
 
   import Tymeslot.AdminAlertsCaptureHelpers
+  import Tymeslot.ConfigTestHelpers, only: [with_config: 2]
   import Tymeslot.Factory
 
   alias Ecto.Changeset
@@ -51,6 +52,17 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefundTest do
 
     assert %{status: :pending, executing_until: nil} = RefundQueries.get(refund.id)
     refute_received {:send_alert, _type, _payload}
+  end
+
+  # A Stripe timeout leaves the refund pending and the job retries it: a wait,
+  # not an error worth tracking.
+  test "an attempt that leaves the refund pending records no error", %{refund: refund} do
+    with_config(:error_tracker, enabled: true)
+    StripeStub.expect(:create_refund, {:error_fixture, "api_error"})
+
+    assert {:error, :pending} = perform_job(ExecuteRefund, %{refund_id: refund.id}, attempt: 1)
+
+    assert Repo.all(ErrorTracker.Error) == []
   end
 
   test "the last attempt fails a refund Stripe never made, without asking for it",
