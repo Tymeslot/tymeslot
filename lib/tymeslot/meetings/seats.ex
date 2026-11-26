@@ -3,8 +3,10 @@ defmodule Tymeslot.Meetings.Seats do
   Seat arithmetic for group meetings.
 
   A meeting's taken seats are its live participants plus their guests, so a
-  booking with G guest emails consumes `1 + G` seats, plus the seats held for
-  bookers still paying (`Tymeslot.Meetings.SeatHolds`). A guest who declines
+  booking with G guest emails consumes `1 + G` seats. Its capacity is
+  measured against the seats it occupies: those, plus seats awaiting email
+  verification and the seats held for bookers still paying
+  (`Tymeslot.Meetings.SeatHolds`), which the organiser is not shown. A guest who declines
   gives their seat back (`holds_seat?/1`); answering yes again takes one only
   while one is free (`Tymeslot.Meetings.Guests.record_rsvp/2`). Query work is
   delegated to `Tymeslot.Meetings.ParticipantQueries` and `SeatHolds` and
@@ -76,24 +78,20 @@ defmodule Tymeslot.Meetings.Seats do
   end
 
   @doc """
-  Live participants and seats taken (`seats_taken/1`, plus seat holds) on
-  each of `meeting_ids`, in two queries rather than two per meeting. Every
-  id is in the result; one nobody is booked on counts zero of each, and one
-  with only holds counts zero participants.
+  Live participants and seats taken (`seats_taken/1`'s count) on each of
+  `meeting_ids`, in one query rather than one per meeting. Visible, like
+  `seats_taken/1`: the counts to tell the organiser, leaving out seats
+  awaiting email verification and seats held for bookers still paying.
+  Every id is in the result; one nobody is booked on, or that only holds
+  occupy, counts zero of each. What a slot still takes is
+  `seats_left_by_meeting/1`'s.
   """
   @spec counts_by_meeting([binary()]) :: %{
           binary() => %{participants: non_neg_integer(), seats_taken: non_neg_integer()}
         }
   def counts_by_meeting(meeting_ids) do
     counts = ParticipantQueries.counts_by_meeting(meeting_ids)
-    held = SeatHolds.seats_held_by_meeting(meeting_ids)
-
-    Map.new(meeting_ids, fn id ->
-      %{participants: participants, seats_taken: seats} =
-        Map.get(counts, id, %{participants: 0, seats_taken: 0})
-
-      {id, %{participants: participants, seats_taken: seats + Map.get(held, id, 0)}}
-    end)
+    Map.new(meeting_ids, &{&1, Map.get(counts, &1, %{participants: 0, seats_taken: 0})})
   end
 
   @doc """

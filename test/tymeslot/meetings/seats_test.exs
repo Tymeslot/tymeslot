@@ -191,15 +191,24 @@ defmodule Tymeslot.Meetings.SeatsTest do
       assert Seats.seats_left(meeting, 5) == 2
     end
 
-    test "counts_by_meeting lists a hold-only meeting" do
-      meeting = held_meeting()
-      insert(:seat_hold, meeting: meeting, seats: 2, email: "ann@example.com")
+    test "counts_by_meeting counts people, not holds, as seats_taken/1 does" do
+      held_only = held_meeting()
+      insert(:seat_hold, meeting: held_only, seats: 2, email: "ann@example.com")
 
-      assert Seats.counts_by_meeting([meeting.id]) == %{
-               meeting.id => %{participants: 0, seats_taken: 2}
+      mixed = held_meeting()
+      insert(:participant, meeting: mixed)
+      insert(:seat_hold, meeting: mixed, seats: 2, email: "bob@example.com")
+
+      assert Seats.counts_by_meeting([held_only.id, mixed.id]) == %{
+               held_only.id => %{participants: 0, seats_taken: 0},
+               mixed.id => %{participants: 1, seats_taken: 1}
              }
 
-      assert Seats.seats_left_by_meeting([%{meeting | capacity: 3}]) == %{meeting.id => 1}
+      assert Seats.seats_taken(mixed.id) == 1
+
+      # What the slots still take counts the holds.
+      assert Seats.seats_left_by_meeting([%{held_only | capacity: 3}, %{mixed | capacity: 4}]) ==
+               %{held_only.id => 1, mixed.id => 1}
     end
 
     test "seat_counts_for_range includes a hold-only slot and adds holds to seats" do
