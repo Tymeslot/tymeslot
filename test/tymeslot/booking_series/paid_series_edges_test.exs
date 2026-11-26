@@ -24,8 +24,8 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Emails.Templates.AppointmentCancellation.RefundNotice
 
-  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.MeetingPayments.BookingPayments
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted

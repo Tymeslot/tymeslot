@@ -24,9 +24,9 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
   alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.CalendarMock
 
-  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired

@@ -7,8 +7,8 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
 
   alias Ecto.UUID
 
-  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.StripeFixtures

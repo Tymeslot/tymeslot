@@ -18,8 +18,8 @@ defmodule Tymeslot.MeetingPayments.ConnectHttpTest do
   alias Plug.Conn
   alias Req.Test, as: ReqTest
   alias Tymeslot.MeetingPayments
-  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.ChargeBackfill
   alias Tymeslot.MeetingPayments.CheckoutSessions

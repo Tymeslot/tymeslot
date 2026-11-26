@@ -10,9 +10,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
 
   alias Ecto.Changeset
   alias Tymeslot.MeetingPayments.Checkout
-  alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.MeetingPayments.RefundSchema
+  alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.SeatHolds

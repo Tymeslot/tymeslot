@@ -33,8 +33,6 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest do
   @moduletag :payments
   @moduletag :cross_tenant
 
-  alias Tymeslot.MeetingPayments.BookingPayments
-
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Repo

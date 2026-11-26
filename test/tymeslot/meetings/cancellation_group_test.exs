@@ -20,8 +20,8 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Bookings.Cancel
-  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
@@ -53,8 +53,7 @@ defmodule Tymeslot.Meetings.CancellationGroupTest do
 
   # The refunds the host's cancellation recorded, by amount.
   defp cancellation_refunds do
-    from(r in RefundSchema, where: r.source == :cancellation, order_by: r.amount_cents)
-    |> Repo.all()
+    Repo.all(from(r in RefundSchema, where: r.source == :cancellation, order_by: r.amount_cents))
   end
 
   defp refund_amounts, do: Enum.map(cancellation_refunds(), & &1.amount_cents)
