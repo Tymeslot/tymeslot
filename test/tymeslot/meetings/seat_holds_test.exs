@@ -244,11 +244,13 @@ defmodule Tymeslot.Meetings.SeatHoldsTest do
   end
 
   describe "one seat per email" do
+    # The email's checkout is still open, which is not a booking: the booker
+    # is told so apart from an email that has a seat.
     test "a held email cannot book again", ctx do
       {:ok, _hold} = hold(ctx, "ann@example.com")
 
-      assert {:error, :already_booked} = hold(ctx, "ANN@example.com")
-      assert {:error, :already_booked} = book(ctx, "ANN@example.com")
+      assert {:error, :seat_held} = hold(ctx, "ANN@example.com")
+      assert {:error, :seat_held} = book(ctx, "ANN@example.com")
       assert Repo.aggregate(SeatHoldSchema, :count) == 1
       assert Repo.all(ParticipantSchema) == []
     end

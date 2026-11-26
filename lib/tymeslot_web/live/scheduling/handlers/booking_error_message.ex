@@ -152,6 +152,16 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage do
     )
   end
 
+  # The booker left a checkout for this slot unfinished (the browser's back
+  # button out of Stripe, say); its hold keeps their seat until the checkout
+  # expires.
+  def message(:seat_held) do
+    dgettext(
+      "booking_errors",
+      "A payment for this email is still open for this time. Finish that payment, or try again in about half an hour."
+    )
+  end
+
   def message(:already_cancelled) do
     dgettext("booking_errors", "This booking has already been cancelled or moved.")
   end

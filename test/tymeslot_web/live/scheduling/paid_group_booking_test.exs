@@ -174,6 +174,27 @@ defmodule TymeslotWeb.Live.Scheduling.PaidGroupBookingTest do
 
       assert Repo.all(ParticipantSchema) == []
     end
+
+    # Leaving Stripe by the browser's back button leaves the checkout, and
+    # its hold, open: the same booking again is told to finish that payment,
+    # never that the booker has a seat.
+    @tag :capture_log
+    test "a booker back from an unfinished checkout is told it is still open",
+         %{conn: conn, profile: profile} do
+      expect_checkout("cs_GROUP_OPEN")
+      first = open_form(conn, "/#{profile.username}?timezone=UTC")
+      submit(first)
+      assert_redirect(first, "https://checkout.stripe.com/c/pay/cs_GROUP_OPEN", 5_000)
+
+      again = open_form(conn, "/#{profile.username}?timezone=UTC")
+      submit(again)
+      _drain = render_async(again, 5_000)
+
+      html = render(again)
+      assert html =~ "A payment for this email is still open for this time."
+      refute html =~ "You already have a spot"
+      assert [%SeatHoldSchema{status: :held}] = Repo.all(SeatHoldSchema)
+    end
   end
 
   describe "inside an embed" do

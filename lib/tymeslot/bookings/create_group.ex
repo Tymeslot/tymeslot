@@ -340,9 +340,11 @@ defmodule Tymeslot.Bookings.CreateGroup do
 
   defp map_error({:error, :slot_full}, _booking_data), do: {:error, :slot_taken}
 
-  # The booker's email already has a seat or a hold on the slot, found under
-  # the lock before the insert (see `GroupScheduling.book_seat/3`).
-  defp map_error({:error, :already_booked}, _booking_data), do: {:error, :already_booked}
+  # The booker's email already has a seat (`:already_booked`) or a checkout
+  # still open (`:seat_held`) on the slot, found under the lock before the
+  # insert (see `GroupScheduling.book_seat/3`).
+  defp map_error({:error, reason}, _booking_data) when reason in [:already_booked, :seat_held],
+    do: {:error, reason}
 
   # `book_seat/3` exhausts its retry on a rare first-booker index collision
   # and surfaces the raw changeset. Its `organizer_user_id` error is worded

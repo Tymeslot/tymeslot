@@ -16,6 +16,8 @@ defmodule Tymeslot.BookingSeries.Occurrence do
     * `:overlaps_session`: an earlier session of the same series is in the
       way, buffers included;
     * `:already_booked`: the booker already holds a seat in that session;
+    * `:seat_held`: the booker's checkout for a seat in that session is
+      still open;
     * `:session_full`: the group session has too few seats left;
     * `:limit_reached`: a booking limit would be exceeded, counting the
       series' own earlier occurrences.
@@ -36,6 +38,7 @@ defmodule Tymeslot.BookingSeries.Occurrence do
           | :booked
           | :overlaps_session
           | :already_booked
+          | :seat_held
           | :session_full
           | :limit_reached
 

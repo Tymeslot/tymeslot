@@ -719,3 +719,8 @@ msgstr "termín %{position}, %{when}"
 #, elixir-autogen, elixir-format
 msgid "The host answered your request in the meantime, so nothing was withdrawn. The list shows where each session now stands."
 msgstr "Hostitel mezitím na vaši žádost odpověděl, takže nic nebylo staženo. Seznam ukazuje, jak si teď stojí každý termín."
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Your payment is still open"
+msgstr "Vaše platba ještě není dokončená"

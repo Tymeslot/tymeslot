@@ -236,11 +236,13 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
     refute_receive :expired
   end
 
+  # The first checkout is still open: the booker is told to finish it, not
+  # that they have a seat.
   test "the same email cannot hold a seat twice", ctx do
     expect_checkout()
     assert {:ok, :payment_required, %{meeting: meeting}} = execute(ctx, "one@example.com")
 
-    assert {:error, :already_booked} = execute(ctx, "ONE@example.com")
+    assert {:error, :seat_held} = execute(ctx, "ONE@example.com")
     assert SeatHolds.seats_held(meeting.id) == 1
   end
 

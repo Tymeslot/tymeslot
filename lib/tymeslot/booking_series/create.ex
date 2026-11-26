@@ -27,7 +27,7 @@ defmodule Tymeslot.BookingSeries.Create do
   A full session, or one the booker already has a seat in, refuses the
   whole series. No seat sends a confirmation of its own.
 
-  On a paid type (one-to-one only: a group type cannot take payment) every
+  On a paid one-to-one type (a paid group type offers no series) every
   session is held `awaiting_payment` instead, with nothing else done for it
   and no confirmation scheduled, and once the series commits one Stripe
   Checkout is opened for all of them (`Tymeslot.BookingSeries.Payment`).
@@ -97,7 +97,8 @@ defmodule Tymeslot.BookingSeries.Create do
     time_conflict: :booked,
     booking_limit_reached: :limit_reached,
     slot_full: :session_full,
-    already_booked: :already_booked
+    already_booked: :already_booked,
+    seat_held: :seat_held
   }
 
   @doc """

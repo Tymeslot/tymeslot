@@ -47,8 +47,9 @@ defmodule Tymeslot.Meetings.GroupScheduling do
   `created_meeting?: true` and they run the new-slot effects then. Until
   then it is outside the confirmed-slot unique index, so for it the
   schedule lock is the only guard against a second row. One email holds at
-  most one seat on a meeting, held or booked: both paths refuse a second as
-  `:already_booked`.
+  most one seat on a meeting, held or booked: both paths refuse a second,
+  as `:already_booked` when the email has a seat and as `:seat_held` when
+  it holds seats through a checkout still open.
   """
 
   alias Ecto.Changeset
@@ -131,10 +132,11 @@ defmodule Tymeslot.Meetings.GroupScheduling do
   it and reports `created_meeting?: true`, as if it had created the slot.
 
   Returns `{:ok, booking}` or `{:error, :slot_full | :slot_taken |
-  :time_conflict | :organizer_required | :already_booked | :invalid_hold |
-  Ecto.Changeset.t() | term}`; a slot without an organiser is refused with
-  `:organizer_required`, and an email already seated or holding seats on the
-  meeting with `:already_booked`.
+  :time_conflict | :organizer_required | :already_booked | :seat_held |
+  :invalid_hold | Ecto.Changeset.t() | term}`; a slot without an organiser
+  is refused with `:organizer_required`, an email already seated on the
+  meeting with `:already_booked`, and one holding seats on it with
+  `:seat_held`.
   """
   @spec book_seat(map(), seat_request(), keyword()) ::
           {:ok, booking()}
@@ -144,6 +146,7 @@ defmodule Tymeslot.Meetings.GroupScheduling do
              | :time_conflict
              | :organizer_required
              | :already_booked
+             | :seat_held
              | :invalid_hold
              | Changeset.t()
              | term()}

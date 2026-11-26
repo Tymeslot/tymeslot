@@ -60,7 +60,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   require Logger
 
   # Refusals the booking flow makes as designed; not failures worth an error log.
-  @expected_refusals [:invitation_required, :invitation_unavailable, :slot_taken]
+  @expected_refusals [:invitation_required, :invitation_unavailable, :slot_taken, :seat_held]
 
   @doc """
   Submits a booking using the booking orchestrator.

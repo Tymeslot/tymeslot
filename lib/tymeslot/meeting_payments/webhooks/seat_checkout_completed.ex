@@ -59,7 +59,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompleted do
 
   # Refusals a conversion can only meet once it has written, so they come
   # back having rolled the transaction back: the slot was taken meanwhile.
-  @slot_lost_reasons [:time_conflict, :booking_limit_reached, :already_booked, :slot_full]
+  @slot_lost_reasons [
+    :time_conflict,
+    :booking_limit_reached,
+    :already_booked,
+    :seat_held,
+    :slot_full
+  ]
 
   @doc """
   Completes the seat payment `payment` (a paid checkout session `object`,

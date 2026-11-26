@@ -429,10 +429,12 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   defp handle_move({:error, :booking_limit_reached}, _old_meeting, _participant),
     do: {:error, :booking_limit_reached}
 
-  # The mover already holds a live seat (or a hold) at the target slot, found
-  # under the lock before the insert; the index catches the rest below.
-  defp handle_move({:error, :already_booked}, old_meeting, participant),
-    do: log_and_bounce(old_meeting, participant, :already_booked, :already_booked)
+  # The mover already holds a live seat (`:already_booked`) or a checkout
+  # still open (`:seat_held`) at the target slot, found under the lock before
+  # the insert; the index catches the rest below.
+  defp handle_move({:error, reason}, old_meeting, participant)
+       when reason in [:already_booked, :seat_held],
+       do: log_and_bounce(old_meeting, participant, reason, reason)
 
   defp handle_move({:error, %Ecto.Changeset{} = changeset}, old_meeting, participant) do
     cond do

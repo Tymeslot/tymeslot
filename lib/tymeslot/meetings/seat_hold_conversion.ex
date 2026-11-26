@@ -30,10 +30,10 @@ defmodule Tymeslot.Meetings.SeatHoldConversion do
   the hold. The meeting is found by the hold's `meeting_id`, never by the
   slot the hold snapshotted, as a planned session can move without its holds.
 
-    * A hold still held, or released on its expiry, a failure or its booker
-      abandoning the checkout, converts while a slot has room for all its
-      seats: its own meeting while that still holds its slot, else the live
-      meeting at that meeting's slot, else a new one (`:new_slot`).
+    * A hold still held, or released on its expiry or a failure, converts
+      while a slot has room for all its seats: its own meeting while that
+      still holds its slot, else the live meeting at that meeting's slot,
+      else a new one (`:new_slot`).
     * A hold still held on its own meeting reserved its seats before any
       registration close, so it converts there even once a planned
       session's registration has closed. A hold released already reserves
@@ -52,9 +52,10 @@ defmodule Tymeslot.Meetings.SeatHoldConversion do
   Refusals are decided under the locks before anything is written and
   come back as `{:refused, reason}`, leaving the caller's transaction
   usable. Every `{:error, reason}` has rolled the caller's transaction back
-  (a refusal met only once writing, `:slot_full` or `:already_booked` among
-  them, or a unique-slot violation, which a confirmed meeting of the
-  organiser's at the slot raises and which has aborted it in Postgres), so
+  (a refusal met only once writing, `:slot_full`, `:already_booked` or
+  `:seat_held` among them, or a unique-slot violation, which a confirmed
+  meeting of the organiser's at the slot raises and which has aborted it in
+  Postgres), so
   the caller must settle the payment in a fresh transaction.
 
   The hold stops counting against its slot before the seats are taken, so a

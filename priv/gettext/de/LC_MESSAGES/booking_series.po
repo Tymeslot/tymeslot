@@ -701,3 +701,8 @@ msgstr "Termin %{position}, %{when}"
 #, elixir-autogen, elixir-format
 msgid "The host answered your request in the meantime, so nothing was withdrawn. The list shows where each session now stands."
 msgstr "Der Gastgeber hat Ihre Anfrage inzwischen beantwortet, daher wurde nichts zurückgezogen. Die Liste zeigt den aktuellen Stand jedes Termins."
+
+#: lib/tymeslot_web/themes/shared/series_parts.ex
+#, elixir-autogen, elixir-format
+msgid "Your payment is still open"
+msgstr "Ihre Zahlung ist noch offen"

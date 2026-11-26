@@ -195,10 +195,13 @@ defmodule Tymeslot.Meetings.SeatWrites do
   # Checked under the meeting's row lock, before either insert: the seat's
   # own unique index sees only its own table, so a held email booking a free
   # seat (or the reverse) would otherwise pass it. The indexes stay the
-  # backstop within each table.
+  # backstop within each table. A seat is `:already_booked`; a hold is
+  # `:seat_held`, a checkout the booker left open and can still finish.
   defp insert_seat_or_rollback(meeting, seat_request, seats_requested, hold_opts) do
-    if email_taken?(meeting.id, seat_request.participant.email),
-      do: Repo.rollback(:already_booked)
+    case email_taken(meeting.id, seat_request.participant.email) do
+      nil -> :ok
+      reason -> Repo.rollback(reason)
+    end
 
     case hold_opts do
       nil ->
@@ -209,12 +212,15 @@ defmodule Tymeslot.Meetings.SeatWrites do
     end
   end
 
-  defp email_taken?(_meeting_id, nil), do: false
+  defp email_taken(_meeting_id, nil), do: nil
 
-  defp email_taken?(meeting_id, email),
-    do:
-      ParticipantQueries.live_email_taken?(meeting_id, email) or
-        SeatHoldQueries.held_email_taken?(meeting_id, email)
+  defp email_taken(meeting_id, email) do
+    cond do
+      ParticipantQueries.live_email_taken?(meeting_id, email) -> :already_booked
+      SeatHoldQueries.held_email_taken?(meeting_id, email) -> :seat_held
+      true -> nil
+    end
+  end
 
   defp insert_hold_or_rollback(meeting, seat_request, seats_requested, %{expires_at: expires_at}) do
     attrs =
@@ -235,7 +241,7 @@ defmodule Tymeslot.Meetings.SeatWrites do
 
       {:error, %Changeset{} = changeset} ->
         if SeatHoldSchema.duplicate_hold?(changeset),
-          do: Repo.rollback(:already_booked),
+          do: Repo.rollback(:seat_held),
           else: Repo.rollback(changeset)
     end
   end
