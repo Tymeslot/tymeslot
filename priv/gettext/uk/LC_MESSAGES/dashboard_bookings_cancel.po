@@ -235,11 +235,6 @@ msgstr "Повертає залишок коштів (%{amount})."
 msgid "Session cancelled. Refunds are on their way."
 msgstr "Зустріч скасовано. Кошти вже повертаються учасникам."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Someone paid for a seat while this was open. Check the refund choice and confirm again."
-msgstr "Поки це вікно було відкрите, хтось оплатив місце. Перевірте свій вибір щодо повернення коштів і підтвердьте ще раз."
-
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "The attendee keeps no money. Use only if the attendee already agreed."
@@ -279,3 +274,8 @@ msgstr "Поставте прапорець для підтвердження, �
 #, elixir-autogen, elixir-format
 msgid "Tick the acknowledgement to cancel without refunding the participants."
 msgstr "Поставте прапорець для підтвердження, щоб скасувати зустріч без повернення коштів учасникам."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "The payments for this meeting changed while this was open. Check them and choose again."
+msgstr "Поки це вікно було відкрите, платежі за цю зустріч змінилися. Перевірте їх і виберіть ще раз."

@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
       answering_opts: %{},
       sending_reschedule: nil
     )
-    |> assign(Cancellation.no_payments())
+    |> assign(Cancellation.dialog_assigns())
   end
 
   @doc "Handles the `booking:` event `name`. Unknown names and malformed params change nothing."
@@ -95,12 +95,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
 
     case ModalMeeting.fetch(user_id, %{"id" => id}, &Policy.can_cancel_meeting?/1) do
       {:ok, meeting} ->
-        Cancellation.emit_open(user_id, meeting.id)
-
-        socket
-        |> assign(:preview, nil)
-        |> assign(Cancellation.payments_for(meeting, user_id))
-        |> ModalHook.show_modal(:cancel_meeting, meeting)
+        socket |> assign(:preview, nil) |> Cancellation.open(meeting)
 
       {:error, :policy_blocked, reason} ->
         refuse(socket, reason)
@@ -114,7 +109,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
     with_limit(socket, :dashboard_cancel, socket.assigns.current_user.id, fn socket ->
       case socket.assigns.cancel_meeting_modal_data do
         nil -> socket
-        meeting -> cancel(socket, meeting, params)
+        meeting -> Cancellation.confirm(socket, meeting, params, &reload_events/1)
       end
     end)
   end
@@ -157,7 +152,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
   def handle("close", %{"modal" => modal}, socket) when is_map_key(@modals, modal) do
     socket
     |> ModalHook.hide_modal(Map.fetch!(@modals, modal))
-    |> assign(Cancellation.no_payments())
+    |> assign(Cancellation.dialog_assigns())
     |> push_event("calendar:preview-closed", %{})
   end
 
@@ -210,33 +205,6 @@ defmodule TymeslotWeb.Dashboard.Calendar.BookingActions do
   end
 
   defp reload_events(socket), do: SurfaceData.reload(socket, :events)
-
-  defp cancel(socket, meeting, params) do
-    {outcome, type, message} =
-      Cancellation.cancel(
-        socket.assigns.current_user.id,
-        meeting,
-        Cancellation.paid(socket.assigns),
-        params
-      )
-
-    socket
-    |> Flash.put_flash(type, message)
-    |> settle_cancel(outcome)
-  end
-
-  defp settle_cancel(socket, outcome) when outcome in [:closed, :refused],
-    do:
-      socket
-      |> ModalHook.hide_modal(:cancel_meeting)
-      |> assign(Cancellation.no_payments())
-      |> SurfaceData.reload(:events)
-
-  # What was paid changed while the dialog was open: it stays, showing the
-  # payments as they now stand, for the host to choose again.
-  defp settle_cancel(socket, {:changed, current}), do: assign(socket, current)
-
-  defp settle_cancel(socket, _kept_open), do: socket
 
   # The action is no longer allowed (started, ended, already cancelled): the
   # block on screen is stale, so it is reloaded with the reason.

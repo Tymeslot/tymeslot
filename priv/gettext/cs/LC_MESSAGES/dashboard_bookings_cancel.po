@@ -235,11 +235,6 @@ msgstr "Vrátí zbývající částku (%{amount})."
 msgid "Session cancelled. Refunds are on their way."
 msgstr "Setkání bylo zrušeno. Platby se právě vracejí."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Someone paid for a seat while this was open. Check the refund choice and confirm again."
-msgstr "Zatímco bylo toto okno otevřené, někdo zaplatil místo. Zkontrolujte volbu vrácení plateb a potvrďte znovu."
-
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "The attendee keeps no money. Use only if the attendee already agreed."
@@ -279,3 +274,8 @@ msgstr "Chcete-li zrušit schůzku bez vrácení platby účastníkovi, zaškrtn
 #, elixir-autogen, elixir-format
 msgid "Tick the acknowledgement to cancel without refunding the participants."
 msgstr "Chcete-li setkání zrušit bez vrácení plateb účastníkům, zaškrtněte potvrzení."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "The payments for this meeting changed while this was open. Check them and choose again."
+msgstr "Platby za tuto schůzku se změnily, zatímco bylo toto okno otevřené. Zkontrolujte je a vyberte znovu."

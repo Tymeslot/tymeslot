@@ -1,11 +1,16 @@
 defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   @moduledoc """
-  Cancelling a booking from the bookings dashboard: opening the dialog,
-  confirming it (with whatever refund the host chose), and the telemetry and
-  user-facing copy that go with it.
+  Cancelling a booking from the bookings dashboard and from the calendar's
+  preview (`Calendar.BookingActions`): opening the dialog, confirming it
+  (with whatever refund the host chose), and the telemetry and user-facing
+  copy that go with it, so the two pages act and speak alike.
 
-  The reload is passed in rather than reached for: the list belongs to the
-  component, and this module only says when it should be refreshed.
+  The dialog's state lives in the caller's assigns (`dialog_assigns/0`): what
+  the cancellation can refund (`t:paid/0`), the refund choice as the host
+  last submitted it, and the errors shown beside its fields.
+
+  The reload is passed in rather than reached for: the list or grid belongs
+  to the caller, and this module only says when it should be refreshed.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -49,13 +54,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
 
     case ModalMeeting.fetch(user_id, params, policy) do
       {:ok, meeting} ->
-        emit_open(user_id, meeting.id)
-
-        socket
-        |> assign(payments_for(meeting, user_id))
-        |> assign(:cancel_refund_error, %{})
-        |> assign(:cancel_refund_form, blank_refund_form())
-        |> ModalHook.show_modal(:cancel_meeting, meeting)
+        open(socket, meeting)
 
       {:error, :validation_failed, reason} ->
         emit_error(user_id, reason, :validation_failed)
@@ -69,6 +68,22 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
       {:error, :not_found, _reason} ->
         socket
     end
+  end
+
+  @doc """
+  Opens the cancel dialog on `meeting`, which the caller has already looked
+  up for the signed-in host and checked may be cancelled: with what it can
+  refund (`payments_for/2`) and a blank refund choice.
+  """
+  @spec open(Phoenix.LiveView.Socket.t(), MeetingSchema.t()) :: Phoenix.LiveView.Socket.t()
+  def open(socket, meeting) do
+    user_id = socket.assigns.current_user.id
+    emit_open(user_id, meeting.id)
+
+    socket
+    |> assign(dialog_assigns())
+    |> assign(payments_for(meeting, user_id))
+    |> ModalHook.show_modal(:cancel_meeting, meeting)
   end
 
   @doc """
@@ -91,26 +106,49 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
       }
   end
 
-  @doc "The dialog's assigns before it opens and after it closes: nothing to refund."
-  @spec no_payments() :: paid()
-  def no_payments, do: %{cancel_booking_payment: nil, cancel_seat_payments: []}
+  defp no_payments, do: %{cancel_booking_payment: nil, cancel_seat_payments: []}
+
+  @doc """
+  The dialog's assigns before it opens and after it closes: nothing to
+  refund, a blank refund choice (`cancel_refund_form`) and no errors
+  (`cancel_refund_error`).
+  """
+  @spec dialog_assigns() :: map()
+  def dialog_assigns,
+    do:
+      Map.merge(no_payments(), %{
+        cancel_refund_error: %{},
+        cancel_refund_form: %{choice: "full", amount: "", acknowledged: false}
+      })
 
   @doc "Closes the cancel dialog without cancelling anything."
   @spec hide(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def hide(socket) do
     socket
-    |> assign(no_payments())
+    |> assign(dialog_assigns())
     |> ModalHook.hide_modal(:cancel_meeting)
   end
 
   @doc """
-  Cancels `meeting` with the refund `params` describe and settles the dialog:
-  closed and the list refreshed once the meeting is cancelled (even if only the
-  refund failed), closed without a refresh when the domain refused, and left
-  open for a retry on any other failure. A refund choice that does not
-  validate keeps the dialog open with the error beside its field, and so does
-  a change to what was paid since it opened (`recheck/3`), showing the
-  payments as they now stand.
+  Cancels `meeting` for the signed-in host with the refund the cancel form's
+  `params` choose, against what the dialog showed it can refund, and settles
+  the dialog, flashing how it went:
+
+    * the booking is cancelled (the refund may still be pending or have been
+      declined, or someone else cancelled it first; the message says which):
+      the dialog closes and `reload` refreshes the list.
+    * the meeting started or ended meanwhile, so nothing changed: the dialog
+      closes and `reload` refreshes the stale list.
+    * what was paid changed since the dialog opened (`recheck/3`, or the
+      cancellation's own read of the paid seats under the meeting's lock), so
+      nothing was cancelled: the dialog stays open, showing the payments as
+      they now stand and saying so, for the host to choose again.
+    * a refund choice that does not validate: the dialog stays open with the
+      error beside its field.
+    * any other failure: the dialog stays open for another try.
+
+  The host's refund choice is kept whatever the outcome, so a dialog left
+  open shows it as they made it.
   """
   @spec confirm(Phoenix.LiveView.Socket.t(), MeetingSchema.t(), map(), reload()) ::
           Phoenix.LiveView.Socket.t()
@@ -121,9 +159,9 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
     socket = assign(socket, :cancel_refund_form, refund_form(params))
 
     with {:ok, paid} <- recheck(meeting, user_id, paid(socket.assigns)),
-         {:ok, _refund_action} <- resolve_refund(meeting, paid, params) do
-      case cancel_checked(user_id, meeting, paid, params) do
-        {{:changed, fresh}, _type, _message} ->
+         {:ok, refund_action} <- resolve_refund(meeting, paid, params) do
+      case cancel_checked(user_id, meeting, paid, refund_action) do
+        {:changed, fresh} ->
           payments_changed(socket, fresh)
 
         {outcome, type, message} ->
@@ -151,36 +189,6 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   end
 
   @doc """
-  Cancels `meeting` for the host `user_id`, with the refund the cancel form's
-  `params` choose against what it can refund (`paid`, from `payments_for/2`;
-  `paid/1` reads it back off the dialog's assigns), and
-  says how it went as `{outcome, flash_type, message}`, so the Meetings page
-  and the calendar's preview (`Calendar.BookingActions`) act and speak alike:
-
-    * `:closed`: the booking is cancelled (the refund may still be pending
-      or have been declined, or someone else cancelled it first; the message
-      says which), so the
-      dialog closes and the list reloads.
-    * `:refused`: the meeting started or ended meanwhile; nothing changed and
-      the dialog closes.
-    * `{:changed, fresh}`: what was paid changed since the dialog opened
-      (`recheck/3`, or the cancellation's own read of the paid seats under
-      the meeting's lock), so nothing was cancelled; the dialog stays open
-      on `fresh` for the host to choose again.
-    * `:invalid` (a refund choice that does not add up) and `:failed`: the
-      dialog stays open for another try.
-  """
-  @spec cancel(integer(), map(), paid(), map()) ::
-          {:closed | :refused | {:changed, paid()} | :invalid | :failed, :info | :error,
-           String.t()}
-  def cancel(user_id, meeting, paid, params) do
-    case recheck(meeting, user_id, paid) do
-      {:ok, paid} -> cancel_checked(user_id, meeting, paid, params)
-      {:changed, fresh} -> {{:changed, fresh}, :error, payments_changed_message()}
-    end
-  end
-
-  @doc """
   Reads what cancelling `meeting` can refund the host `user_id` again, at
   confirm, against `paid`, what the dialog showed when it opened:
   `{:ok, paid}` when the same payments are still owed, `{:changed,
@@ -203,25 +211,21 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   defp payment_ids(%{cancel_booking_payment: payment, cancel_seat_payments: seats}),
     do: MapSet.new(for %{id: id} <- [payment | seats], do: id)
 
-  defp cancel_checked(user_id, meeting, paid, params) do
-    case resolve_refund(meeting, paid, params) do
-      {:ok, refund_action} ->
-        result =
-          Meetings.cancel_meeting_with_refund(meeting, user_id, refund_action,
-            seat_payment_ids: Enum.map(paid.cancel_seat_payments, & &1.id)
-          )
+  # `{outcome, flash_type, message}`, or `{:changed, fresh}` when a seat was
+  # paid or refunded between the recheck and the cancellation's locked read
+  # of the seats, so nothing was cancelled.
+  defp cancel_checked(user_id, meeting, paid, refund_action) do
+    result =
+      Meetings.cancel_meeting_with_refund(meeting, user_id, refund_action,
+        seat_payment_ids: Enum.map(paid.cancel_seat_payments, & &1.id)
+      )
 
-        emit_confirm(user_id, meeting.id, result)
-        outcome(meeting, refund_action, result)
-
-      {:error, reason} ->
-        {:invalid, :error, refund_error_message(reason, meeting)}
-    end
+    emit_confirm(user_id, meeting.id, result)
+    outcome(meeting, refund_action, result)
   end
 
-  @doc "What the cancel dialog's assigns say the cancellation can refund (`t:paid/0`)."
-  @spec paid(map()) :: paid()
-  def paid(assigns), do: Map.merge(no_payments(), Map.take(assigns, Map.keys(no_payments())))
+  # What the cancel dialog's assigns say the cancellation can refund.
+  defp paid(assigns), do: Map.merge(no_payments(), Map.take(assigns, Map.keys(no_payments())))
 
   # A group session is settled seat by seat, a one-to-one booking by its one
   # payment.
@@ -234,12 +238,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   defp outcome(_meeting, refund_action, {:ok, _cancelled}),
     do: {:closed, :info, success_message(refund_action)}
 
-  # A seat was paid or refunded between the recheck and the cancellation's
-  # locked read of the seats: nothing was cancelled.
   defp outcome(_meeting, _refund_action, {:error, {:payments_changed, seats}}),
-    do:
-      {{:changed, %{no_payments() | cancel_seat_payments: seats}}, :error,
-       payments_changed_message()}
+    do: {:changed, %{no_payments() | cancel_seat_payments: seats}}
 
   # Stripe has not confirmed the refund yet; Tymeslot finishes it, so the
   # host is not sent to Stripe, where a second refund would double it.
@@ -284,28 +284,20 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   end
 
   # Cancelled: close and reload, because the cancellation did happen even if
-  # the refund did not. Refused: close, nothing changed. Otherwise the dialog
-  # stays for another try.
-  defp settle(socket, :closed, reload) do
+  # the refund did not. Refused: close and reload, as the meeting started or
+  # ended meanwhile. Otherwise the dialog stays for another try.
+  defp settle(socket, outcome, reload) when outcome in [:closed, :refused] do
     socket
     |> assign(:cancelling_meeting, nil)
-    |> assign(no_payments())
+    |> assign(dialog_assigns())
     |> reload.()
-    |> ModalHook.hide_modal(:cancel_meeting)
-  end
-
-  defp settle(socket, :refused, _reload) do
-    socket
-    |> assign(:cancelling_meeting, nil)
-    |> assign(no_payments())
     |> ModalHook.hide_modal(:cancel_meeting)
   end
 
   defp settle(socket, _kept_open, _reload), do: assign(socket, :cancelling_meeting, nil)
 
-  @doc "Records that the host opened the cancel dialog."
-  @spec emit_open(integer(), binary()) :: :ok
-  def emit_open(user_id, meeting_id) do
+  # Records that the host opened the cancel dialog.
+  defp emit_open(user_id, meeting_id) do
     :telemetry.execute(
       @event_prefix ++ [:open],
       %{},
@@ -352,17 +344,16 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
     }
   end
 
-  defp blank_refund_form, do: %{choice: "full", amount: "", acknowledged: false}
-
   defp refund_error_field(:acknowledgement_required), do: :acknowledgement
   defp refund_error_field(_reason), do: :amount
 
-  # The paid seats changed between opening the dialog and confirming it.
+  # What the cancellation can refund changed between opening the dialog and
+  # confirming it: a seat paid, refunded, disputed or given up meanwhile.
   defp payments_changed_message,
     do:
       dgettext(
         "dashboard_bookings_cancel",
-        "Someone paid for a seat while this was open. Check the refund choice and confirm again."
+        "The payments for this meeting changed while this was open. Check them and choose again."
       )
 
   # The message shown when the refund the host asked for cannot be made.

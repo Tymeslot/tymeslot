@@ -166,7 +166,7 @@ defmodule TymeslotWeb.Dashboard.PaidGroupDashboardTest do
       assert has_element?(
                view,
                "#cancel-refund-payments-error",
-               "Someone paid for a seat while this was open."
+               "The payments for this meeting changed while this was open."
              )
 
       assert has_element?(view, "#cancel-meeting-form", "1 participant paid for this session")
@@ -180,6 +180,34 @@ defmodule TymeslotWeb.Dashboard.PaidGroupDashboardTest do
 
       assert status(ctx.session) == :cancelled
       assert length(refund_jobs()) == 1
+    end
+
+    test "a seat refunded while the dialog was open is shown before anything is cancelled",
+         %{conn: conn} = ctx do
+      paid_seat(ctx, "ada@example.com")
+      refunded = paid_seat(ctx, "grace@example.com")
+
+      view = open_cancel_dialog(conn, ctx.session)
+      assert has_element?(view, "#cancel-meeting-form", "2 participants paid for this session")
+
+      refunded
+      |> Changeset.change(status: :refunded, refunded_amount_cents: refunded.amount_cents)
+      |> Repo.update!()
+
+      view
+      |> form("#cancel-meeting-form", %{"cancel_refund_choice" => "full"})
+      |> render_submit()
+
+      assert has_element?(
+               view,
+               "#cancel-refund-payments-error",
+               "The payments for this meeting changed while this was open."
+             )
+
+      refute render(view) =~ "Someone paid for a seat"
+      assert has_element?(view, "#cancel-meeting-form", "1 participant paid for this session")
+      assert status(ctx.session) == :confirmed
+      assert refund_jobs() == []
     end
 
     test "a seat paid outside the refund window is left for Stripe, and said so",

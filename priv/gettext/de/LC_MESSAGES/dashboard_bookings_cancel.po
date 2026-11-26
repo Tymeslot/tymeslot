@@ -232,11 +232,6 @@ msgstr "Erstattet den Restbetrag (%{amount})."
 msgid "Session cancelled. Refunds are on their way."
 msgstr "Termin abgesagt. Die Rückerstattungen sind unterwegs."
 
-#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Someone paid for a seat while this was open. Check the refund choice and confirm again."
-msgstr "Während dieses Fenster geöffnet war, hat jemand einen Platz bezahlt. Prüfen Sie Ihre Auswahl zur Rückerstattung und bestätigen Sie erneut."
-
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "The attendee keeps no money. Use only if the attendee already agreed."
@@ -276,3 +271,8 @@ msgstr "Aktivieren Sie das Kontrollkästchen, um ohne Rückerstattung an den Tei
 #, elixir-autogen, elixir-format
 msgid "Tick the acknowledgement to cancel without refunding the participants."
 msgstr "Aktivieren Sie das Kontrollkästchen, um ohne Rückerstattung an die Teilnehmer abzusagen."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "The payments for this meeting changed while this was open. Check them and choose again."
+msgstr "Die Zahlungen für diesen Termin haben sich geändert, während dieses Fenster geöffnet war. Prüfen Sie sie und wählen Sie erneut."
