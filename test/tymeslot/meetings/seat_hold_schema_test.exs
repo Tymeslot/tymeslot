@@ -5,6 +5,7 @@ defmodule Tymeslot.Meetings.SeatHoldSchemaTest do
   @moduletag :database
 
   alias Ecto.UUID
+  alias Tymeslot.Meetings.SeatHoldQueries
   alias Tymeslot.Meetings.SeatHoldSchema
   alias Tymeslot.Repo
 
@@ -36,7 +37,7 @@ defmodule Tymeslot.Meetings.SeatHoldSchemaTest do
   test "a released hold frees its email" do
     meeting = insert(:group_meeting)
     {:ok, first} = insert_hold(meeting, "Ann@example.com")
-    {:ok, _released} = first |> SeatHoldSchema.release_changeset(:abandoned) |> Repo.update()
+    assert %SeatHoldSchema{status: :released} = SeatHoldQueries.release(first.id, :expired)
 
     assert {:ok, _hold} = insert_hold(meeting, "ann@example.com")
   end
@@ -87,27 +88,6 @@ defmodule Tymeslot.Meetings.SeatHoldSchemaTest do
 
     assert {:error, changeset} = attrs |> SeatHoldSchema.create_changeset() |> Repo.insert()
     assert %{meeting_id: [_message]} = errors_on(changeset)
-  end
-
-  test "release and convert refuse a hold that is not held" do
-    hold = insert(:seat_hold)
-    {:ok, released} = hold |> SeatHoldSchema.release_changeset(:expired) |> Repo.update()
-    assert released.status == :released and released.released_reason == :expired
-
-    assert %{status: [_message]} =
-             errors_on(SeatHoldSchema.convert_changeset(released, UUID.generate()))
-
-    assert %{status: [_message]} = errors_on(SeatHoldSchema.release_changeset(released, :failed))
-  end
-
-  test "converting a held hold records the participant" do
-    hold = insert(:seat_hold)
-    participant = insert(:participant, meeting: hold.meeting)
-
-    {:ok, converted} = hold |> SeatHoldSchema.convert_changeset(participant.id) |> Repo.update()
-
-    assert converted.status == :converted
-    assert converted.participant_id == participant.id
   end
 
   test "deleting the meeting deletes its holds and keeps the payment" do

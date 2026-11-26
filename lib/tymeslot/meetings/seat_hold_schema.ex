@@ -17,9 +17,11 @@ defmodule Tymeslot.Meetings.SeatHoldSchema do
   `ParticipantSchema.creation_changeset/2` (`BookerContact`), so a hold that
   saves can always convert.
 
-  `ensure_held/2` guards the in-memory struct only. A status transition must
-  also be a conditional update (`WHERE status = 'held'`) in the queries
-  module, or two racing callers can both pass the guard.
+  Status transitions are conditional updates in
+  `Tymeslot.Meetings.SeatHoldQueries` (`WHERE status = 'held'` for a
+  release), never changesets of a loaded struct, so two racing callers
+  cannot both move one hold. The release reason `:abandoned` is allowed by
+  the `seat_holds_released_reason_must_be_known` check but no code writes it.
 
   The `booking_payments_seat_hold_id_fkey` check is deferred, so it only runs
   at commit and never in the test sandbox (which never commits). A test that
@@ -112,25 +114,6 @@ defmodule Tymeslot.Meetings.SeatHoldSchema do
     |> check_constraint(:released_reason, name: :seat_holds_released_reason_must_be_known)
     |> check_constraint(:released_reason, name: :seat_holds_released_has_reason)
   end
-
-  @spec release_changeset(t(), release_reason()) :: Ecto.Changeset.t()
-  def release_changeset(%__MODULE__{} = hold, reason) do
-    hold
-    |> change(status: :released, released_reason: reason)
-    |> ensure_held(hold)
-  end
-
-  @spec convert_changeset(t(), Ecto.UUID.t()) :: Ecto.Changeset.t()
-  def convert_changeset(%__MODULE__{} = hold, participant_id) do
-    hold
-    |> change(status: :converted, participant_id: participant_id)
-    |> ensure_held(hold)
-  end
-
-  defp ensure_held(changeset, %__MODULE__{status: :held}), do: changeset
-
-  defp ensure_held(changeset, %__MODULE__{}),
-    do: add_error(changeset, :status, "is not held")
 
   @doc """
   Whether the insert failed on `seat_holds_live_email_index`: the email
