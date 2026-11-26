@@ -47,6 +47,7 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.Repo
   alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.TransactionalEmailDelivery
 
@@ -120,18 +121,19 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
     # A series payment is named after its first session.
     meeting = payment |> BookingPayments.meetings_for_payment() |> List.first()
     refunded = MeetingPayments.stripe_refunded_cents(payment)
+    locale = booker_locale(payment, meeting)
 
     context = %RefundContext{
       attendee_email: payment.attendee_email,
       attendee_name: payment.attendee_name,
       host_email: payment.host_email,
       host_name: payment.host_name,
-      meeting_title: meeting_title(meeting, payment),
+      meeting_title: meeting_title(meeting, payment, locale),
       amount_cents: payment.amount_cents,
       refunded_amount_cents: refunded,
       currency: payment.currency,
       is_full_refund?: refunded >= payment.amount_cents,
-      locale: RecipientLocale.attendee_locale(meeting)
+      locale: locale
     }
 
     {:ok, context}
@@ -140,17 +142,36 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
   # The refund notice goes to the booker, so the booking is named from their
   # side, "<meeting type> with <host>", in their language. The stored title
   # names the booker instead, being the host's calendar event.
-  defp meeting_title(meeting, payment) do
+  defp meeting_title(meeting, payment, locale) do
     case meeting_type_name(meeting, payment) do
       nil ->
         nil
 
       type ->
-        Gettext.with_locale(TymeslotWeb.Gettext, RecipientLocale.attendee_locale(meeting), fn ->
+        Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
           title_with_host(type, payment.host_name)
         end)
     end
   end
+
+  # A seat's payment belongs to one booker on a group meeting, whose own
+  # `attendee_locale` is the first booker's (or the default, for a session the
+  # host planned). The seat's language is its participant's, or its hold's
+  # while the seat was never confirmed.
+  defp booker_locale(%BookingPaymentSchema{seat_payment: true} = payment, meeting) do
+    case Repo.preload(payment, [:participant, :seat_hold]) do
+      %{participant: %{locale: locale}} when is_binary(locale) ->
+        RecipientLocale.attendee_locale(%{attendee_locale: locale})
+
+      %{seat_hold: %{locale: locale}} when is_binary(locale) ->
+        RecipientLocale.attendee_locale(%{attendee_locale: locale})
+
+      _payment ->
+        RecipientLocale.attendee_locale(meeting)
+    end
+  end
+
+  defp booker_locale(_payment, meeting), do: RecipientLocale.attendee_locale(meeting)
 
   defp meeting_type_name(%{meeting_type: type}, _payment) when is_binary(type) and type != "",
     do: type

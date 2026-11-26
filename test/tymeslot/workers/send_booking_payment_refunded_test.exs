@@ -97,6 +97,51 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefundedTest do
       end)
     end
 
+    # A group meeting's `attendee_locale` is its first booker's, so a later
+    # seat's refund notice is written in that seat's booker's own language.
+    test "writes a seat's refund in that seat's booker's language" do
+      meeting =
+        insert(:group_meeting, capacity: 3, meeting_type: "Workshop", attendee_locale: "en")
+
+      _first = insert(:participant, meeting: meeting, locale: "en")
+      second = insert(:participant, meeting: meeting, locale: "de")
+
+      payment =
+        insert_payment(%{
+          meeting_id: meeting.id,
+          participant_id: second.id,
+          seat_payment: true
+        })
+
+      assert :ok =
+               perform_job(SendBookingPaymentRefunded, %{
+                 "booking_payment_id" => payment.id
+               })
+
+      assert_email_sent(fn email ->
+        assert email.subject == "Rückerstattung veranlasst – 50,00\u00A0€"
+      end)
+    end
+
+    # A seat whose checkout was never confirmed has no participant; its hold
+    # carries the booker's language.
+    test "writes an unconfirmed seat's refund in its hold's language" do
+      meeting = insert(:group_meeting, capacity: 3, attendee_locale: "en")
+      hold = insert(:seat_hold, meeting: meeting, locale: "de")
+
+      payment =
+        insert_payment(%{meeting_id: meeting.id, seat_hold_id: hold.id, seat_payment: true})
+
+      assert :ok =
+               perform_job(SendBookingPaymentRefunded, %{
+                 "booking_payment_id" => payment.id
+               })
+
+      assert_email_sent(fn email ->
+        assert email.subject == "Rückerstattung veranlasst – 50,00\u00A0€"
+      end)
+    end
+
     # With the booking gone (or never linked) there is no booker language to
     # read, so the notice is written in the booking pages' default, as every
     # other booking email is, rather than in English.
