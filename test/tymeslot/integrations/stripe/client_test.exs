@@ -322,6 +322,8 @@ defmodule Tymeslot.Integrations.Stripe.ClientTest do
 
     event = LogCapture.await_log("Stripe request failed")
 
+    assert event.level == :warning
+
     assert LogCapture.user_metadata(event) == %{
              operation: :create_refund,
              method: :post,
@@ -332,6 +334,41 @@ defmodule Tymeslot.Integrations.Stripe.ClientTest do
              attempts: 1,
              reason: nil
            }
+  end
+
+  test "a missing object or an unreachable connected account logs at debug, leaving the level to the caller" do
+    LogCapture.attach(logger_level: :debug)
+
+    stub_stripe(fn
+      1, conn ->
+        json(conn, 404, ~s({"error":{"type":"invalid_request_error","code":"resource_missing"}}))
+
+      _call, conn ->
+        json(conn, 403, ~s({"error":{"type":"invalid_request_error","code":"account_invalid"}}))
+    end)
+
+    request = Request.new(:retrieve_charge, :get, ["charges", "ch_1"], %{}, api_key: "sk_test_x")
+    assert {:error, %Error{status: 404}} = Client.run(request)
+    assert {:error, %Error{status: 403}} = Client.run(request)
+
+    failures =
+      Enum.filter(LogCapture.drain(), &(LogCapture.dump(&1) =~ "Stripe request failed"))
+
+    assert [%{level: :debug} = missing, %{level: :debug} = unreachable] = failures
+    assert %{status: 404, code: "resource_missing"} = LogCapture.user_metadata(missing)
+    assert %{status: 403, code: "account_invalid"} = LogCapture.user_metadata(unreachable)
+  end
+
+  test "a 5xx that outlasts its retries logs a warning" do
+    LogCapture.attach()
+    stub_stripe(fn _call, conn -> json(conn, 503, ~s({"error":{"type":"api_error"}})) end)
+
+    request = Request.new(:retrieve_charge, :get, ["charges", "ch_1"], %{}, api_key: "sk_test_x")
+    assert {:error, %Error{status: 503}} = Client.run(request)
+
+    event = LogCapture.await_log("Stripe request failed")
+    assert event.level == :warning
+    assert %{status: 503, attempts: 3} = LogCapture.user_metadata(event)
   end
 
   test "nothing logged contains the key" do

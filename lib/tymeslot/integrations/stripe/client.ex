@@ -23,10 +23,17 @@ defmodule Tymeslot.Integrations.Stripe.Client do
 
   The whole call is one telemetry span, `[:tymeslot, :integrations, :stripe,
   :request]`, with metadata `operation`, `method`, `connect?` and, on stop,
-  `attempts`, `status`, `request_id` and `error_type`. A final failure logs one
-  warning with the same keys plus Stripe's error `code` and the transport
-  `reason` (an atom or exception module). Neither ever carries the key, a
-  header or a body.
+  `attempts`, `status`, `request_id` and `error_type`. A final failure logs once
+  with the same keys plus Stripe's error `code` and the transport `reason` (an
+  atom or exception module). Neither ever carries the key, a header or a body.
+
+  The log level leaves room for the caller. A refusal that describes the
+  object rather than the call (it does not exist, `Error.resource_missing?/1`,
+  or the platform cannot reach the connected account, `Error.account_invalid?/1`)
+  is an answer callers handle, and logs at debug: the caller decides whether it
+  is worth more. Every other final failure logs a warning: a transport failure,
+  a 409, 429 or 5xx (after any retries), and any other 4xx, which says the
+  request or the key is wrong.
 
   Settings (`config :tymeslot, Tymeslot.Integrations.Stripe`): `base_url`,
   `retry_base_ms`, `req_options` (merged into the Req request; the test suite
@@ -287,7 +294,7 @@ defmodule Tymeslot.Integrations.Stripe.Client do
   defp log_failure({:ok, _map}, _request, _summary), do: :ok
 
   defp log_failure({:error, error}, request, summary) do
-    Logger.warning("Stripe request failed",
+    Logger.log(failure_level(error), "Stripe request failed",
       operation: request.operation,
       method: request.method,
       status: summary.status,
@@ -297,6 +304,12 @@ defmodule Tymeslot.Integrations.Stripe.Client do
       attempts: summary.attempts,
       reason: log_reason(error.reason)
     )
+  end
+
+  defp failure_level(error) do
+    if Error.resource_missing?(error) or Error.account_invalid?(error),
+      do: :debug,
+      else: :warning
   end
 
   defp log_reason({tag, detail}) when tag in [:raised, :exit] and is_atom(detail), do: detail
