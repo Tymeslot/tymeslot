@@ -116,7 +116,8 @@ defmodule Tymeslot.Emails.Templates.SeatUpdateForOrganizer do
     %{html: RefundNotice.html(notice), text: RefundNotice.text(notice)}
   end
 
-  defp payment_block(:moved, _details), do: %{html: "", text: ""}
+  defp payment_block(variant, _details) when variant in [:moved, :revived],
+    do: %{html: "", text: ""}
 
   defp intent(:booked), do: :confirmed
   defp intent(:revived), do: :confirmed
