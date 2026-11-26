@@ -237,8 +237,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   # window nothing was refunded, and the host is told to refund from Stripe.
   defp settled_action(:refund_seats, %{cancel_seat_payments: seats}) do
     case BookingPayments.split_by_refund_window(seats) do
-      {[], [_ | _]} -> :seats_outside_refund_window
-      _ -> :refund_seats
+      {[], [_outside | _more]} -> :seats_outside_refund_window
+      _refundable_or_none -> :refund_seats
     end
   end
 
