@@ -139,4 +139,33 @@ defmodule Tymeslot.Meetings.CancellationGroupDisputeTest do
 
     assert refunds(disputed) == []
   end
+
+  # One read classifies every live seat, so a seat cannot fall between a
+  # read of the refundable seats and another of the disputed ones.
+  test "one read of the live seats splits the refundable from the disputed" do
+    ctx = host_and_session()
+    earlier = ~U[2026-11-01 10:00:00Z]
+    paid = paid_seat(ctx, "ada@example.com", inserted_at: earlier)
+    disputed = disputed_seat(ctx, "grace@example.com", "ch_SPLIT")
+
+    partly =
+      paid_seat(ctx, "alan@example.com",
+        status: :partially_refunded,
+        refunded_amount_cents: 500,
+        inserted_at: DateTime.add(earlier, 1, :hour)
+      )
+
+    paid_seat(ctx, "edsger@example.com", status: :refunded, refunded_amount_cents: 2000)
+    paid_seat(ctx, "mallory@example.com", host_user_id: insert(:user).id, status: :disputed)
+
+    assert {outstanding, disputed_seats} =
+             BookingPayments.live_seat_payments_for_meeting(ctx.session.id, ctx.host.id)
+
+    assert Enum.map(outstanding, & &1.id) == [paid.id, partly.id]
+    assert Enum.map(disputed_seats, & &1.id) == [disputed.id]
+
+    assert ctx.session.id
+           |> BookingPayments.seat_payments_for_meeting(ctx.host.id)
+           |> Enum.map(& &1.id) == [paid.id, partly.id]
+  end
 end

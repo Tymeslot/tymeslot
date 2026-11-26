@@ -233,25 +233,36 @@ defmodule Tymeslot.MeetingPayments.BookingPayments do
   """
   @spec seat_payments_for_meeting(Ecto.UUID.t(), integer()) :: [BookingPaymentSchema.t()]
   def seat_payments_for_meeting(meeting_id, host_user_id) when is_integer(host_user_id) do
-    meeting_id
-    |> SeatPaymentQueries.list_for_live_seats()
-    |> Enum.filter(&(&1.host_user_id == host_user_id and Refunds.refund_outstanding?(&1)))
+    {outstanding, _disputed} = live_seat_payments_for_meeting(meeting_id, host_user_id)
+    outstanding
   end
 
   @doc """
-  The seat payments `host_user_id` took on the group meeting `meeting_id`
-  that a dispute holds, oldest first: the live seats
-  `seat_payments_for_meeting/2` leaves out because the card network has
-  their money.
+  The seat payments `host_user_id` took on the group meeting `meeting_id`,
+  from one read of its live seats, as `{outstanding, disputed}`, each
+  oldest first: those `seat_payments_for_meeting/2` returns, and those a
+  dispute holds, which it leaves out because the card network has their
+  money. A live seat with neither (refunded in full, say) is in neither.
+
+  One read, so a seat whose dispute closes meanwhile cannot fall between
+  two of them and be in neither list.
   """
-  @spec disputed_seat_payments_for_meeting(Ecto.UUID.t(), integer()) :: [
-          BookingPaymentSchema.t()
-        ]
-  def disputed_seat_payments_for_meeting(meeting_id, host_user_id)
-      when is_integer(host_user_id) do
+  @spec live_seat_payments_for_meeting(Ecto.UUID.t(), integer()) ::
+          {[BookingPaymentSchema.t()], [BookingPaymentSchema.t()]}
+  def live_seat_payments_for_meeting(meeting_id, host_user_id) when is_integer(host_user_id) do
     meeting_id
     |> SeatPaymentQueries.list_for_live_seats()
-    |> Enum.filter(&(&1.host_user_id == host_user_id and &1.status == :disputed))
+    |> Enum.filter(&(&1.host_user_id == host_user_id))
+    |> Enum.reduce({[], []}, fn
+      %{status: :disputed} = payment, {outstanding, disputed} ->
+        {outstanding, [payment | disputed]}
+
+      payment, {outstanding, disputed} ->
+        if Refunds.refund_outstanding?(payment),
+          do: {[payment | outstanding], disputed},
+          else: {outstanding, disputed}
+    end)
+    |> then(fn {outstanding, disputed} -> {Enum.reverse(outstanding), Enum.reverse(disputed)} end)
   end
 
   @doc "Fetches the one booking payment of a paid series, or `nil`."

@@ -368,11 +368,14 @@ defmodule Tymeslot.Meetings.Cancellation do
   # seats are read under the lock, so one paid while the cancellation
   # waited for the lock is among them. No pending payment is locked here.
   #
-  # Only the seats live now are refunded (`seat_payments_for_meeting/2`).
-  # A seat under dispute is not among them (`Refunds.refund_outstanding?/1`):
-  # its money is with the card network. Its refund is recorded held back by
-  # the dispute instead (`hold_disputed_refunds/3`), for the dispute's close
-  # to make should the money come back to the host. The host chose against
+  # Only the seats live now are refunded, read once and split into those
+  # with money outstanding and those a dispute holds
+  # (`BookingPayments.live_seat_payments_for_meeting/2`): a dispute closing
+  # meanwhile locks its payment only, never the meeting, so two reads could
+  # see the seat in neither. A disputed seat's money is with the card
+  # network. Its refund is recorded held back by the dispute instead
+  # (`hold_disputed_refunds/3`), for the dispute's close to make should the
+  # money come back to the host. The host chose against
   # the seats they were shown, which never include a disputed one, so with
   # none shown there was no choice to make and the default, a full refund,
   # applies.
@@ -382,9 +385,11 @@ defmodule Tymeslot.Meetings.Cancellation do
   # it, which would only be refused, and the email tells the host to refund
   # it from Stripe.
   #
-  # Each refund is recorded under its payment's row lock, taken here after
-  # the meeting's, the order `Tymeslot.BookingSeries.Cancel` takes for a
-  # series payment too. No writer holding a seat payment's row lock waits on
+  # Each refund is sized and recorded under its payment's row lock, so a
+  # refund or dispute that landed since the read is accounted for rather
+  # than failing the cancellation. That lock is taken after the meeting's,
+  # the order `Tymeslot.BookingSeries.Cancel` takes for a series payment
+  # too. No writer holding a seat payment's row lock waits on
   # its meeting's: the paths that lock both (`Webhooks.SeatCheckoutCompleted`)
   # do so only for a payment still pending, never one already paid.
   #
@@ -392,8 +397,10 @@ defmodule Tymeslot.Meetings.Cancellation do
   # host chose against (`seen_ids`): any others roll the cancellation back.
   defp settle_seats(cancelled, organizer_user_id, refund?, seen_ids) do
     released = SeatHolds.release_open_for_meeting(cancelled.id, :meeting_cancelled)
-    payments = BookingPayments.seat_payments_for_meeting(cancelled.id, organizer_user_id)
-    disputed = BookingPayments.disputed_seat_payments_for_meeting(cancelled.id, organizer_user_id)
+
+    {payments, disputed} =
+      BookingPayments.live_seat_payments_for_meeting(cancelled.id, organizer_user_id)
+
     {refundable, _outside_window} = BookingPayments.split_by_refund_window(payments)
 
     # What each seat holds is read before its refund is recorded, which
@@ -441,20 +448,12 @@ defmodule Tymeslot.Meetings.Cancellation do
     end)
   end
 
-  # What the seat has left, less any refund of it still pending; a seat
-  # whose pending refunds already hold all of it needs none more.
-  defp record_refund(payment, organizer_user_id) do
-    case MeetingPayments.refundable_remaining_cents(payment) do
-      0 ->
-        {:ok, :none}
-
-      amount ->
-        MeetingPayments.request_refund(payment, amount, :cancellation,
-          host_user_id: organizer_user_id,
-          enqueue_now: true
-        )
-    end
-  end
+  # What the seat has left, less any refund of it still pending, read under
+  # its row lock: a seat whose pending or settled refunds already hold all
+  # of it records none, and one disputed since the read is held back by
+  # the dispute as `hold_disputed_refunds/3` holds it.
+  defp record_refund(payment, organizer_user_id),
+    do: MeetingPayments.request_remaining_refund(payment.id, organizer_user_id, :cancellation)
 
   # The organiser's email says what happens to the money only when somebody
   # paid, and names the very seats settled above, at what each still held:
