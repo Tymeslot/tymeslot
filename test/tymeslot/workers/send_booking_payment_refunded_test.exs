@@ -72,9 +72,10 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefundedTest do
       end)
     end
 
-    # The meeting's stored title is the host's calendar event, in the host's
-    # language; the booker reads it in theirs.
-    test "names the booking in the booker's language" do
+    # The meeting's stored title is the host's calendar event, naming the
+    # booker in the host's language; the booker reads the booking named after
+    # the host, in theirs.
+    test "names the booking after the host, in the booker's language" do
       meeting =
         insert(:meeting,
           title: "Discovery Call mit Alice",
@@ -91,8 +92,8 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefundedTest do
                })
 
       assert_email_sent(fn email ->
-        refute email.text_body =~ "mit Alice"
-        assert email.text_body =~ "Discovery Call con Alice"
+        refute email.text_body =~ "con Alice"
+        assert email.text_body =~ "Discovery Call con Bob Host"
       end)
     end
 

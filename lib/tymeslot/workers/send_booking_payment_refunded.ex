@@ -136,10 +136,32 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
     {:ok, context}
   end
 
-  # The refund notice goes to the booker, so the title is in their language.
-  defp meeting_title(%{title: title} = meeting, _payment) when is_binary(title) and title != "",
-    do: BookingTitle.localise(meeting, RecipientLocale.attendee_locale(meeting))
+  # The refund notice goes to the booker, so the booking is named from their
+  # side, "<meeting type> with <host>", in their language. The stored title
+  # names the booker instead, being the host's calendar event.
+  defp meeting_title(meeting, payment) do
+    case meeting_type_name(meeting, payment) do
+      nil ->
+        nil
 
-  defp meeting_title(_meeting, %{meeting_type_name: name}) when is_binary(name), do: name
-  defp meeting_title(_meeting, _payment), do: nil
+      type ->
+        Gettext.with_locale(TymeslotWeb.Gettext, RecipientLocale.attendee_locale(meeting), fn ->
+          title_with_host(type, payment.host_name)
+        end)
+    end
+  end
+
+  defp meeting_type_name(%{meeting_type: type}, _payment) when is_binary(type) and type != "",
+    do: type
+
+  defp meeting_type_name(_meeting, %{meeting_type_name: type})
+       when is_binary(type) and type != "",
+       do: type
+
+  defp meeting_type_name(_meeting, _payment), do: nil
+
+  defp title_with_host(type, host) when is_binary(host) and host != "",
+    do: BookingTitle.render(type, host)
+
+  defp title_with_host(type, _host), do: type
 end
