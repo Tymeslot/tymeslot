@@ -317,6 +317,17 @@ defmodule Tymeslot.MeetingPayments do
           {:ok, RefundSchema.t()} | {:error, Refunds.refusal()}
   defdelegate request_refund(payment, amount_cents, source, opts \\ []), to: Refunds
 
+  @doc """
+  Locks a payment and records a refund of whatever it has left, held back
+  until its dispute closes when it is disputed; see
+  `Refunds.request_remaining_refund_locked/3`.
+  """
+  @spec request_remaining_refund(Ecto.UUID.t(), integer(), Refunds.refund_source()) ::
+          {:ok, RefundSchema.t() | :none} | {:error, Refunds.refusal()}
+  defdelegate request_remaining_refund(payment_id, host_user_id, source),
+    to: Refunds,
+    as: :request_remaining_refund_locked
+
   @doc "Makes one attempt at a recorded refund; see `Refunds.execute/2`."
   @spec execute_refund(RefundSchema.t(), keyword()) :: Refunds.attempt_result()
   defdelegate execute_refund(refund, opts \\ []), to: Refunds, as: :execute

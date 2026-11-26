@@ -60,8 +60,14 @@ defmodule Tymeslot.Meetings.Cancellation do
   seat is settled by its own path, and a participant who left earlier is
   not refunded for having left, so neither is refunded here; the host can
   still refund the latter from the payments page. A seat under dispute is
-  left out as well, its money being with the card network; should the
-  host later win the dispute, nothing refunds that seat.
+  not refunded now, its money being with the card network, but its refund
+  is recorded as held back by the dispute
+  (`MeetingPayments.request_remaining_refund/3`), so a dispute the host
+  later wins refunds the attendee what came back
+  (`Webhooks.ChargeDisputeClosed`). That follows the host's choice: a
+  host who chose no refund records none. A session whose only paid seats
+  are disputed offers the host no choice, and is settled as the default,
+  a full refund.
 
   The seats are settled in the cancellation's own transaction, once the
   meeting row is cancelled and so locked (`Cancel.execute_settling/3`):
@@ -363,10 +369,13 @@ defmodule Tymeslot.Meetings.Cancellation do
   # waited for the lock is among them. No pending payment is locked here.
   #
   # Only the seats live now are refunded (`seat_payments_for_meeting/2`).
-  # A seat under dispute is left out too (`Refunds.refund_outstanding?/1`):
-  # its money is with the card network. That leaves a gap: should the host
-  # later win the dispute (`Webhooks.ChargeDisputeClosed`), the money comes
-  # back to them for a session they cancelled, and nothing refunds it.
+  # A seat under dispute is not among them (`Refunds.refund_outstanding?/1`):
+  # its money is with the card network. Its refund is recorded held back by
+  # the dispute instead (`hold_disputed_refunds/3`), for the dispute's close
+  # to make should the money come back to the host. The host chose against
+  # the seats they were shown, which never include a disputed one, so with
+  # none shown there was no choice to make and the default, a full refund,
+  # applies.
   #
   # A seat paid more than 60 days ago is past the refund window
   # (`BookingPayments.split_by_refund_window/1`): no refund is recorded for
@@ -384,6 +393,7 @@ defmodule Tymeslot.Meetings.Cancellation do
   defp settle_seats(cancelled, organizer_user_id, refund?, seen_ids) do
     released = SeatHolds.release_open_for_meeting(cancelled.id, :meeting_cancelled)
     payments = BookingPayments.seat_payments_for_meeting(cancelled.id, organizer_user_id)
+    disputed = BookingPayments.disputed_seat_payments_for_meeting(cancelled.id, organizer_user_id)
     {refundable, _outside_window} = BookingPayments.split_by_refund_window(payments)
 
     # What each seat holds is read before its refund is recorded, which
@@ -391,7 +401,8 @@ defmodule Tymeslot.Meetings.Cancellation do
     seat_money = BookingPayments.seat_money(payments)
 
     with :ok <- seen(payments, seen_ids),
-         {:ok, scheduled} <- schedule_refunds(refundable, organizer_user_id, refund?) do
+         {:ok, scheduled} <- schedule_refunds(refundable, organizer_user_id, refund?),
+         :ok <- hold_disputed_refunds(disputed, organizer_user_id, refund? or payments == []) do
       {:ok, %{released_holds: released, refunds_scheduled: scheduled, seat_money: seat_money}}
     end
   end
@@ -411,6 +422,20 @@ defmodule Tymeslot.Meetings.Cancellation do
       case record_refund(payment, organizer_user_id) do
         {:ok, :none} -> {:cont, {:ok, count}}
         {:ok, _refund} -> {:cont, {:ok, count + 1}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  # Each payment is locked and read afresh: a dispute that closed while the
+  # cancellation waited leaves a payment refunded as any other seat, one it
+  # took all of leaves nothing to refund.
+  defp hold_disputed_refunds(_payments, _organizer_user_id, false), do: :ok
+
+  defp hold_disputed_refunds(payments, organizer_user_id, true) do
+    Enum.reduce_while(payments, :ok, fn payment, :ok ->
+      case MeetingPayments.request_remaining_refund(payment.id, organizer_user_id, :cancellation) do
+        {:ok, _refund_or_none} -> {:cont, :ok}
         {:error, reason} -> {:halt, {:error, reason}}
       end
     end)

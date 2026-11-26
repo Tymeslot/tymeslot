@@ -175,6 +175,20 @@ defmodule Tymeslot.MeetingPayments.Refunds do
     request_remaining(payment, remaining, source, refusal(payment))
   end
 
+  @doc """
+  Locks the payment `payment_id` taken by `host_user_id`, then records a
+  refund of whatever it has left (`request_remaining_refund/2`), for a
+  caller whose transaction holds no lock on it yet. Another host's payment,
+  or one that does not exist, is `{:error, :not_found}`.
+  """
+  @spec request_remaining_refund_locked(Ecto.UUID.t(), integer(), refund_source()) ::
+          {:ok, RefundSchema.t() | :none} | {:error, refusal()}
+  def request_remaining_refund_locked(payment_id, host_user_id, source)
+      when is_integer(host_user_id) do
+    with {:ok, payment} <- lock(payment_id, host_user_id),
+         do: request_remaining_refund(payment, source)
+  end
+
   defp request_remaining(_payment, remaining, _source, _refusal) when remaining <= 0,
     do: {:ok, :none}
 

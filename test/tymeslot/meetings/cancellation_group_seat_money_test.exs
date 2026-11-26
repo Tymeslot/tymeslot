@@ -34,10 +34,12 @@ defmodule Tymeslot.Meetings.CancellationGroupSeatMoneyTest do
     :ok
   end
 
-  defp refund_amounts do
+  # The refunds the cancellation set out to make: a disputed seat's refund,
+  # held back by the dispute, is recorded failed and counted apart.
+  defp refund_amounts(status \\ :pending) do
     Repo.all(
       from(r in RefundSchema,
-        where: r.source == :cancellation,
+        where: r.source == :cancellation and r.status == ^status,
         order_by: r.amount_cents,
         select: r.amount_cents
       )
@@ -74,7 +76,9 @@ defmodule Tymeslot.Meetings.CancellationGroupSeatMoneyTest do
   # The organiser is told of the very seats the cancellation settled, at what
   # each still held then: a seat partly refunded before the cancel counts at
   # its balance, and a disputed seat (its money with the card network) is
-  # neither refunded nor counted. Full and none name the same seats and sums.
+  # neither refunded nor counted, a full refund only recording its refund
+  # held back for the dispute's close. Full and none name the same seats and
+  # sums.
   describe "what the organiser's cancellation email is told" do
     setup do
       ctx = host_and_session()
@@ -89,15 +93,16 @@ defmodule Tymeslot.Meetings.CancellationGroupSeatMoneyTest do
       ctx
     end
 
-    for {action, choice, refunds} <- [
-          {:refund_seats, "full", [1500, 2000]},
-          {:none, "none", []}
+    for {action, choice, refunds, held} <- [
+          {:refund_seats, "full", [1500, 2000], [2000]},
+          {:none, "none", [], []}
         ] do
       test "for a #{choice} refund, the seats settled and what they held", ctx do
         assert {:ok, _cancelled} =
                  Meetings.cancel_meeting_with_refund(ctx.session, ctx.host.id, unquote(action))
 
         assert refund_amounts() == unquote(refunds)
+        assert refund_amounts(:failed) == unquote(held)
 
         assert seat_refund_arg() == %{
                  "choice" => unquote(choice),

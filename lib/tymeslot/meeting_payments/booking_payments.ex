@@ -238,6 +238,22 @@ defmodule Tymeslot.MeetingPayments.BookingPayments do
     |> Enum.filter(&(&1.host_user_id == host_user_id and Refunds.refund_outstanding?(&1)))
   end
 
+  @doc """
+  The seat payments `host_user_id` took on the group meeting `meeting_id`
+  that a dispute holds, oldest first: the live seats
+  `seat_payments_for_meeting/2` leaves out because the card network has
+  their money.
+  """
+  @spec disputed_seat_payments_for_meeting(Ecto.UUID.t(), integer()) :: [
+          BookingPaymentSchema.t()
+        ]
+  def disputed_seat_payments_for_meeting(meeting_id, host_user_id)
+      when is_integer(host_user_id) do
+    meeting_id
+    |> SeatPaymentQueries.list_for_live_seats()
+    |> Enum.filter(&(&1.host_user_id == host_user_id and &1.status == :disputed))
+  end
+
   @doc "Fetches the one booking payment of a paid series, or `nil`."
   @spec payment_for_series(term()) :: BookingPaymentSchema.t() | nil
   def payment_for_series(series_id), do: BookingPaymentQueries.by_series_id(series_id)
