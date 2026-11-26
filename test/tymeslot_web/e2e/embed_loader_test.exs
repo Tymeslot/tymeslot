@@ -109,8 +109,9 @@ defmodule TymeslotWeb.E2E.EmbedLoaderTest do
     modal_wrapper = "#tymeslot-modal [data-tymeslot-frame]"
 
     # Escape closes it, hands the page its scrolling back and puts focus on
-    # the trigger. Pressed straight after opening: once the visitor is in the
-    # booking frame, its keys go to the framed page, not to this one.
+    # the trigger. Pressed straight after opening, with focus still on the
+    # close button, it is the host page's own handler that closes it; Escape
+    # from inside the booking frame has a feature of its own below.
     session =
       session
       |> resize(@window)
@@ -164,6 +165,44 @@ defmodule TymeslotWeb.E2E.EmbedLoaderTest do
     |> send_keys([:shift, :tab, :shift])
     |> assert_focus("modal-iframe")
     |> click(css("#tymeslot-modal [data-tymeslot-close]"))
+    |> assert_closed("book")
+  end
+
+  feature "Escape inside the booking frame closes the popup, unless the page takes it itself",
+          %{session: session} do
+    profile = create_embeddable_profile(["127.0.0.1"])
+
+    site =
+      HostSite.start!(%{
+        "/" =>
+          HostSite.page("""
+          <button id="book" type="button"
+                  onclick="TymeslotBooking.open('#{profile.username}', {theme: '1'})">Book</button>
+          """)
+      })
+
+    modal_frame = "#tymeslot-modal iframe[title='Booking Widget']"
+    switcher = "#language-switcher-dropdown"
+
+    # Clicking the booking page's language switcher puts focus inside the
+    # frame, where the host page's own Escape handler never hears a key.
+    session
+    |> resize(@window)
+    |> visit(site <> "/")
+    |> open_popup()
+    |> focus_frame(css(modal_frame))
+    |> assert_has(css("[data-phx-main].phx-connected"))
+    |> click(css("#{switcher} > button"))
+    |> assert_has(css("#{switcher}-panel"))
+    # The first Escape is the dropdown's: it closes alone, the popup stays.
+    |> send_keys([:escape])
+    |> assert_has(css("#{switcher}-panel", count: 0, visible: :any))
+    |> focus_default_frame()
+    |> assert_has(css("#tymeslot-modal[role='dialog']"))
+    # The next one, nothing on the page taking it, closes the popup.
+    |> focus_frame(css(modal_frame))
+    |> send_keys([:escape])
+    |> focus_default_frame()
     |> assert_closed("book")
   end
 

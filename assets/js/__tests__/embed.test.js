@@ -1480,3 +1480,56 @@ describe('chrome text in the embed\'s language', () => {
   })
 })
 
+
+describe('Escape relayed from the booking frame', () => {
+  function escapeFrom(source, origin = window.location.origin) {
+    window.dispatchEvent(
+      new MessageEvent('message', { origin, source, data: { type: 'tymeslot-escape' } })
+    )
+  }
+
+  test("closes the popup when its own frame relays Escape, and restores the trigger's focus", async () => {
+    vi.useFakeTimers()
+    const trigger = document.createElement('button')
+    document.body.appendChild(trigger)
+    trigger.focus()
+
+    window.TymeslotBooking.open('alice')
+    const iframe = document.querySelector('#tymeslot-modal iframe[title="Booking Widget"]')
+    escapeFrom(iframe.contentWindow)
+    await vi.runAllTimersAsync()
+
+    expect(document.getElementById('tymeslot-modal')).toBeNull()
+    expect(document.activeElement).toBe(trigger)
+  })
+
+  test('ignores an inline embed relaying Escape while the popup is open', async () => {
+    vi.useFakeTimers()
+    const container = document.createElement('div')
+    container.id = 'booking-container'
+    document.body.appendChild(container)
+    window.TymeslotBooking.embed('#booking-container', 'alice')
+    const inline = container.querySelector('iframe[title="Booking Widget"]')
+
+    window.TymeslotBooking.open('alice')
+    escapeFrom(inline.contentWindow)
+    await vi.runAllTimersAsync()
+
+    expect(document.getElementById('tymeslot-modal')).not.toBeNull()
+  })
+
+  test('ignores Escape relayed from another origin', async () => {
+    vi.useFakeTimers()
+    window.TymeslotBooking.open('alice')
+    const iframe = document.querySelector('#tymeslot-modal iframe[title="Booking Widget"]')
+
+    escapeFrom(iframe.contentWindow, 'https://evil.example')
+    await vi.runAllTimersAsync()
+
+    expect(document.getElementById('tymeslot-modal')).not.toBeNull()
+  })
+
+  test('does nothing without an open popup', () => {
+    expect(() => escapeFrom(window)).not.toThrow()
+  })
+})

@@ -8,6 +8,7 @@
  * - Grow immediately, settle a shrink for one tick, skip sub-pixel jitter
  * - Origin derivation from document.referrer / parent-origin param
  * - Graceful degradation when referrer is unavailable
+ * - The Escape relay, and the Escapes the page consumes itself
  */
 
 import { beforeEach, afterEach, describe, expect, test, vi } from 'vitest'
@@ -93,6 +94,13 @@ function runScript({
     return scheduled.length
   })
 
+  // Recorded so the next test starts without this run's window listeners.
+  const addEventListener = window.addEventListener.bind(window)
+  vi.spyOn(window, 'addEventListener').mockImplementation((type, listener, options) => {
+    scriptListeners.push([type, listener, options])
+    return addEventListener(type, listener, options)
+  })
+
   // eslint-disable-next-line no-eval
   eval(iframeEmbedSource)
 
@@ -106,8 +114,12 @@ function runScript({
 }
 
 const originalLocation = window.location
+const scriptListeners = []
 
 beforeEach(() => {
+  for (const [type, listener, options] of scriptListeners.splice(0)) {
+    window.removeEventListener(type, listener, options)
+  }
   document.documentElement.removeAttribute('data-embedded')
   document.documentElement.removeAttribute('data-embed-mode')
   document.body.innerHTML = ''
@@ -608,5 +620,116 @@ describe('parent origin derivation', () => {
       expect.stringContaining('auto-resize disabled')
     )
     expect(window.parent.postMessage).not.toHaveBeenCalled()
+  })
+})
+
+describe('Escape relay', () => {
+  function pressEscape(target = document.body, init = {}) {
+    const event = new KeyboardEvent('keydown', {
+      key: 'Escape',
+      bubbles: true,
+      cancelable: true,
+      ...init
+    })
+    target.dispatchEvent(event)
+  }
+
+  function escapeMessages() {
+    return window.parent.postMessage.mock.calls.filter(
+      ([data]) => data.type === 'tymeslot-escape'
+    )
+  }
+
+  // jsdom lays nothing out, so a rendered element has to say it has a box.
+  function shown(el) {
+    el.getClientRects = () => [{}]
+    return el
+  }
+
+  test('posts tymeslot-escape to the parent origin only', () => {
+    runScript({ referrer: 'https://embedder.com/page' })
+    pressEscape()
+
+    expect(escapeMessages()).toEqual([[{ type: 'tymeslot-escape' }, 'https://embedder.com']])
+  })
+
+  test('posts nothing for other keys, a held key or an IME composition', () => {
+    runScript()
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    pressEscape(document.body, { repeat: true })
+    pressEscape(document.body, { isComposing: true })
+
+    expect(escapeMessages()).toEqual([])
+  })
+
+  test('posts nothing when the page prevented the Escape (a select panel closing)', () => {
+    runScript()
+    const consume = (e) => e.preventDefault()
+    document.addEventListener('keydown', consume, true)
+    pressEscape()
+    document.removeEventListener('keydown', consume, true)
+
+    expect(escapeMessages()).toEqual([])
+  })
+
+  test('posts nothing when the page stopped the Escape in the capture phase (a tooltip)', () => {
+    runScript()
+    const stop = (e) => e.stopPropagation()
+    window.addEventListener('keydown', stop, true)
+    pressEscape()
+    window.removeEventListener('keydown', stop, true)
+
+    expect(escapeMessages()).toEqual([])
+  })
+
+  test("posts nothing while an open dropdown's LiveView Escape binding is on the page", () => {
+    runScript()
+    document.body.innerHTML =
+      '<div phx-window-keydown="close_language_dropdown" phx-key="escape"></div>'
+    shown(document.body.firstChild)
+    pressEscape()
+
+    expect(escapeMessages()).toEqual([])
+  })
+
+  test('posts once the dropdown has closed and its binding is gone', () => {
+    runScript()
+    document.body.innerHTML = '<div phx-key="escape"></div>'
+    shown(document.body.firstChild)
+    pressEscape()
+
+    expect(escapeMessages()).toHaveLength(1)
+  })
+
+  test('posts while a modal bound to Escape is hidden', () => {
+    runScript()
+    document.body.innerHTML =
+      '<div style="display: none" phx-window-keydown="cancel" phx-key="escape"></div>'
+    pressEscape()
+
+    expect(escapeMessages()).toHaveLength(1)
+  })
+
+  test('an element-level Escape binding takes the key only from inside it', () => {
+    runScript()
+    document.body.innerHTML =
+      '<div phx-keydown="close" phx-key="Escape"><input id="inside"></div><input id="outside">'
+    shown(document.body.firstChild)
+
+    pressEscape(document.getElementById('inside'))
+    expect(escapeMessages()).toEqual([])
+
+    pressEscape(document.getElementById('outside'))
+    expect(escapeMessages()).toHaveLength(1)
+  })
+
+  test('posts nothing outside an embed or for an owner preview', () => {
+    runScript({ isEmbedded: false })
+    pressEscape()
+    expect(escapeMessages()).toEqual([])
+
+    runScript({ search: '?preview=true' })
+    pressEscape()
+    expect(escapeMessages()).toEqual([])
   })
 })
