@@ -90,16 +90,16 @@ defmodule Tymeslot.Meetings.SeatWrites do
   @spec hold_snapshot(map()) :: map()
   def hold_snapshot(source), do: Map.take(source, @hold_snapshot_fields)
 
-  # A slot is created confirmed, or awaiting payment when a hold creates it
+  # A slot is created confirmed, awaiting payment when a hold creates it, or
+  # awaiting verification when its first seat is held for an email check
   # (`MeetingSchema.group_changeset/2` honours no other status).
   defp create_meeting_with_first_seat(meeting_attrs, seat_request, seats_requested, hooks) do
     # Snapshotted once, at creation, onto the meeting row itself — see
     # `Tymeslot.Meetings.group?/1`. Not re-read from the meeting type later.
     attrs =
-      Map.merge(meeting_attrs, %{
-        capacity: seat_request.max_participants,
-        status: if(hooks.hold, do: :awaiting_payment, else: :confirmed)
-      })
+      meeting_attrs
+      |> Map.put(:capacity, seat_request.max_participants)
+      |> then(&if(hooks.hold, do: Map.put(&1, :status, :awaiting_payment), else: &1))
 
     case Scheduling.create_group_meeting_with_conflict_check(attrs,
            exclude_uid: hooks.exclude_from_conflicts.()
