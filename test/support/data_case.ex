@@ -25,6 +25,8 @@ defmodule Tymeslot.DataCase do
   alias Tymeslot.Infrastructure.VideoCircuitBreaker
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.Test.LeftoverProcesses
 
   using do
@@ -53,14 +55,18 @@ defmodule Tymeslot.DataCase do
       {:error, %Mint.TransportError{reason: :timeout}}
     end)
 
-    # Safe Stripe adapter fallback — meeting-payments handlers backfill
+    # Safe Stripe fallback: meeting-payments handlers backfill
     # stripe_charge_id by retrieving the payment intent. Tests that don't
-    # care about the backfill get a benign no-charge response so the handler
-    # logs a warning and continues without crashing.
-    Mox.stub(Tymeslot.MeetingPayments.StripeAdapterMock, :retrieve_payment_intent, fn _id,
-                                                                                      _opts ->
-      {:ok, %{"latest_charge" => nil}}
-    end)
+    # care about the backfill get a benign no-charge response, which
+    # `ChargeBackfill` reads as `:charge_not_available`: a checkout completed
+    # under it enqueues a `BackfillCharge` job (not run, as Oban is manual
+    # in test, unless the test drains the `:payments` queue).
+    StripeStub.stub(
+      :retrieve_payment_intent,
+      StripeFixtures.object("payment_intent_with_latest_charge", %{
+        "latest_charge" => nil
+      })
+    )
 
     reset_stateful_components(tags)
 

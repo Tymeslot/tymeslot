@@ -42,12 +42,12 @@ defmodule Tymeslot.Payments.Webhooks.Ingress do
 
   require Logger
 
-  alias Stripe.Webhook
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Stripe
+  alias Tymeslot.Integrations.Stripe.WebhookSignature
   alias Tymeslot.MeetingPayments.Webhooks.WebhookRegistry, as: ConnectRegistry
-  alias Tymeslot.Payments.Config
   alias Tymeslot.Payments.Webhooks.Idempotency
   alias Tymeslot.Payments.Webhooks.WebhookRegistry, as: PlatformRegistry
 
@@ -122,21 +122,24 @@ defmodule Tymeslot.Payments.Webhooks.Ingress do
     end
   end
 
-  # The event is decoded as Stripe sent it (`response_as: :map`) rather than
-  # cast into the library's structs: an endpoint renders events at the API
-  # version it was created with, not the one the library pins, and the
-  # structs drop every field their own version lacks. A correctly signed
-  # body that is not a JSON object is an invalid payload: the library
-  # decodes only after the signature checks out, and raises if it cannot.
+  # The event is decoded as Stripe sent it, into a plain map: an endpoint
+  # renders events at the API version it was created with, and a typed
+  # struct would drop every field its own version lacks. The body is decoded
+  # only after the signature checks out; a correctly signed body that is not
+  # a JSON object is an invalid payload.
   defp verify(endpoint, raw_body, signature, secret) do
-    case Webhook.construct_event(raw_body, signature || "", secret, response_as: :map) do
-      {:ok, event} when is_map(event) -> {:ok, event}
-      {:ok, _not_an_object} -> reject(endpoint, :not_an_object, :invalid_payload)
+    case WebhookSignature.verify(raw_body, signature, secret) do
+      :ok -> decode(endpoint, raw_body)
       {:error, reason} -> reject(endpoint, reason, :invalid_signature)
     end
-  rescue
-    exception in [Jason.DecodeError] ->
-      reject(endpoint, exception.__struct__, :invalid_payload)
+  end
+
+  defp decode(endpoint, raw_body) do
+    case Jason.decode(raw_body) do
+      {:ok, event} when is_map(event) -> {:ok, event}
+      {:ok, _not_an_object} -> reject(endpoint, :not_an_object, :invalid_payload)
+      {:error, %Jason.DecodeError{}} -> reject(endpoint, Jason.DecodeError, :invalid_payload)
+    end
   end
 
   defp reject(endpoint, reason, result) do
@@ -177,12 +180,8 @@ defmodule Tymeslot.Payments.Webhooks.Ingress do
     {:error, :permanent, :invalid_event}
   end
 
-  defp other_mode?(%{"livemode" => livemode}) when is_boolean(livemode) do
-    case Config.stripe_api_key() do
-      key when is_binary(key) -> livemode != String.contains?(key, "_live_")
-      nil -> false
-    end
-  end
+  defp other_mode?(%{"livemode" => livemode}) when is_boolean(livemode),
+    do: Stripe.configured?() and livemode != Stripe.live_mode?()
 
   defp other_mode?(_event), do: false
 

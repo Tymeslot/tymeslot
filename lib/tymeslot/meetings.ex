@@ -220,15 +220,16 @@ defmodule Tymeslot.Meetings do
   needs the payment to be theirs; anyone else gets `{:error, :not_found}`
   before the meeting is touched.
 
-  Returns `{:error, {:refund_failed, reason}}` when the meeting was cancelled
-  but the refund could not be issued, so callers can tell the host to settle it
-  manually rather than reporting a failed cancellation.
+  Returns `{:ok, cancelled, :refund_pending}` when Stripe has not confirmed
+  the refund yet (Tymeslot finishes it), and `{:error, {:refund_failed,
+  reason}}` when the meeting was cancelled but the refund was declined, so
+  callers can tell the host rather than reporting a failed cancellation.
   """
   @spec cancel_meeting_with_refund(
           Ecto.Schema.t(),
           integer(),
           Cancellation.refund_action()
-        ) :: {:ok, Ecto.Schema.t()} | {:error, term()}
+        ) :: {:ok, Ecto.Schema.t()} | {:ok, Ecto.Schema.t(), :refund_pending} | {:error, term()}
   defdelegate cancel_meeting_with_refund(meeting, acting_user_id, refund_action),
     to: Cancellation,
     as: :cancel

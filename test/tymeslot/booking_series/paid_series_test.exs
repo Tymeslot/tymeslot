@@ -25,13 +25,14 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
   alias Tymeslot.CalendarMock
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired
-  alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.SeriesAnnouncementWorker
@@ -98,7 +99,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
     assert {:ok, :payment_required, %{series: series, meeting: first, meetings: held}} =
              book(host, type, 3)
 
-    assert_received {:checkout, params, opts}
+    assert_received {:checkout, form, headers}
 
     assert statuses() == [:awaiting_payment, :awaiting_payment, :awaiting_payment]
     assert first.id == hd(held).id and first.series_position == 1
@@ -111,13 +112,15 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
     assert payment.amount_cents == total()
     assert payment.stripe_checkout_session_id == session_id()
 
-    assert [%{price_data: %{unit_amount: 5_000}, quantity: 3} = item] = params.line_items
-    assert item.price_data.product_data.name == "Mentoring, 3 sessions"
-    assert params.client_reference_id == "series:#{series.id}"
-    assert params.payment_intent_data.metadata.series_id == series.id
-    assert params.success_url =~ "/payment-processing/#{first.id}?session_id="
-    assert params.cancel_url =~ "/payment-cancelled/#{first.id}?"
-    assert opts[:idempotency_key] == "checkout:series:#{series.id}"
+    assert [%{"price_data" => %{"unit_amount" => "5000"}, "quantity" => "3"} = item] =
+             form["line_items"]
+
+    assert item["price_data"]["product_data"]["name"] == "Mentoring, 3 sessions"
+    assert form["client_reference_id"] == "series:#{series.id}"
+    assert form["payment_intent_data"]["metadata"]["series_id"] == to_string(series.id)
+    assert form["success_url"] =~ "/payment-processing/#{first.id}?session_id="
+    assert form["cancel_url"] =~ "/payment-cancelled/#{first.id}?"
+    assert headers["idempotency-key"] == "tymeslot:series_checkout:#{series.id}"
 
     # Nothing is done for a held session until it is paid for.
     assert calendar_creates() == []
@@ -128,11 +131,11 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
 
   test "the application fee is computed on the total", %{host: host, type: type} do
     {_series, payment} = book_three(host, type)
-    assert_received {:checkout, params, _opts}
+    assert_received {:checkout, form, _headers}
 
     # 0.5% of 150.00, where a session alone would take 0.25.
     assert payment.application_fee_cents == 75
-    assert params.payment_intent_data.application_fee_amount == 75
+    assert form["payment_intent_data"]["application_fee_amount"] == "75"
   end
 
   test "paying confirms every occurrence and sends one confirmation", %{host: host, type: type} do
@@ -203,7 +206,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
     assert Repo.reload!(payment).status == :paid
     assert length(calendar_creates()) == 3
     assert [_announcement] = all_enqueued(worker: SeriesAnnouncementWorker)
-    refute_enqueued(worker: RefundLatePayment)
+    assert late_refunds(payment) == []
   end
 
   test "a late payment with one slot taken refunds in full and reinstates nothing", %{
@@ -228,13 +231,13 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
 
     assert statuses() == [:expired, :expired, :expired]
     assert Repo.reload!(payment).status == :paid
-    assert_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: payment.id})
+    assert [%{source: :late_payment}] = late_refunds(payment)
     assert calendar_creates() == []
     refute_enqueued(worker: SeriesAnnouncementWorker)
   end
 
   test "a checkout failure expires the series at once", %{host: host, type: type} do
-    expect_checkout({:error, :stripe_down})
+    expect_checkout({:error_fixture, "api_error"})
 
     assert {:error, :checkout_failed} = book(host, type, 3)
 
@@ -245,9 +248,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
   describe "cancelling one paid session" do
     setup %{host: host, type: type} do
       # The completed webhook backfills the charge the refunds are made on.
-      stub(StripeAdapterMock, :retrieve_payment_intent, fn "pi_SERIES", _opts ->
-        {:ok, %{"latest_charge" => "ch_SERIES"}}
-      end)
+      stub_charge_backfill()
 
       {series, payment} = book_three(host, type)
       pay(series)
@@ -265,11 +266,21 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
 
       assert {:ok, {:refund, 5_000}} = Meetings.resolve_cancellation_refund(held, %{})
 
-      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
-        assert params.charge == "ch_SERIES"
-        assert params.amount == 5_000
-        assert params.metadata == %{series_id: series.id, booking_payment_id: payment.id}
-        {:ok, %{id: "re_SESSION"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["charge"] == "ch_SERIES"
+        assert request.form["amount"] == "5000"
+
+        assert %{
+                 "series_id" => series_id,
+                 "booking_payment_id" => payment_id,
+                 "tymeslot_refund_id" => _refund_id
+               } = request.form["metadata"]
+
+        assert series_id == to_string(series.id)
+        assert payment_id == to_string(payment.id)
+        refute Map.has_key?(request.form["metadata"], "meeting_id")
+
+        StripeStubResponses.refund(request, "re_SESSION")
       end)
 
       assert {:ok, _cancelled} =
@@ -308,4 +319,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
       assert cancelled_id == first.id
     end
   end
+
+  defp late_refunds(payment),
+    do: Repo.all(from(r in RefundSchema, where: r.booking_payment_id == ^payment.id))
 end

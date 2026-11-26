@@ -16,8 +16,9 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRaceTest do
   alias Ecto.Changeset
   alias Plug.Test
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Repo
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
 
   setup :verify_on_exit!
 
@@ -78,9 +79,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRaceTest do
         refunded_amount_cents: 0
       )
 
-    expect(StripeAdapterMock, :create_refund, 0, fn _params, _opts ->
-      {:ok, %{id: "re_must_not_happen"}}
-    end)
+    StripeStub.stub(
+      :create_refund,
+      StripeStubResponses.refund("re_must_not_happen")
+    )
 
     {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
     view |> element("#cancel-meeting-#{meeting.id}") |> render_click()
@@ -98,6 +100,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCancelRaceTest do
     reloaded = BookingPaymentQueries.get(payment.id)
     assert reloaded.status == :paid
     assert reloaded.refunded_amount_cents == 0
+    assert StripeStub.requests(:create_refund) == []
   end
 
   defp cancel_behind_the_modal(meeting) do

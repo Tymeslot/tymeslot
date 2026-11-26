@@ -25,9 +25,21 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccount do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Stripe.Accounts
+  alias Tymeslot.Integrations.Stripe.Error, as: StripeError
   alias Tymeslot.MeetingPayments.ConnectAccounts
-  alias Tymeslot.MeetingPayments.StripeAdapter
+
+  @behaviour ExpectedJobOutcome
+
+  # A deleted or disconnected account is expected: Stripe answers
+  # `resource_missing` for an account it does not know and `account_invalid`
+  # for one that has revoked the platform's access, and the
+  # `account.application.deauthorized` webhook settles its row. Any other
+  # permanent refusal (an invalid key, say) stays recorded.
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason), do: account_gone?(reason)
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"stripe_account_id" => stripe_account_id}})
@@ -38,9 +50,22 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccount do
     # is still treated as stale.
     read_at = DateTime.utc_now(:second)
 
-    case StripeAdapter.retrieve_account(stripe_account_id) do
+    case Accounts.retrieve_connected(stripe_account_id) do
       {:ok, account} ->
         ConnectAccounts.apply_account_event(account, read_at)
+
+      {:error, %StripeError{} = error} ->
+        Logger.log(
+          if(account_gone?(error), do: :info, else: :warning),
+          "ResyncConnectAccount could not retrieve Stripe account",
+          stripe_account_id: stripe_account_id,
+          operation: error.operation,
+          status: error.status,
+          code: error.code,
+          request_id: error.request_id
+        )
+
+        if StripeError.retryable?(error), do: {:error, error}, else: {:cancel, error}
 
       {:error, reason} ->
         Logger.warning("ResyncConnectAccount could not retrieve Stripe account",
@@ -56,4 +81,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccount do
     Logger.error("ResyncConnectAccount missing stripe_account_id", args: LogFormat.reason(args))
     {:discard, "missing stripe_account_id"}
   end
+
+  defp account_gone?(reason),
+    do: StripeError.resource_missing?(reason) or StripeError.account_invalid?(reason)
 end

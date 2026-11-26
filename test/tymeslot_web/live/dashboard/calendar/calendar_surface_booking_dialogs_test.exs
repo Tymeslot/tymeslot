@@ -20,23 +20,20 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
   @moduletag :bookings
   @moduletag :live
 
-  import Mox
-
   import Tymeslot.Factory
   import TymeslotWeb.CalendarSurfaceHelpers
 
   alias Ecto.Changeset
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.Workers.CalendarEventDeleteWorker
   alias Tymeslot.Workers.EmailWorker
 
   @async_timeout 1_000
-
-  setup :verify_on_exit!
 
   setup %{conn: conn}, do: owner(conn)
 
@@ -243,9 +240,9 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
         refunded_amount_cents: 0
       )
 
-    expect(StripeAdapterMock, :create_refund, fn params, _opts ->
-      assert params.amount == 5000
-      {:ok, %{id: "re_calendar_full"}}
+    StripeStub.expect(:create_refund, 1, fn request ->
+      assert request.form["amount"] == "5000"
+      StripeStubResponses.refund(request, "re_calendar_full")
     end)
 
     {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")

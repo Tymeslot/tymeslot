@@ -25,12 +25,17 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefunds do
   words, and dates an expired row by its payment, since an expired meeting
   carries no cancellation date.
 
-  Each row offers the same `open_refund_modal` event as the payments table.
-  A row only carries that button when both halves of the question say yes:
-  the payment itself is still refundable (`MeetingPayments.refundable?/1`
+  A row whose refund is recorded and still pending stays listed, owed until
+  it settles: with the pending amount noted beside the row's action while
+  some of the balance is left to refund, and a "Refund processing" badge
+  in place of any action once the pending refunds hold all of it. Rows
+  offer the same `open_refund_modal` event as the payments table. A row
+  only carries that button when both halves of the question say yes: the
+  payment itself is still refundable (`MeetingPayments.refundable?/1`
   covers balance, age and dispute state), *and* the host still has a live
-  Connect account to refund from. Everything else gets the "Refund in Stripe"
-  label instead, and stays listed, because the debt is real either way.
+  Connect account to refund from. Any other row with a balance beyond its
+  pending refunds gets the "Refund in Stripe" label instead, and stays
+  listed, because the debt is real either way.
 
   `@account` is therefore nilable. It is nil for a host who has disconnected
   Stripe, which is exactly when this card matters most: the soft delete
@@ -124,11 +129,24 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefunds do
                 <td class="p-2 text-token-sm">{p.attendee_email}</td>
                 <td class="p-2 text-token-sm">{p.meeting_type_name}</td>
                 <td class="p-2 text-token-sm text-right font-semibold">
-                  {format_amount(MeetingPayments.refundable_remaining_cents(p), p.currency)}
+                  {format_amount(MeetingPayments.refund_owed_cents(p), p.currency)}
                 </td>
                 <td class="p-2 text-right">
+                  <.pill :if={row_action(p, @account) == :processing} tone={:neutral} size={:sm}>
+                    {dgettext("dashboard_payments", "Refund processing")}
+                  </.pill>
+                  <span
+                    :if={
+                      row_action(p, @account) != :processing and MeetingPayments.refund_pending?(p)
+                    }
+                    class="text-token-xs text-tymeslot-500 mr-2"
+                  >
+                    {dgettext("dashboard_payments", "%{amount} being processed",
+                      amount: format_amount(MeetingPayments.pending_refund_cents(p), p.currency)
+                    )}
+                  </span>
                   <.action_button
-                    :if={can_refund_here?(p, @account)}
+                    :if={row_action(p, @account) == :refund}
                     variant={:secondary}
                     size={:sm}
                     phx-click="open_refund_modal"
@@ -138,7 +156,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefunds do
                     {dgettext("dashboard_payments", "Refund")}
                   </.action_button>
                   <span
-                    :if={not can_refund_here?(p, @account)}
+                    :if={row_action(p, @account) == :in_stripe}
                     class="text-token-xs text-tymeslot-500"
                   >
                     {dgettext("dashboard_payments", "Refund in Stripe")}
@@ -153,11 +171,24 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefunds do
     """
   end
 
-  # Two independent questions, and the in-app Refund button needs both
+  # Pending refunds that hold all that is owed are Tymeslot's to finish.
+  # Otherwise the in-app Refund button needs two independent questions
   # answered yes: whether the payment can still be refunded at all, and
-  # whether there is a Connect account left to refund it from.
-  defp can_refund_here?(payment, account),
-    do: MeetingPayments.refundable?(payment) and connected_for_refunds?(account)
+  # whether there is a Connect account left to refund it from. A balance
+  # beyond the pending refunds that fails either is the host's to settle in
+  # Stripe, however much of it is pending.
+  defp row_action(payment, account) do
+    cond do
+      all_pending?(payment) -> :processing
+      MeetingPayments.refundable?(payment) and connected_for_refunds?(account) -> :refund
+      true -> :in_stripe
+    end
+  end
+
+  defp all_pending?(payment) do
+    MeetingPayments.refund_pending?(payment) and
+      MeetingPayments.pending_refund_cents(payment) >= MeetingPayments.refund_owed_cents(payment)
+  end
 
   # Nil is the live case, not an oversight: `disconnect/1` nulls `user_id` on
   # the row it soft-deletes, so after a disconnect nothing user-scoped can

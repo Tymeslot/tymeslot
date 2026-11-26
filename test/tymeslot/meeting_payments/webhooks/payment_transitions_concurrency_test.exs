@@ -24,7 +24,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
   alias Ecto.UUID
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated
   alias Tymeslot.MeetingPayments.Webhooks.ChargeRefunded
@@ -33,10 +33,15 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.Test.RaceConductor
 
   @account "acct_RACE_HOST"
   @succeeded [:tymeslot, :meeting_payments, :booking_payment, :succeeded]
+
+  # The raced handlers run in processes the test did not start.
+  setup {StripeStub, :shared!}
 
   setup do
     user =
@@ -56,11 +61,17 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
             from(b in BookingPaymentSchema, where: b.host_user_id == ^user.id, select: b.id)
           )
 
+        refund_ids =
+          Repo.all(
+            from(r in RefundSchema, where: r.booking_payment_id in ^payment_ids, select: r.id)
+          )
+
         Repo.delete_all(
           from(j in Oban.Job,
             where:
               fragment("?->>'meeting_id'", j.args) in ^meeting_ids or
-                fragment("?->>'booking_payment_id'", j.args) in ^payment_ids
+                fragment("?->>'booking_payment_id'", j.args) in ^payment_ids or
+                fragment("?->>'refund_id'", j.args) in ^refund_ids
           )
         )
 
@@ -108,6 +119,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
   end
 
   test "a lost dispute racing a refund adds to the refund rather than writing over it", ctx do
+    # charge.refunded lists the charge's refunds; Tymeslot recorded none.
+    StripeStub.stub(:list_refunds, StripeFixtures.list([]))
+
     payment =
       unboxed(fn ->
         insert(:paid_booking_payment,
@@ -158,9 +172,12 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
       Repo.update!(Changeset.change(payment, stripe_payment_intent_id: "pi_RACE_DOUBLE"))
     end)
 
-    Mox.stub(StripeAdapterMock, :retrieve_payment_intent, fn _id, _opts ->
-      {:ok, %{"latest_charge" => "ch_RACE_DISPUTE"}}
-    end)
+    StripeStub.stub(
+      :retrieve_payment_intent,
+      StripeFixtures.object("payment_intent_with_latest_charge", %{
+        "latest_charge" => %{"id" => "ch_RACE_DISPUTE"}
+      })
+    )
 
     results =
       race([
@@ -198,9 +215,12 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
   test "an expiry arriving while a completion commits leaves the booking paid", ctx do
     {meeting, payment} = awaiting_payment_booking(ctx.user, "cs_RACE_EXPIRY")
 
-    Mox.stub(StripeAdapterMock, :retrieve_payment_intent, fn _id, _opts ->
-      {:ok, %{"latest_charge" => "ch_RACE_EXPIRY"}}
-    end)
+    StripeStub.stub(
+      :retrieve_payment_intent,
+      StripeFixtures.object("payment_intent_with_latest_charge", %{
+        "latest_charge" => %{"id" => "ch_RACE_EXPIRY"}
+      })
+    )
 
     results =
       race([
@@ -234,9 +254,12 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
   test "a late completion and a new booking of an overlapping slot: one ends up live", ctx do
     {meeting, payment} = expired_booking(ctx.user, "cs_RACE_LATE")
 
-    Mox.stub(StripeAdapterMock, :retrieve_payment_intent, fn _id, _opts ->
-      {:ok, %{"latest_charge" => "ch_RACE_LATE"}}
-    end)
+    StripeStub.stub(
+      :retrieve_payment_intent,
+      StripeFixtures.object("payment_intent_with_latest_charge", %{
+        "latest_charge" => %{"id" => "ch_RACE_LATE"}
+      })
+    )
 
     results =
       race([
@@ -356,11 +379,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentTransitionsConcurrencyTest do
   defp refunds_scheduled(payment) do
     unboxed(fn ->
       Repo.aggregate(
-        from(j in Oban.Job,
-          where:
-            j.worker == "Tymeslot.MeetingPayments.Workers.RefundLatePayment" and
-              fragment("?->>'booking_payment_id'", j.args) == ^payment.id
-        ),
+        from(r in RefundSchema, where: r.booking_payment_id == ^payment.id),
         :count
       )
     end)

@@ -155,11 +155,6 @@ msgstr "Spotkanie odwołane, zwrot zrealizowany."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
-msgid "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
-msgstr "Spotkanie odwołane, ale nie udało się zrealizować zwrotu. Wykonaj zwrot ręcznie w panelu Stripe."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
-#, elixir-autogen, elixir-format
 msgid "Meeting cancelled successfully"
 msgstr "Spotkanie zostało odwołane"
 
@@ -987,3 +982,23 @@ msgstr "Zwrot nie jest możliwy, ponieważ płatność jest starsza niż 60-dnio
 #, elixir-autogen, elixir-format
 msgid "No refund can be made: the payment is under dispute. Settle the dispute in Stripe first."
 msgstr "Zwrot nie jest możliwy, ponieważ płatność jest przedmiotem sporu. Najpierw rozstrzygnij spór w Stripe."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "A refund of %{amount} is already being processed."
+msgstr "Zwrot %{amount} jest już w toku."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting cancelled, but Stripe declined the refund. Check the payment in your Stripe dashboard."
+msgstr "Spotkanie odwołane, ale Stripe odrzucił zwrot. Sprawdź płatność w panelu Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting cancelled. The refund is being processed and the attendee will be emailed when it goes through."
+msgstr "Spotkanie odwołane. Zwrot jest w toku; gdy zostanie zrealizowany, uczestnik otrzyma e-mail."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled without a refund: the payment's refundable balance changed meanwhile. Check it on the payments page."
+msgstr "Odwołano bez zwrotu, ponieważ w międzyczasie zmieniła się kwota płatności pozostała do zwrotu. Sprawdź ją na stronie płatności."

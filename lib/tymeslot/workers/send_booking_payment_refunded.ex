@@ -2,19 +2,25 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
   @moduledoc """
   Sends the attendee email confirming a booking-payment refund.
 
-  Enqueued synchronously by `Tymeslot.MeetingPayments.Refunds.issue_refund/4`
-  whenever a refund (full or partial) succeeds, and by
-  `Tymeslot.MeetingPayments.Workers.RefundLatePayment` for a refund Stripe
-  accepted whose own transaction rolled back. The Stripe `charge.refunded`
-  webhook reconciles `refunded_amount_cents` and `status` but does not
-  re-enqueue the email — host-initiated refunds are the only path that
-  notifies the attendee, matching §7 of the meeting-payments design.
+  Enqueued by `Tymeslot.MeetingPayments.Refunds.Settlement` in the
+  transaction that settles a recorded refund (full or partial) as
+  succeeded, whatever decided it and whoever settles it (a refund attempt,
+  or `charge.refunded` reconciling a pending refund), so one refund sends
+  one email; and by `Tymeslot.MeetingPayments.Workers.RefundLatePayment`
+  for a refund made under its old key that `charge.refunded` recorded. A
+  refund made outside Tymeslot (in the Stripe dashboard), which
+  `charge.refunded` records as external, sends no email.
 
   Loads a fresh booking-payment row inside `perform/1` so the email reflects
   the row's committed state, not whatever was in flight when the job was
   enqueued. Standard Oban retry semantics apply: up to five attempts on
   the `:emails` queue with the platform's CircuitBreaker handling
   upstream-mailer failures.
+
+  The email names the refunds made at Stripe
+  (`MeetingPayments.stripe_refunded_cents/1`), never what a lost dispute
+  took back: the attendee's bank has told them about the chargeback, and
+  a payment that only a dispute repaid sends nothing.
 
   The send is claimed through `Tymeslot.Workers.DeliveryClaims`, so a job the
   Oban lifeline rescues after the email went out does not send it again.
@@ -63,15 +69,16 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
 
         {:discard, @payment_gone}
 
-      %BookingPaymentSchema{refunded_amount_cents: 0} ->
-        Logger.info("Refund email skipped — no refund recorded on booking_payment",
-          booking_payment_id: booking_payment_id
-        )
-
-        :ok
-
       %BookingPaymentSchema{} = payment ->
-        send_email(payment, job)
+        if MeetingPayments.stripe_refunded_cents(payment) > 0 do
+          send_email(payment, job)
+        else
+          Logger.info("Refund email skipped — no refund recorded on booking_payment",
+            booking_payment_id: booking_payment_id
+          )
+
+          :ok
+        end
     end
   end
 
@@ -111,6 +118,7 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
   defp build_context(%BookingPaymentSchema{} = payment) do
     # A series payment is named after its first session.
     meeting = payment |> MeetingPayments.meetings_for_payment() |> List.first()
+    refunded = MeetingPayments.stripe_refunded_cents(payment)
 
     context = %RefundContext{
       attendee_email: payment.attendee_email,
@@ -119,9 +127,9 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
       host_name: payment.host_name,
       meeting_title: meeting_title(meeting, payment),
       amount_cents: payment.amount_cents,
-      refunded_amount_cents: payment.refunded_amount_cents,
+      refunded_amount_cents: refunded,
       currency: payment.currency,
-      is_full_refund?: payment.refunded_amount_cents >= payment.amount_cents,
+      is_full_refund?: refunded >= payment.amount_cents,
       locale: RecipientLocale.attendee_locale(meeting)
     }
 

@@ -2,14 +2,13 @@ defmodule Tymeslot.FinancialRetentionTest do
   use Tymeslot.DataCase, async: true
   use Oban.Testing, repo: Tymeslot.Repo
 
-  import Mox
+  import Tymeslot.StripeConnectTestHelpers, only: [expect_deauthorize: 1]
 
   @moduletag :database
   @moduletag :payments
 
   alias Tymeslot.FinancialRetention
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount
   alias Tymeslot.Payments.PaymentTransactionSchema
   alias Tymeslot.Payments.SubscriptionInvoiceQueries
@@ -18,8 +17,6 @@ defmodule Tymeslot.FinancialRetentionTest do
   # The default period is ten years from the end of the calendar year, so the
   # records of 2026 are the last ones kept on 31 December 2036 and the first
   # ones past their period on 1 January 2037.
-  setup :verify_on_exit!
-
   @last_day_kept ~U[2036-12-31 23:59:59Z]
   @first_day_purged ~U[2037-01-01 00:00:00Z]
   @end_of_2026 ~U[2026-12-31 23:59:59Z]
@@ -45,10 +42,12 @@ defmodule Tymeslot.FinancialRetentionTest do
         scheduled_at: {DateTime.add(DateTime.utc_now(:second), 35 * 60), delta: 60}
       )
 
-      expect(StripeAdapterMock, :deauthorize_account, 1, fn "acct_RET" -> :ok end)
+      expect_deauthorize("acct_RET")
 
       assert %{success: 1, failure: 0} =
                Oban.drain_queue(queue: :payments, with_scheduled: true)
+
+      assert_received {:oauth_deauthorize, "acct_RET"}
     end
 
     test "schedules revocation for a legacy account too" do
@@ -229,6 +228,16 @@ defmodule Tymeslot.FinancialRetentionTest do
 
       refute Repo.reload(expired)
       assert Repo.reload(current)
+    end
+
+    test "deletes a booking payment's refund records with it" do
+      expired = retained_booking_payment(paid_at: @end_of_2026)
+      refund = insert(:booking_payment_refund, booking_payment: expired, status: :succeeded)
+
+      assert {:ok, %{booking_payments_deleted: 1}} =
+               FinancialRetention.purge_expired(@first_day_purged)
+
+      refute Repo.reload(refund)
     end
 
     test "counts from the end of the year, so January and December rows expire together" do

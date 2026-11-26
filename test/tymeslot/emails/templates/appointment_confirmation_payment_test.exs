@@ -12,12 +12,11 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationPaymentTest do
   @moduletag :emails
   @moduletag :payments
 
-  import Mox
-  alias Tymeslot.Emails.Templates.AppointmentConfirmation
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   import Tymeslot.EmailTestHelpers
 
-  setup :verify_on_exit!
+  alias Tymeslot.Emails.Templates.AppointmentConfirmation
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
   describe "attendee payment receipt block" do
     test "renders payment block with receipt URL when charge fetch succeeds" do
@@ -31,9 +30,13 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationPaymentTest do
         stripe_account_id: "acct_TEST"
       }
 
-      expect(StripeAdapterMock, :retrieve_charge, fn "ch_TEST_RECEIPT", opts ->
-        assert opts[:connect_account] == "acct_TEST"
-        {:ok, %{receipt_url: "https://pay.stripe.com/receipts/r_TEST"}}
+      StripeStub.expect(:retrieve_charge, 1, fn request ->
+        assert request.path == "/v1/charges/ch_TEST_RECEIPT"
+        assert request.headers["stripe-account"] == "acct_TEST"
+
+        StripeFixtures.object("charge", %{
+          "receipt_url" => "https://pay.stripe.com/receipts/r_TEST"
+        })
       end)
 
       details = build_appointment_details(%{booking_payment: booking_payment})
@@ -59,9 +62,11 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationPaymentTest do
         stripe_account_id: "acct_TEST"
       }
 
-      expect(StripeAdapterMock, :retrieve_charge, fn _id, _opts ->
-        {:ok, %{receipt_url: "javascript:alert(1)"}}
-      end)
+      StripeStub.expect(
+        :retrieve_charge,
+        1,
+        StripeFixtures.object("charge", %{"receipt_url" => "javascript:alert(1)"})
+      )
 
       details = build_appointment_details(%{booking_payment: booking_payment})
       email = AppointmentConfirmation.render(:attendee, "attendee@example.com", details)
@@ -91,7 +96,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationPaymentTest do
         stripe_account_id: "acct_TEST"
       }
 
-      expect(StripeAdapterMock, :retrieve_charge, fn _id, _opts -> {:error, :api_error} end)
+      # A 5xx on a GET is sent 3 times in all.
+      StripeStub.expect(:retrieve_charge, 3, {:error_fixture, "api_error"})
 
       details = build_appointment_details(%{booking_payment: booking_payment})
       email = AppointmentConfirmation.render(:attendee, "attendee@example.com", details)
@@ -114,7 +120,11 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationPaymentTest do
         stripe_account_id: "acct_TEST"
       }
 
-      expect(StripeAdapterMock, :retrieve_charge, fn _id, _opts -> {:ok, %{receipt_url: nil}} end)
+      StripeStub.expect(
+        :retrieve_charge,
+        1,
+        StripeFixtures.object("charge", %{"receipt_url" => nil})
+      )
 
       details = build_appointment_details(%{booking_payment: booking_payment})
       email = AppointmentConfirmation.render(:attendee, "attendee@example.com", details)

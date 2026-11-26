@@ -126,25 +126,6 @@ defmodule Tymeslot.MixProject do
       {:mox, "~> 1.0", only: :test},
       {:meck, "~> 1.1", only: :test},
       {:ex_machina, "~> 2.8", only: :test},
-      {:stripity_stripe, "~> 3.3"},
-      # Pinned to 4.x, which every remaining requirement accepts: Swoosh
-      # declares it optional, Wallaby's httpoison and web_driver_client (and
-      # the Tesla it pulls in) are test-only, and stripity_stripe uses hackney
-      # as its non-optional HTTP client for every Stripe API call.
-      # stripity_stripe is hackney's only runtime consumer: Swoosh sends
-      # through Finch (config :swoosh, :api_client), and everything else
-      # uses Req. Stripe calls are mocked in CI, so verify a real Stripe
-      # request in staging after any hackney upgrade.
-      # The same override must be repeated in any project that depends on
-      # this one as a path dependency, because overrides declared by a
-      # dependency do not apply to the parent project's resolution.
-      # Verified via `mix deps.tree`/mix.lock: no current dependency
-      # requires hackney below 4.0 (stripity_stripe's own requirement is
-      # already the non-optional `~> 4.0` that would be picked without this
-      # override), so nothing is being resolved here today. Retained
-      # deliberately as a guard against a future dependency reintroducing a
-      # lower requirement and silently downgrading hackney underneath it.
-      {:hackney, "~> 4.0", override: true},
       {:html_sanitize_ex, "~> 1.4"},
       {:gen_smtp, "~> 1.2"},
       {:castore, "~> 1.0"},
@@ -180,6 +161,10 @@ defmodule Tymeslot.MixProject do
       # Plug for setting conn.remote_ip from proxy headers
       {:remote_ip, "~> 1.1"},
       {:stream_data, "~> 1.1", only: :test},
+      # Wallaby's httpoison and web_driver_client are the only consumers of
+      # hackney, so it is test-only; httpoison's `~> 4.0` keeps it on 4.x
+      # without an override. Production HTTP goes through Finch and Req,
+      # Swoosh included (`config :swoosh, :api_client`).
       {:wallaby, "~> 0.30", only: :test, runtime: false},
       {:phoenix_ecto, "~> 4.6"}
     ]

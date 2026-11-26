@@ -26,7 +26,6 @@ defmodule Tymeslot.Webhooks.SeriesPayloadTest do
   alias Tymeslot.BookingSeries
   alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.CalendarMock
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired
   alias Tymeslot.Meetings.MeetingSchema
@@ -554,9 +553,7 @@ defmodule Tymeslot.Webhooks.SeriesPayloadTest do
     subscribe(host)
     Paid.expect_checkout()
 
-    stub(StripeAdapterMock, :retrieve_payment_intent, fn _intent, _opts ->
-      {:ok, %{"latest_charge" => "ch_SERIES"}}
-    end)
+    Paid.stub_charge_backfill()
 
     assert {:ok, :payment_required, %{series: series}} =
              Paid.book(host, Paid.paid_series_type(host), 2)

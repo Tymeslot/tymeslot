@@ -135,6 +135,77 @@ defmodule Tymeslot.Payments.PaymentQueries do
   end
 
   @doc """
+  Applies `attrs` to a transaction only while it is still pending, under its
+  row lock, so a concurrent `fail_pending_transaction/2` either sees the
+  change or makes it fail. `{:error, :not_pending}` when the row has left
+  `:pending` (or gone).
+  """
+  @spec update_pending_transaction(PaymentTransaction.t(), map()) ::
+          {:ok, PaymentTransaction.t()} | {:error, :not_pending | Ecto.Changeset.t()}
+  def update_pending_transaction(%PaymentTransaction{id: id}, attrs) do
+    Repo.transaction(fn ->
+      with %PaymentTransaction{} = locked <- lock_pending(id),
+           {:ok, updated} <- locked |> PaymentTransaction.changeset(attrs) |> Repo.update() do
+        updated
+      else
+        nil -> Repo.rollback(:not_pending)
+        {:error, changeset} -> Repo.rollback(changeset)
+      end
+    end)
+  end
+
+  @doc """
+  Marks a pending transaction `:failed`, merging `metadata` into its own, under
+  its row lock. Returns the row as it stood before, whose `stripe_id` is the
+  session a concurrent `update_pending_transaction/2` may have just recorded.
+  `{:error, :not_pending}` when it has left `:pending` already.
+  """
+  @spec fail_pending_transaction(PaymentTransaction.t(), map()) ::
+          {:ok, PaymentTransaction.t()} | {:error, :not_pending | Ecto.Changeset.t()}
+  def fail_pending_transaction(%PaymentTransaction{id: id}, metadata) do
+    Repo.transaction(fn ->
+      with %PaymentTransaction{} = locked <- lock_pending(id),
+           {:ok, _failed} <-
+             locked
+             |> PaymentTransaction.changeset(%{
+               status: :failed,
+               metadata: Map.merge(locked.metadata, metadata)
+             })
+             |> Repo.update() do
+        locked
+      else
+        nil -> Repo.rollback(:not_pending)
+        {:error, changeset} -> Repo.rollback(changeset)
+      end
+    end)
+  end
+
+  defp lock_pending(id) do
+    Repo.one(
+      from(t in PaymentTransaction,
+        where: t.id == ^id and t.status == :pending,
+        lock: "FOR UPDATE"
+      )
+    )
+  end
+
+  @doc """
+  A user's pending transactions, leaving out any whose checkout is still being
+  prepared: no session recorded yet, and inserted less than `preparing_seconds`
+  ago by the database clock.
+  """
+  @spec list_supersedable_pending_transactions(pos_integer(), pos_integer()) ::
+          [PaymentTransaction.t()]
+  def list_supersedable_pending_transactions(user_id, preparing_seconds) do
+    Repo.all(
+      from(t in PaymentTransaction,
+        where: t.user_id == ^user_id and t.status == :pending,
+        where: not (is_nil(t.stripe_id) and t.inserted_at > ago(^preparing_seconds, "second"))
+      )
+    )
+  end
+
+  @doc """
   Gets transactions by status for a specific user.
   """
   @spec get_transactions_by_status(PaymentTransaction.status(), pos_integer()) ::

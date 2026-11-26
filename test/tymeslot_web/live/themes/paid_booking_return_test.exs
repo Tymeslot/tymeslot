@@ -27,12 +27,13 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
 
   alias Tymeslot.CalendarMock
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.TestMocks
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.BookingDriver
@@ -48,6 +49,12 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
     Mox.set_mox_from_context(tags)
     RateLimiter.clear_all()
     AvailabilityCache.clear_all()
+
+    # Landing on the cancelled page ends the checkout at Stripe.
+    StripeStub.stub(
+      :expire_checkout_session,
+      StripeFixtures.object("checkout_session_expired", %{"id" => @session_id})
+    )
 
     # Core ships with meeting payments off; without this the paid branch
     # never reaches the Stripe adapter.
@@ -214,12 +221,13 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
   # contract, asserts the visitor is sent to Stripe Checkout, and returns
   # the return URLs the checkout session was created with, as paths.
   defp book_to_checkout(conn, profile) do
-    test_pid = self()
+    StripeStub.expect(:create_checkout_session, 1, fn request ->
+      assert request.headers["stripe-account"] == "acct_RETURN"
 
-    expect(StripeAdapterMock, :create_checkout_session, fn params, opts ->
-      assert opts[:connect_account] == "acct_RETURN"
-      send(test_pid, {:checkout_session, params})
-      {:ok, %{id: @session_id, url: @checkout_url}}
+      StripeFixtures.object("checkout_session_payment", %{
+        "id" => @session_id,
+        "url" => @checkout_url
+      })
     end)
 
     {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=UTC")
@@ -237,14 +245,14 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
     |> render_submit()
 
     assert_redirect(view, @checkout_url, 5_000)
-    assert_received {:checkout_session, params}
+    assert [%{form: form}] = StripeStub.requests(:create_checkout_session)
 
     %{
       success_url:
-        params.success_url
+        form["success_url"]
         |> String.replace("{CHECKOUT_SESSION_ID}", @session_id)
         |> path_of(),
-      cancel_url: path_of(params.cancel_url)
+      cancel_url: path_of(form["cancel_url"])
     }
   end
 

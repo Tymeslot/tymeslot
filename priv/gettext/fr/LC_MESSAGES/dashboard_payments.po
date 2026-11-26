@@ -540,3 +540,34 @@ msgstr[1] "%{count} paiements en cours seront annulés lors de la déconnexion."
 #, elixir-autogen, elixir-format
 msgid "A checkout is in progress in your current currency. Try again in a few minutes."
 msgstr "Un paiement est en cours dans votre devise actuelle. Réessayez dans quelques minutes."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} being processed"
+msgstr "%{amount} en cours de traitement"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "A refund for this payment is already being processed."
+msgstr "Un remboursement est déjà en cours pour ce paiement."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Refund processing"
+msgstr "Remboursement en cours"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Refund submitted. Stripe has not confirmed it yet; Tymeslot keeps trying and emails the attendee once it goes through."
+msgstr "Demande de remboursement envoyée. Stripe ne l’a pas encore confirmée ; Tymeslot continue d’essayer et enverra un e-mail au participant dès que le remboursement aura abouti."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe declined this refund. Check the payment in your Stripe dashboard."
+msgstr "Stripe a refusé ce remboursement. Vérifiez le paiement dans votre tableau de bord Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Lost in a dispute:"
+msgstr "Perdu lors d’un litige :"

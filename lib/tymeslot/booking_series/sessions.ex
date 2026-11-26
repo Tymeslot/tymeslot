@@ -149,10 +149,14 @@ defmodule Tymeslot.BookingSeries.Sessions do
     }
   end
 
+  # Its pending refunds read once, for every figure the overview shows.
   defp taken_payment(%SeriesSchema{id: id}) do
     case MeetingPayments.payment_for_series(id) do
-      %{paid_at: %DateTime{}} = payment -> payment
-      _unpaid_or_none -> nil
+      %{paid_at: %DateTime{}} = payment ->
+        %{payment | pending_refund_cents: MeetingPayments.pending_refund_cents(payment)}
+
+      _unpaid_or_none ->
+        nil
     end
   end
 

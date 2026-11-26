@@ -234,19 +234,20 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.SeriesActions do
     )
   end
 
-  # A series request is withdrawn whole and refunded at once.
+  # A series request is withdrawn whole and refunded in full, in the
+  # background.
   defp cancelled_message(count, {:refunded, cents}, payment) do
     dngettext(
       "dashboard_booking_series",
-      "%{count} session cancelled. Refund of %{amount} issued.",
-      "%{count} sessions cancelled. Refund of %{amount} issued.",
+      "%{count} session cancelled. Refund of %{amount} is being processed.",
+      "%{count} sessions cancelled. Refund of %{amount} is being processed.",
       count,
       amount: format_amount(cents, payment_currency(payment))
     )
   end
 
-  # The refund runs in the background; a failure is emailed to the host
-  # (`SeriesHostRefund`).
+  # The refund is made in the background; a failure is emailed to the host
+  # (`Refunds.FailureNotice`).
   defp cancelled_message(count, {:scheduled, cents}, payment) do
     dngettext(
       "dashboard_booking_series",

@@ -159,11 +159,6 @@ msgstr "Schůzka byla zrušena a platba byla vrácena."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
 #, elixir-autogen, elixir-format
-msgid "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
-msgstr "Schůzka byla zrušena, ale platbu se nepodařilo vrátit. Vraťte ji prosím ručně ve svém účtu Stripe."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
-#, elixir-autogen, elixir-format
 msgid "Meeting cancelled successfully"
 msgstr "Schůzka byla zrušena."
 
@@ -991,3 +986,23 @@ msgstr "Platbu nelze vrátit, protože je starší než 60denní lhůta pro vrá
 #, elixir-autogen, elixir-format
 msgid "No refund can be made: the payment is under dispute. Settle the dispute in Stripe first."
 msgstr "Platbu nelze vrátit, protože k ní probíhá spor. Nejprve ho vyřešte ve Stripe."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "A refund of %{amount} is already being processed."
+msgstr "Vrácení %{amount} se už zpracovává."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting cancelled, but Stripe declined the refund. Check the payment in your Stripe dashboard."
+msgstr "Schůzka byla zrušena, ale Stripe vrácení platby odmítl. Zkontrolujte platbu na nástěnce Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting cancelled. The refund is being processed and the attendee will be emailed when it goes through."
+msgstr "Schůzka byla zrušena. Vrácení platby se zpracovává a po jeho dokončení dostane účastník e-mail."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled without a refund: the payment's refundable balance changed meanwhile. Check it on the payments page."
+msgstr "Zrušeno bez vrácení platby, protože se mezitím změnil vratný zůstatek platby. Zkontrolujte ho v sekci Platby."

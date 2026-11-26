@@ -10,23 +10,23 @@ defmodule TymeslotWeb.E2E.EmbedPaidCheckoutTest do
   host page of another origin that frames the booking page through
   `embed.js`.
 
-  The Stripe adapter is the test's mock, and the checkout address it hands
+  Stripe is stubbed at HTTP level, and the checkout address the stub hands
   back is a page on the host's server, so the new tab has somewhere to land
   without the network.
   """
   use TymeslotWeb.BrowserCase, async: false
 
   import Ecto.Query, only: [where: 2]
-  import Mox
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.TestHelpers.Eventually
   import TymeslotWeb.E2E.BookerSteps
 
   alias Ecto.Changeset
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias TymeslotWeb.E2E.HostSite
   alias TymeslotWeb.Endpoint
 
@@ -34,11 +34,12 @@ defmodule TymeslotWeb.E2E.EmbedPaidCheckoutTest do
   @moduletag :payments
   @moduletag :themes
 
-  setup :verify_on_exit!
+  # The booking page's LiveView is not one of the test's `$callers`.
+  setup {StripeStub, :shared!}
 
   setup do
     # Core ships with meeting payments off; without these the paid branch
-    # stops at `:payments_unavailable` before reaching the adapter.
+    # stops at `:payments_unavailable` before reaching Stripe.
     with_config(:tymeslot,
       feature_access_checker: Tymeslot.Features.DefaultAccessChecker,
       meeting_payments_enabled: true,
@@ -63,9 +64,10 @@ defmodule TymeslotWeb.E2E.EmbedPaidCheckoutTest do
 
     checkout_url = site <> "/checkout/#{session_id}"
 
-    expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
-      {:ok, %{id: session_id, url: checkout_url}}
-    end)
+    StripeStub.expect(
+      :create_checkout_session,
+      StripeStubResponses.checkout_session(session_id, checkout_url)
+    )
 
     session =
       session

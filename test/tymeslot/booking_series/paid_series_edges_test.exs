@@ -24,15 +24,16 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Emails.Templates.AppointmentCancellation.RefundNotice
   alias Tymeslot.MeetingPayments
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired
-  alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.ApprovalRefunds
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.SeriesAnnouncementWorker
@@ -49,9 +50,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
 
     stub(CalendarMock, :get_booking_integration_info, fn _context -> {:error, :no_integration} end)
 
-    stub(StripeAdapterMock, :retrieve_payment_intent, fn "pi_SERIES", _opts ->
-      {:ok, %{"latest_charge" => "ch_SERIES"}}
-    end)
+    stub_charge_backfill()
 
     host = paid_host()
     expect_checkout()
@@ -117,7 +116,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
 
     assert statuses() == [:expired, :cancelled, :expired]
     assert Repo.reload!(payment).status == :paid
-    assert_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: payment.id})
+    assert [%{source: :late_payment}] = late_refunds(payment)
     assert_received :expired
     refute_enqueued(worker: SeriesAnnouncementWorker)
     assert all_enqueued(worker: CalendarEventWorker, args: %{"action" => "create"}) == []
@@ -136,7 +135,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
 
     assert statuses() == [:expired, :expired, :expired]
     assert Repo.reload!(payment).status == :paid
-    assert_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: payment.id})
+    assert [%{source: :late_payment}] = late_refunds(payment)
   end
 
   test "a payment for a series with no session left is refunded", %{
@@ -148,7 +147,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
     pay(series)
 
     assert Repo.reload!(payment).status == :paid
-    assert_enqueued(worker: RefundLatePayment, args: %{booking_payment_id: payment.id})
+    assert [%{source: :late_payment}] = late_refunds(payment)
   end
 
   test "a dispute won on a series that never went ahead refunds what is left", %{
@@ -168,10 +167,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
 
     assert :ok = ChargeDisputeClosed.handle(dispute_closed("won"))
 
-    assert_enqueued(
-      worker: RefundLatePayment,
-      args: %{booking_payment_id: payment.id, reason: "after_dispute"}
-    )
+    assert [%{source: :late_payment}] = late_refunds(payment)
   end
 
   test "a dispute won on a series still going ahead refunds nothing", %{
@@ -183,16 +179,16 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
 
     assert :ok = ChargeDisputeClosed.handle(dispute_closed("won"))
 
-    refute_enqueued(worker: RefundLatePayment)
+    assert late_refunds(payment) == []
   end
 
   test "abandoning the checkout from the first session ends the series' checkout" do
     [first | _rest] = meetings()
 
-    expect(StripeAdapterMock, :expire_checkout_session, fn id, opts ->
-      assert id == session_id()
-      assert opts[:connect_account] == account()
-      {:ok, %{}}
+    StripeStub.expect(:expire_checkout_session, 1, fn request ->
+      assert request.path == "/v1/checkout/sessions/#{session_id()}/expire"
+      assert request.headers["stripe-account"] == account()
+      StripeFixtures.object("checkout_session_expired", %{"id" => session_id()})
     end)
 
     assert :ok = MeetingPayments.abandon_checkout(first.id)
@@ -293,4 +289,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
       }
     }
   end
+
+  defp late_refunds(payment),
+    do: Repo.all(from(r in RefundSchema, where: r.booking_payment_id == ^payment.id))
 end

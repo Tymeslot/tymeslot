@@ -12,6 +12,7 @@ defmodule Tymeslot.Bookings.Cancel do
   alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.EmailVerification
@@ -402,7 +403,7 @@ defmodule Tymeslot.Bookings.Cancel do
         fn {_key, value} -> is_nil(value) end
       )
 
-    case cancel_with_held_seats(meeting.id, changes) do
+    case cancel_with_held_seats(meeting, changes) do
       {:ok, updated_meeting} ->
         Logger.info("Meeting status updated to cancelled",
           meeting_id: meeting.id,
@@ -418,20 +419,33 @@ defmodule Tymeslot.Bookings.Cancel do
         )
 
         error
+
+      {:error, reason} = error ->
+        Logger.error("Failed to cancel meeting",
+          meeting_id: meeting.id,
+          reason: LogFormat.reason(reason)
+        )
+
+        error
     end
   end
 
-  defp cancel_with_held_seats(meeting_id, changes) do
-    {:ok, result} =
-      Repo.transaction(fn ->
-        with {:ok, cancelled} <-
-               MeetingTransitionQueries.transition_to_cancelled(meeting_id, changes) do
-          :ok = EmailVerification.release_all_held(cancelled.id)
-          {:ok, cancelled}
-        end
-      end)
-
-    result
+  # A booking cancelled while its checkout is open has the checkout closed
+  # by a job committed with the cancellation, so its attendee cannot pay for
+  # it afterwards, and Stripe is not called under these locks. A payment
+  # that completes before the close is refunded in full when it does
+  # (`Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted`).
+  defp cancel_with_held_seats(meeting, changes) do
+    Repo.transaction(fn ->
+      with {:ok, cancelled} <-
+             MeetingTransitionQueries.transition_to_cancelled(meeting.id, changes),
+           :ok <- EmailVerification.release_all_held(cancelled.id),
+           :ok <- MeetingPayments.schedule_checkout_close(meeting) do
+        cancelled
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
   end
 
   # Enqueues the video-sync job that deletes the provider-side meeting (e.g.

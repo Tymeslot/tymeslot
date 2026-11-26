@@ -145,6 +145,73 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefundedTest do
       refute_email_sent()
     end
 
+    test "the refund email states only the refund made" do
+      payment =
+        insert_payment(%{
+          amount_cents: 10_000,
+          refunded_amount_cents: 10_000,
+          disputed_lost_cents: 6_000,
+          status: :disputed
+        })
+
+      assert :ok =
+               perform_job(SendBookingPaymentRefunded, %{
+                 "booking_payment_id" => payment.id
+               })
+
+      assert_email_sent(fn email ->
+        assert email.subject == "Partial Refund Issued - €40.00"
+
+        assert email.text_body =~
+                 "Hi Alice, €40.00 of your €100.00 payment has been refunded."
+
+        assert email.html_body =~ "€40.00 of your €100.00 payment has been refunded."
+
+        for body <- [email.text_body, email.html_body] do
+          refute body =~ "€100.00 has been refunded"
+          refute body =~ "refunded in full"
+          refute body =~ "dispute"
+        end
+      end)
+    end
+
+    test "the refund email still goes out once a dispute over the same money is lost" do
+      payment =
+        insert_payment(%{
+          amount_cents: 10_000,
+          refunded_amount_cents: 10_000,
+          stripe_refunded_cents: 10_000,
+          disputed_lost_cents: 10_000,
+          status: :refunded
+        })
+
+      assert :ok =
+               perform_job(SendBookingPaymentRefunded, %{
+                 "booking_payment_id" => payment.id
+               })
+
+      assert_email_sent(fn email ->
+        assert email.to == [{"Alice", "alice@example.com"}]
+        assert email.subject == "Refund Issued - €100.00"
+      end)
+    end
+
+    test "no refund email when only a dispute took the money" do
+      payment =
+        insert_payment(%{
+          refunded_amount_cents: 3_000,
+          disputed_lost_cents: 3_000,
+          status: :disputed
+        })
+
+      assert :ok =
+               perform_job(SendBookingPaymentRefunded, %{
+                 "booking_payment_id" => payment.id
+               })
+
+      refute_email_sent()
+    end
+
     test "discards when booking_payment_id is missing from args" do
       assert {:discard, "missing booking_payment_id"} =
                perform_job(SendBookingPaymentRefunded, %{})

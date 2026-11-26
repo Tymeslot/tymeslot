@@ -315,11 +315,17 @@ config :tymeslot, :calendar_providers, %{
 config :tymeslot, :recaptcha, signup_enabled: false, booking_enabled: false
 
 # Payment system configuration for tests
-config :tymeslot, :stripe_provider, Tymeslot.Payments.StripeMock
 config :tymeslot, :subscription_manager, Tymeslot.Payments.SubscriptionManagerMock
 
-config :tymeslot, :stripe_adapter, Tymeslot.MeetingPayments.StripeAdapterMock
 config :tymeslot, :stripe_connect_client_id, "ca_test"
+
+# Stripe calls go to their own Req.Test stub, never retry with a delay, and
+# name their operation in a header the test stubs match on.
+config :tymeslot, Tymeslot.Integrations.Stripe,
+  retry_base_ms: 0,
+  req_options: [plug: {Req.Test, Tymeslot.Integrations.Stripe}],
+  tag_requests: true
+
 config :tymeslot, :show_branding, true
 
 # Pricing configuration for tests

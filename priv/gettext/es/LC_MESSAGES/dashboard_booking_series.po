@@ -171,13 +171,6 @@ msgstr "%{amount} reembolsados hasta ahora"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
 #, elixir-autogen, elixir-format
-msgid "%{count} session cancelled. Refund of %{amount} issued."
-msgid_plural "%{count} sessions cancelled. Refund of %{amount} issued."
-msgstr[0] "%{count} sesión cancelada. Se emitió un reembolso de %{amount}."
-msgstr[1] "%{count} sesiones canceladas. Se emitió un reembolso de %{amount}."
-
-#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
-#, elixir-autogen, elixir-format
 msgid "%{count} session cancelled. The attendee has been told."
 msgid_plural "%{count} sessions cancelled. The attendee has been told."
 msgstr[0] "%{count} sesión cancelada. Se avisó al asistente."
@@ -417,3 +410,25 @@ msgstr "No se puede hacer ningún reembolso, ya que el pago está en disputa. Re
 #, elixir-autogen, elixir-format
 msgid "No refund can be made: the series was not paid."
 msgstr "No se puede hacer ningún reembolso, ya que la serie no se pagó."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} being processed"
+msgstr "%{amount} en proceso"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/series_actions.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} session cancelled. Refund of %{amount} is being processed."
+msgid_plural "%{count} sessions cancelled. Refund of %{amount} is being processed."
+msgstr[0] "%{count} sesión cancelada. El reembolso de %{amount} está en proceso."
+msgstr[1] "%{count} sesiones canceladas. El reembolso de %{amount} está en proceso."
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{lost} lost in a dispute"
+msgstr "%{lost} perdidos en una disputa"
+
+#: lib/tymeslot_web/components/dashboard/meetings/series_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{refunded} refunded so far, plus %{lost} lost in a dispute"
+msgstr "%{refunded} reembolsados hasta ahora, más %{lost} perdidos en una disputa"

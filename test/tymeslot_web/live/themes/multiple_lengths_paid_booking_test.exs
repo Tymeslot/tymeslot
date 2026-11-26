@@ -24,11 +24,12 @@ defmodule TymeslotWeb.Live.Themes.MultipleLengthsPaidBookingTest do
 
   alias Tymeslot.CalendarMock
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.TestMocks
   alias TymeslotWeb.BookingDriver
   alias TymeslotWeb.Endpoint
@@ -97,10 +98,13 @@ defmodule TymeslotWeb.Live.Themes.MultipleLengthsPaidBookingTest do
           charges_enabled: true
         )
 
-        %{params: params, success_url: success_url} = book_to_checkout(conn, profile)
+        %{form: form, success_url: success_url} = book_to_checkout(conn, profile)
 
         # The price is the type's whatever the length.
-        assert [%{price_data: %{unit_amount: @price_cents}, quantity: 1}] = params.line_items
+        assert [%{"price_data" => %{"unit_amount" => price}, "quantity" => "1"}] =
+                 form["line_items"]
+
+        assert price == to_string(@price_cents)
 
         # Held for the hour while the visitor pays.
         meeting = Repo.get_by!(MeetingSchema, organizer_user_id: user.id)
@@ -144,15 +148,16 @@ defmodule TymeslotWeb.Live.Themes.MultipleLengthsPaidBookingTest do
   end
 
   # Books the paid type at an hour through the markup contract, asserts the
-  # visitor is sent to Stripe Checkout, and returns the session's params and
+  # visitor is sent to Stripe Checkout, and returns the session's form and
   # its success URL as a path.
   defp book_to_checkout(conn, profile) do
-    test_pid = self()
+    StripeStub.expect(:create_checkout_session, 1, fn request ->
+      assert request.headers["stripe-account"] == "acct_LENGTHS"
 
-    expect(StripeAdapterMock, :create_checkout_session, fn params, opts ->
-      assert opts[:connect_account] == "acct_LENGTHS"
-      send(test_pid, {:checkout_session, params})
-      {:ok, %{id: @session_id, url: @checkout_url}}
+      StripeFixtures.object("checkout_session_payment", %{
+        "id" => @session_id,
+        "url" => @checkout_url
+      })
     end)
 
     {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=UTC")
@@ -168,13 +173,13 @@ defmodule TymeslotWeb.Live.Themes.MultipleLengthsPaidBookingTest do
     |> render_submit()
 
     assert_redirect(view, @checkout_url, 5_000)
-    assert_received {:checkout_session, params}
+    assert [%{form: form}] = StripeStub.requests(:create_checkout_session)
 
     success_url =
-      params.success_url
+      form["success_url"]
       |> String.replace("{CHECKOUT_SESSION_ID}", @session_id)
       |> String.replace_prefix(Endpoint.url(), "")
 
-    %{params: params, success_url: success_url}
+    %{form: form, success_url: success_url}
   end
 end

@@ -43,15 +43,6 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandlerTest do
       charge = %{"amount" => 10_000}
       assert RefundHandler.calculate_total_refunded(charge) == 0
     end
-
-    test "handles atom keys" do
-      charge = %{
-        amount_refunded: 3000,
-        refunds: %{data: [%{amount: 3000}]}
-      }
-
-      assert RefundHandler.calculate_total_refunded(charge) == 3000
-    end
   end
 
   describe "calculate_latest_refund_amount/1" do
@@ -78,29 +69,11 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandlerTest do
       charge = %{"amount_refunded" => 0, "refunds" => %{"data" => []}}
       assert RefundHandler.calculate_latest_refund_amount(charge) == 0
     end
-
-    test "handles atom keys" do
-      charge = %{
-        refunds: %{
-          data: [
-            %{amount: 1500, created: 10},
-            %{amount: 2500, created: 20}
-          ]
-        }
-      }
-
-      assert RefundHandler.calculate_latest_refund_amount(charge) == 2500
-    end
   end
 
   describe "get_charge_amount/1" do
     test "extracts charge amount with string keys" do
       charge = %{"amount" => 10_000}
-      assert RefundHandler.get_charge_amount(charge) == 10_000
-    end
-
-    test "extracts charge amount with atom keys" do
-      charge = %{amount: 10_000}
       assert RefundHandler.get_charge_amount(charge) == 10_000
     end
 
@@ -251,11 +224,6 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandlerTest do
     test "extracts currency from string-keyed charge" do
       charge = %{"currency" => "usd", "amount" => 5000}
       assert RefundHandler.extract_charge_currency(charge) == "usd"
-    end
-
-    test "extracts currency from atom-keyed charge" do
-      charge = %{currency: "gbp", amount: 5000}
-      assert RefundHandler.extract_charge_currency(charge) == "gbp"
     end
 
     test "defaults to eur when currency key is absent" do

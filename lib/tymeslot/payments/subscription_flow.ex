@@ -126,12 +126,21 @@ defmodule Tymeslot.Payments.SubscriptionFlow do
            urls,
            subscription_metadata
          ) do
-      {:ok, checkout_session} ->
-        checkout_url = Map.get(checkout_session, "url") || checkout_session.url
-
-        case update_subscription_transaction_from_checkout(transaction, checkout_session) do
+      {:ok, %{"url" => checkout_url} = checkout_session} when is_binary(checkout_url) ->
+        case update_subscription_transaction_from_checkout(
+               transaction,
+               checkout_session,
+               checkout_url
+             ) do
           {:ok, _updated_transaction} ->
             {:ok, %{checkout_url: checkout_url}}
+
+          # A newer checkout superseded this one while Stripe was creating its
+          # session, too early to expire it, so it is expired here: the user
+          # is sent to the newer checkout, never to two payable ones.
+          {:error, :not_pending} ->
+            PendingTransactions.expire_checkout_session(checkout_session["id"])
+            {:error, :checkout_superseded}
 
           {:error, reason} ->
             Logger.error(
@@ -142,11 +151,27 @@ defmodule Tymeslot.Payments.SubscriptionFlow do
             {:ok, %{checkout_url: checkout_url}}
         end
 
+      {:ok, checkout_session_without_url} ->
+        Logger.error("Stripe returned a subscription checkout session without a URL")
+        expire_unusable_checkout(checkout_session_without_url)
+
+        _mark_result =
+          mark_pending_subscription_transaction_failed(transaction, :missing_checkout_url)
+
+        {:error, :missing_checkout_url}
+
       {:error, reason} ->
         _mark_result = mark_pending_subscription_transaction_failed(transaction, reason)
         {:error, reason}
     end
   end
+
+  # A session nobody can open would otherwise stay payable at Stripe with no
+  # transaction recording it.
+  defp expire_unusable_checkout(%{"id" => session_id}) when is_binary(session_id),
+    do: PendingTransactions.expire_checkout_session(session_id)
+
+  defp expire_unusable_checkout(_checkout_session), do: :ok
 
   defp create_pending_subscription_transaction(
          user_id,
@@ -165,24 +190,16 @@ defmodule Tymeslot.Payments.SubscriptionFlow do
     DatabaseOperations.create_payment_transaction(transaction_attrs)
   end
 
-  defp update_subscription_transaction_from_checkout(transaction, checkout_session) do
-    checkout_session_id = Map.get(checkout_session, "id") || Map.get(checkout_session, :id)
+  defp update_subscription_transaction_from_checkout(transaction, checkout_session, checkout_url) do
+    checkout_session_id = checkout_session["id"]
 
-    checkout_subscription_id =
-      Map.get(checkout_session, "subscription") || Map.get(checkout_session, :subscription)
-
-    checkout_url = Map.get(checkout_session, "url") || Map.get(checkout_session, :url)
-
-    stripe_customer_id =
-      Map.get(checkout_session, "customer") || Map.get(checkout_session, :customer)
-
-    if is_nil(checkout_session_id) or is_nil(checkout_url) do
+    if is_nil(checkout_session_id) do
       {:error, :invalid_checkout_session}
     else
       attrs = %{
         stripe_id: checkout_session_id,
-        subscription_id: checkout_subscription_id,
-        stripe_customer_id: stripe_customer_id,
+        subscription_id: checkout_session["subscription"],
+        stripe_customer_id: checkout_session["customer"],
         metadata:
           Map.merge(transaction.metadata, %{
             "checkout_session" => checkout_session_id,
@@ -190,7 +207,7 @@ defmodule Tymeslot.Payments.SubscriptionFlow do
           })
       }
 
-      PaymentQueries.update_transaction(transaction, attrs)
+      PaymentQueries.update_pending_transaction(transaction, attrs)
     end
   end
 

@@ -1,0 +1,15 @@
+{
+  "after_expiration": null,
+  "configuration": "bpc_1MAhNDLkdIwHu7ixckACO1Jq",
+  "created": 1795683210,
+  "customer": "cus_test1",
+  "customer_account": null,
+  "flow": null,
+  "id": "bps_test1",
+  "livemode": false,
+  "locale": null,
+  "object": "billing_portal.session",
+  "on_behalf_of": null,
+  "return_url": "https://example.test/billing",
+  "url": "redacted"
+}

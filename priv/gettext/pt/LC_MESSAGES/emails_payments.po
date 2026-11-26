@@ -43,19 +43,19 @@ msgstr "Status da conta"
 
 #: lib/tymeslot/emails/templates/charge_dispute_opened.ex
 #: lib/tymeslot/emails/templates/connect_account_restricted.ex
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "Action required"
 msgstr "Ação necessária"
 
 #: lib/tymeslot/emails/templates/charge_dispute_opened.ex
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee email:"
 msgstr "E-mail do participante:"
 
 #: lib/tymeslot/emails/templates/charge_dispute_opened.ex
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee:"
 msgstr "Participante:"
@@ -86,7 +86,7 @@ msgid "If the dispute is closed in your favour, the booking will reconcile autom
 msgstr "Se a contestação for encerrada a seu favor, o agendamento será conciliado automaticamente. Se for perdida, o agendamento será marcado como reembolsado."
 
 #: lib/tymeslot/emails/templates/charge_dispute_opened.ex
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting:"
 msgstr "Reunião:"
@@ -217,87 +217,82 @@ msgstr "não"
 msgid "yes"
 msgstr "sim"
 
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "%{amount} is still to be refunded"
 msgstr "Ainda falta reembolsar %{amount}"
 
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
-#, elixir-autogen, elixir-format
-msgid "A refund for a cancelled series could not be made."
-msgstr "Não foi possível fazer o reembolso de uma série cancelada."
-
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "Amount to refund:"
 msgstr "Valor a reembolsar:"
 
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "Open payments"
 msgstr "Abrir pagamentos"
 
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "REFUND DETAILS:"
 msgstr "DETALHES DO REEMBOLSO:"
 
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "Refund details"
 msgstr "Detalhes do reembolso"
 
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
-#, elixir-autogen, elixir-format
-msgid "Refund the attendee from your payments in Tymeslot or from your Stripe dashboard, or let them know what happens next."
-msgstr "Reembolse o participante pelos seus pagamentos no Tymeslot ou pelo painel do Stripe, ou informe o que acontece depois."
-
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
-#, elixir-autogen, elixir-format
-msgid "SERIES REFUND NOT MADE"
-msgstr "REEMBOLSO DA SÉRIE NÃO REALIZADO"
-
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
-#, elixir-autogen, elixir-format
-msgid "Series refund not made"
-msgstr "Reembolso da série não realizado"
-
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
-#, elixir-autogen, elixir-format
-msgid "Series refund not made: %{amount}"
-msgstr "Reembolso da série não realizado: %{amount}"
-
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
-#, elixir-autogen, elixir-format
-msgid "Stripe did not accept the refund after several attempts."
-msgstr "O Stripe não aceitou o reembolso após várias tentativas."
-
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
-#, elixir-autogen, elixir-format
-msgid "The payment is older than the 60-day refund window."
-msgstr "O pagamento já passou do prazo de 60 dias para reembolso."
-
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
-#, elixir-autogen, elixir-format
-msgid "The payment is under dispute."
-msgstr "O pagamento está em contestação."
-
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "The refund was not made"
 msgstr "O reembolso não foi feito"
 
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "WHAT TO DO:"
 msgstr "O QUE FAZER:"
 
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
 msgid "What to do"
 msgstr "O que fazer"
 
-#: lib/tymeslot/emails/templates/series_refund_failed.ex
+#: lib/tymeslot/emails/templates/refund_failed.ex
 #, elixir-autogen, elixir-format
-msgid "You cancelled the remaining sessions of a series, but the refund of %{amount} to the attendee could not be made. The sessions stay cancelled."
-msgstr "Você cancelou as sessões restantes de uma série, mas não foi possível reembolsar %{amount} ao participante. As sessões continuam canceladas."
+msgid "Check the payment in your Stripe dashboard. The money is still yours to return: refund the attendee from your payments in Tymeslot or from Stripe, or let them know what happens next."
+msgstr "Verifique o pagamento no seu painel do Stripe. A devolução do dinheiro continua com você: faça o reembolso em pagamentos no Tymeslot ou no Stripe, ou explique ao participante o que acontece a seguir."
+
+#: lib/tymeslot/emails/templates/refund_failed.ex
+#, elixir-autogen, elixir-format
+msgid "REFUND NOT MADE"
+msgstr "REEMBOLSO NÃO FEITO"
+
+#: lib/tymeslot/emails/templates/refund_failed.ex
+#, elixir-autogen, elixir-format
+msgid "Refund not made"
+msgstr "Reembolso não feito"
+
+#: lib/tymeslot/emails/templates/refund_failed.ex
+#, elixir-autogen, elixir-format
+msgid "Refund of %{amount} to %{attendee} not made"
+msgstr "Reembolso de %{amount} para %{attendee} não foi feito"
+
+#: lib/tymeslot/emails/templates/refund_failed.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe declined or could not complete a refund."
+msgstr "O Stripe recusou ou não conseguiu concluir um reembolso."
+
+#: lib/tymeslot/emails/templates/refund_failed.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe declined or could not complete the refund of %{amount} to %{attendee} for their booking."
+msgstr "O Stripe recusou ou não conseguiu concluir o reembolso de %{amount} para %{attendee} referente ao agendamento."
+
+#: lib/tymeslot/emails/templates/refund_failed.ex
+#, elixir-autogen, elixir-format
+msgid "You cancelled sessions of a series, but Stripe declined or could not complete the refund of %{amount} to %{attendee}. The sessions stay cancelled."
+msgstr "Você cancelou sessões de uma série, mas o Stripe recusou ou não conseguiu concluir o reembolso de %{amount} para %{attendee}. As sessões continuam canceladas."
+
+#: lib/tymeslot/emails/templates/refund_failed.ex
+#, elixir-autogen, elixir-format
+msgid "the attendee"
+msgstr "o participante"

@@ -144,18 +144,59 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
       "sweep tries again, but the account stays past its deletion date until the cause is fixed"
   end
 
-  # The booking stays on the host's outstanding-refunds list; the id is what
-  # the operator needs to find the charge in Stripe. The job is unique per
-  # payment over every state, so a fresh one cannot be inserted: retrying
-  # means retrying this one.
-  def format_message(:late_payment_refund_failed, metadata) do
-    id = Map.get(metadata, :booking_payment_id, "unknown")
-    job_id = Map.get(metadata, :oban_job_id, "unknown")
+  # The refund row is settled `failed`, so nothing retries it; the payment
+  # id is what the operator needs to find the charge.
+  def format_message(:refund_failed, metadata) do
+    get = &Map.get(metadata, &1, "unknown")
 
-    "Refund of booking payment #{id}, paid after its slot was taken, failed on every " <>
-      "attempt (#{reason_text(metadata)}); the attendee is still owed the money. " <>
-      "To settle it, refund the booking from the host's payments settings (or the " <>
-      "Stripe dashboard), or once the cause is fixed retry Oban job #{job_id}"
+    "Refund #{get.(:refund_id)} (#{get.(:source)}) of booking payment " <>
+      "#{get.(:booking_payment_id)} failed: #{get.(:failure_code)}. The attendee is still " <>
+      "owed the money; refund the booking from the host's payments settings or the " <>
+      "Stripe dashboard"
+  end
+
+  def format_message(:refund_failure_reversed, metadata) do
+    get = &Map.get(metadata, &1, "unknown")
+
+    "Refund #{get.(:refund_id)} of booking payment #{get.(:booking_payment_id)}, reported " <>
+      "as failed (#{get.(:failure_code)}), was made at Stripe after all as " <>
+      "#{get.(:stripe_refund_id)} and is now recorded. The earlier failure alert is void: " <>
+      "the attendee has been refunded, so refund nothing by hand" <> host_told(metadata)
+  end
+
+  def format_message(:refund_duplicated, metadata) do
+    get = &Map.get(metadata, &1, "unknown")
+
+    "Stripe made a second refund, #{get.(:duplicate_stripe_refund_id)} of " <>
+      "#{get.(:duplicate_amount_cents)} cents, for refund #{get.(:refund_id)} of booking " <>
+      "payment #{get.(:booking_payment_id)}, which records #{get.(:stripe_refund_id)}: the " <>
+      "attendee has been refunded twice. Check the charge in the Stripe dashboard and settle " <>
+      "the difference with the host and the attendee"
+  end
+
+  # The job is unique per payment and reason over every state, so a fresh
+  # one cannot be inserted: retrying means retrying this one.
+  def format_message(:late_payment_refund_failed, metadata) do
+    get = &Map.get(metadata, &1, "unknown")
+
+    "Refund of booking payment #{get.(:booking_payment_id)}, owed in full to the attendee " <>
+      "(paid after its slot was taken, to a host whose account is being deleted, or left " <>
+      "with the host by a decided dispute), could not be recorded on any attempt " <>
+      "(#{reason_text(metadata)}); the attendee is still owed the money. Refund the " <>
+      "booking from the host's payments settings or the Stripe dashboard, or once the " <>
+      "cause is fixed retry Oban job #{get.(:oban_job_id)}"
+  end
+
+  def format_message(:refund_stuck, metadata) do
+    get = &Map.get(metadata, &1, "unknown")
+
+    "Refund #{get.(:refund_id)} (#{get.(:source)}) of booking payment " <>
+      "#{get.(:booking_payment_id)} is still pending after #{get.(:attempt)} attempts: " <>
+      "Tymeslot cannot tell whether Stripe made it. Tymeslot keeps trying; check the " <>
+      "charge in the Stripe dashboard, then record what Stripe did with " <>
+      ~s|Tymeslot.Release.settle_stuck_refund("#{get.(:refund_id)}", | <>
+      ~s|{:succeeded, "re_…", charge_refunded_cents}) through bin/tymeslot rpc, | <>
+      "or with :failed in place of the tuple if Stripe never made it"
   end
 
   # The job is unique per account, so once the cause is fixed the way to try
@@ -168,6 +209,16 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
       "(#{reason_text(metadata)}); the account is no longer connected in Tymeslot but " <>
       "still authorises it. Once the cause is fixed, retry Oban job #{job_id}, or remove " <>
       "Tymeslot from the account's authorised apps in the Stripe dashboard"
+  end
+
+  def format_message(:connect_event_unmatched, metadata) do
+    get = &Map.get(metadata, &1, "unknown")
+
+    "Stripe event #{get.(:event_type)} #{get.(:event_id)} from account " <>
+      "#{get.(:stripe_account_id)} was acknowledged without a booking match: its payment " <>
+      "intent #{get.(:payment_intent_id)} could not be read (#{reason_text(metadata)}). " <>
+      "Any refund or dispute on charge #{get.(:charge_id)} is not recorded in Tymeslot; " <>
+      "check the charge in the Stripe dashboard"
   end
 
   # One alert per integration and sync run (`Calendar.InvalidEventReport`).
@@ -278,6 +329,12 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
       true -> nil
     end
   end
+
+  # A refund the host decided emails the host when it fails.
+  defp host_told(%{host_may_have_been_told: true}),
+    do: ". The host may have been emailed that it failed: tell them it was made"
+
+  defp host_told(_metadata), do: ""
 
   defp recipients_label(metadata) do
     case Map.get(metadata, :recipients_masked) do

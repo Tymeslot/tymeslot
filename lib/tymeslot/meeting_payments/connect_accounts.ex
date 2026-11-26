@@ -13,10 +13,11 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
 
   alias Tymeslot.Features
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Integrations.Stripe.Accounts
+  alias Tymeslot.Integrations.Stripe.ConnectOAuth, as: StripeOAuthClient
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.Currency
-  alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.MeetingPayments.StripeConnectOAuth
   alias Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount
   alias Tymeslot.MeetingTypes
@@ -24,6 +25,16 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   alias Tymeslot.Workers.SendConnectAccountRestricted
 
   @type account :: ConnectAccountSchema.t()
+
+  @typedoc "Where an account is in the Stripe Connect lifecycle (`display_state/1`)."
+  @type display_state ::
+          :not_connected
+          | :incomplete
+          | :pending_review
+          | :ready
+          | :unsupported_currency
+          | :restricted
+          | :deleted
 
   # Seconds: long enough for a host whose connection could not be saved to
   # retry. A later disconnect or a refusal moves the job (see
@@ -97,7 +108,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
     with :ok <- check_onboarding_access(user.id),
          {:ok, nonce} <- verify_state_for(user.id, state),
          :ok <- claim_nonce(user.id, nonce),
-         {:ok, %{stripe_user_id: stripe_account_id}} <- StripeAdapter.exchange_oauth_code(code),
+         {:ok, %{stripe_user_id: stripe_account_id}} <- StripeOAuthClient.exchange_code(code),
          :ok <- check_not_linked_elsewhere(stripe_account_id, user.id),
          :ok <- enqueue_revocation(stripe_account_id, @revocation_delay) do
       record_connection(user.id, stripe_account_id, connected_at)
@@ -145,7 +156,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   defp record_connection(user_id, stripe_account_id, connected_at) do
     read_at = DateTime.utc_now(:second)
 
-    case StripeAdapter.retrieve_account(stripe_account_id) do
+    case Accounts.retrieve_connected(stripe_account_id) do
       {:ok, %{"default_currency" => currency} = snapshot} when is_binary(currency) ->
         if Currency.allowed?(currency) do
           connect_with_snapshot(user_id, stripe_account_id, snapshot, read_at, connected_at)
@@ -350,4 +361,39 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   # enqueue a duplicate SendConnectAccountRestricted job.
   defp stale_or_equal?(_event_dt, nil), do: false
   defp stale_or_equal?(event_dt, last), do: DateTime.compare(event_dt, last) in [:lt, :eq]
+
+  @doc """
+  Maps a Connect account (or `nil`) to its onboarding display state.
+
+  This is the single source of truth for "where is this account in the Stripe
+  Connect lifecycle?" — consumed both by the payments status banner
+  (`TymeslotWeb.Dashboard.PaymentsSettings.StatusCard`) and the integrations
+  hub summary. `nil` (no account) reads as `:not_connected`.
+
+  Two submitted states are distinct on purpose: `:incomplete` is onboarding
+  that was never submitted (Stripe stamps a brand-new account with
+  `requirements.past_due`, so `disabled_reason` must not be read until
+  `details_submitted` is true), while `:pending_review` is a submitted account
+  Stripe is still reviewing.
+
+  An account that is otherwise ready but carries a currency payments cannot
+  charge at all (`Currency.support/1` is `:unsupported`) reads as
+  `:unsupported_currency`, since it takes no payments until its host picks a
+  supported one.
+  """
+  @spec display_state(map() | nil) :: display_state()
+  def display_state(nil), do: :not_connected
+  def display_state(%{deleted_at: dt}) when is_struct(dt, DateTime), do: :deleted
+  def display_state(%{details_submitted: true} = account), do: submitted_state(account)
+  def display_state(_account), do: :incomplete
+
+  defp submitted_state(%{disabled_reason: reason}) when is_binary(reason), do: :restricted
+
+  defp submitted_state(%{charges_enabled: true, payouts_enabled: true} = account) do
+    if Currency.support(Map.get(account, :default_currency)) == :unsupported,
+      do: :unsupported_currency,
+      else: :ready
+  end
+
+  defp submitted_state(_account), do: :pending_review
 end

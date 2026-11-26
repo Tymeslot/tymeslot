@@ -8,12 +8,14 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
   import Tymeslot.Factory
 
   alias Swoosh.Email
+  alias Tymeslot.Integrations.Stripe.Error
   alias Tymeslot.Payments.PaymentTransactionSchema
-  alias Tymeslot.Payments.StripeMock
   alias Tymeslot.Payments.SubscriptionInvoiceQueries
   alias Tymeslot.Payments.SubscriptionManagerMock
   alias Tymeslot.Payments.Webhooks.RefundHandler
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
 
   defmodule FailingHandler do
     @spec handle_payment_event(map()) :: {:error, term()}
@@ -51,7 +53,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
     # Current API versions send charge.refunded without the charge's refunds,
     # so the handler reads the latest one from Stripe. By default there is
     # none to read, and the email quotes the charge's refunded total.
-    stub(StripeMock, :list_refunds, fn _params -> {:ok, %{data: [], has_more: false}} end)
+    StripeStub.stub(:list_refunds, StripeFixtures.list([]))
 
     on_exit(fn ->
       restore(:subscription_manager, original_manager)
@@ -84,6 +86,15 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
     }
 
   defp with_object(event, object), do: Map.put(event, "data", %{"object" => object})
+
+  defp refund(id, amount, created, metadata) do
+    StripeFixtures.object("refund", %{
+      "id" => id,
+      "amount" => amount,
+      "created" => created,
+      "metadata" => metadata
+    })
+  end
 
   # The event as Stripe sends it for one refund among several: the charge as
   # it stood once this refund was made, and what it had refunded before.
@@ -191,24 +202,31 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       assert_received {:refund_email, ^user_id, 5_000, "eur", "partial"}
     end
 
-    test "a refund the app already announced revokes without a second email" do
+    test "a refund already announced is not announced again when the charge lacks its refunds" do
       {user, customer_id} = linked_subscription()
       # As Stripe sends it at current API versions: no refunds on the charge.
       charge = refunded_charge(customer_id, 10_000, 10_000)
-      charge_id = charge["id"]
 
-      expect(StripeMock, :list_refunds, fn %{charge: ^charge_id, limit: 100} ->
-        {:ok,
-         %{
-           data: [%{id: "re_1", amount: 10_000, metadata: %{"customer_notified" => "true"}}],
-           has_more: false
-         }}
-      end)
+      StripeStub.expect(
+        :list_refunds,
+        1,
+        StripeFixtures.list([
+          StripeFixtures.object("refund", %{
+            "amount" => 500,
+            "metadata" => %{"customer_notified" => "true"}
+          })
+        ])
+      )
 
       assert {:ok, :refund_processed} =
                RefundHandler.handle(with_object(refunded_event(), charge))
 
       assert_received %{event: :charge_refunded, data: %{should_revoke: true}}
+
+      assert [%{query: %{"charge" => charge_id, "limit" => "100"}}] =
+               StripeStub.requests(:list_refunds)
+
+      assert charge_id == charge["id"]
 
       Oban.drain_queue(queue: :emails)
       user_id = user.id
@@ -219,9 +237,10 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       {user, customer_id} = linked_subscription()
       charge = refunded_charge(customer_id, 10_000, 10_000)
 
-      expect(StripeMock, :list_refunds, fn _params ->
-        {:ok, %{data: [%{id: "re_2", amount: 6_000, metadata: %{}}], has_more: false}}
-      end)
+      StripeStub.expect(
+        :list_refunds,
+        StripeFixtures.list([refund("re_2", 6_000, 1, %{})])
+      )
 
       assert {:ok, :refund_processed} =
                RefundHandler.handle(with_object(refunded_event(), charge))
@@ -231,11 +250,28 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       assert_received {:refund_email, ^user_id, 6_000, "eur", _revoked}
     end
 
-    test "a failed read of the latest refund still sends the refund email" do
+    # Whether the refund was announced already cannot be known, so sending
+    # the email now could repeat the app's own notice; the redelivery reads
+    # the list again.
+    test "an unreadable refund list on a transient error sends no email and retries" do
+      {_user, customer_id} = linked_subscription()
+      charge = refunded_charge(customer_id, 5_000, 10_000)
+
+      StripeStub.stub(:list_refunds, {:transport_error, :closed})
+
+      assert {:error, :retry_later, {:refunds_unreadable, %Error{type: "api_connection_error"}}} =
+               RefundHandler.handle(with_object(refunded_event(), charge))
+
+      refute_received %{event: :charge_refunded}
+      Oban.drain_queue(queue: :emails)
+      refute_received {:refund_email, _user_id, _amount, _currency, _access}
+    end
+
+    test "a permanent refund list error still sends the email" do
       {user, customer_id} = linked_subscription()
       charge = refunded_charge(customer_id, 5_000, 10_000)
 
-      expect(StripeMock, :list_refunds, fn _params -> {:error, :timeout} end)
+      StripeStub.stub(:list_refunds, {:error_fixture, "invalid_request_error"})
 
       assert {:ok, :refund_processed} =
                RefundHandler.handle(with_object(refunded_event(), charge))
@@ -243,6 +279,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       Oban.drain_queue(queue: :emails)
       user_id = user.id
       assert_received {:refund_email, ^user_id, 5_000, "eur", "partial"}
+      refute_received {:refund_email, _user_id, _amount, _currency, _access}
     end
 
     test "an earlier announced refund on the payload does not silence a later one" do
@@ -274,15 +311,11 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       {user, customer_id} = linked_subscription()
       charge_id = "ch_test_#{System.unique_integer([:positive])}"
 
-      stub(StripeMock, :list_refunds, fn %{charge: ^charge_id} ->
-        {:ok,
-         %{
-           data: [
-             %{id: "re_b", amount: 6_000, created: 2, metadata: %{}},
-             %{id: "re_a", amount: 4_000, created: 1, metadata: %{"customer_notified" => "true"}}
-           ],
-           has_more: false
-         }}
+      StripeStub.stub(:list_refunds, fn %{query: %{"charge" => ^charge_id}} ->
+        StripeFixtures.list([
+          refund("re_b", 6_000, 2, %{}),
+          refund("re_a", 4_000, 1, %{"customer_notified" => "true"})
+        ])
       end)
 
       for {refunded, previous} <- [{4_000, 0}, {10_000, 4_000}] do
@@ -302,15 +335,11 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       {user, customer_id} = linked_subscription()
       charge_id = "ch_test_#{System.unique_integer([:positive])}"
 
-      stub(StripeMock, :list_refunds, fn %{charge: ^charge_id} ->
-        {:ok,
-         %{
-           data: [
-             %{id: "re_a", amount: 4_000, created: 2, metadata: %{"customer_notified" => "true"}},
-             %{id: "re_b", amount: 6_000, created: 1, metadata: %{}}
-           ],
-           has_more: false
-         }}
+      StripeStub.stub(:list_refunds, fn %{query: %{"charge" => ^charge_id}} ->
+        StripeFixtures.list([
+          refund("re_a", 4_000, 2, %{"customer_notified" => "true"}),
+          refund("re_b", 6_000, 1, %{})
+        ])
       end)
 
       for {refunded, previous} <- [{6_000, 0}, {10_000, 6_000}] do
@@ -332,16 +361,13 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       {user, customer_id} = linked_subscription()
       charge = refunded_charge(customer_id, 10_000, 10_000)
 
-      stub(StripeMock, :list_refunds, fn _params ->
-        {:ok,
-         %{
-           data: [
-             %{id: "re_2", amount: 5_000, created: 2, metadata: %{}},
-             %{id: "re_1", amount: 5_000, created: 1, metadata: %{"customer_notified" => "true"}}
-           ],
-           has_more: false
-         }}
-      end)
+      StripeStub.stub(
+        :list_refunds,
+        StripeFixtures.list([
+          refund("re_2", 5_000, 2, %{}),
+          refund("re_1", 5_000, 1, %{"customer_notified" => "true"})
+        ])
+      )
 
       assert {:ok, :refund_processed} =
                RefundHandler.handle(for_refund(refunded_event(), charge, 5_000))
@@ -461,9 +487,13 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
     test "a refund of an invoice paid before invoices were recorded names its own subscription" do
       {user, customer_id} = linked_subscription()
 
-      expect(StripeMock, :get_invoice, fn "in_before_recording" ->
-        {:ok, %{id: "in_before_recording", subscription: "sub_before_resubscribing"}}
-      end)
+      StripeStub.expect(
+        :retrieve_invoice,
+        StripeFixtures.object("invoice", %{
+          "id" => "in_before_recording",
+          "subscription" => "sub_before_resubscribing"
+        })
+      )
 
       charge = refunded_charge(customer_id, 10_000, 10_000, "in_before_recording")
 
@@ -490,19 +520,26 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
     test "a charge that does not name its invoice is traced through its payment intent" do
       {user, customer_id} = linked_subscription()
 
-      expect(StripeMock, :list_invoice_payments, fn %{
-                                                      payment: %{
-                                                        type: "payment_intent",
-                                                        payment_intent: "pi_current"
-                                                      }
-                                                    } ->
-        {:ok, %{data: [%{invoice: "in_current"}], has_more: false}}
+      StripeStub.expect(:list_invoice_payments, fn %{
+                                                     query: %{
+                                                       "payment" => %{
+                                                         "type" => "payment_intent",
+                                                         "payment_intent" => "pi_current"
+                                                       }
+                                                     }
+                                                   } ->
+        StripeFixtures.list([
+          StripeFixtures.object("invoice_payment", %{"invoice" => "in_current"})
+        ])
       end)
 
-      expect(StripeMock, :get_invoice, fn "in_current" ->
-        {:ok,
-         %{id: "in_current", parent: %{subscription_details: %{subscription: "sub_current"}}}}
-      end)
+      StripeStub.expect(
+        :retrieve_invoice,
+        StripeFixtures.object("invoice", %{
+          "id" => "in_current",
+          "parent" => %{"subscription_details" => %{"subscription" => "sub_current"}}
+        })
+      )
 
       charge =
         customer_id
@@ -527,11 +564,11 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
     test "a failed Stripe lookup retries the delivery instead of guessing the subscription" do
       {_user, customer_id} = linked_subscription()
 
-      expect(StripeMock, :get_invoice, fn "in_before_recording" -> {:error, :timeout} end)
+      StripeStub.stub(:retrieve_invoice, {:error_fixture, "api_error"})
 
       charge = refunded_charge(customer_id, 10_000, 10_000, "in_before_recording")
 
-      assert {:error, :retry_later, {:stripe_lookup_failed, :timeout}} =
+      assert {:error, :retry_later, {:stripe_lookup_failed, %Error{type: "api_error"}}} =
                RefundHandler.handle(with_object(refunded_event(), charge))
 
       refute_received %{event: :charge_refunded}

@@ -23,11 +23,27 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.DedupKey do
     # A hold repeats daily for as long as the account is the last admin; one
     # alert per account per window, kept apart from a failed deletion's.
     account_deletion_held_last_admin: {:user_id, "unknown"},
-    # Each payment left unrefunded is money an attendee is owed, so one alert
-    # per payment, whatever the reason text says.
+    # Each failed refund is money an attendee is owed: one alert per refund.
+    refund_failed: {:refund_id, "unknown"},
+    # A stuck refund is reported again by every attempt that leaves it so:
+    # each job whose last attempt leaves it pending, the pending-refund
+    # sweep giving it a new one, and, for one whose charge's refunds Stripe
+    # will not list, each wake of its job, at most a day apart. One alert
+    # per refund, not one per attempt.
+    refund_stuck: {:refund_id, "unknown"},
+    # A refund is settled once succeeded, so it is reversed at most once.
+    refund_failure_reversed: {:refund_id, "unknown"},
+    # Every reconcile of the payment's refunds finds a duplicate again, and
+    # one refund may be made more than twice: one alert per Stripe refund.
+    refund_duplicated: {:duplicate_stripe_refund_id, "unknown"},
+    # A late-payment refund job that could not record its refund leaves no
+    # refund row to key on: one alert per payment, whatever the reason text.
     late_payment_refund_failed: {:booking_payment_id, "unknown"},
     # One alert per account: two accounts failing must not collapse into one.
     connect_revocation_failed: {:stripe_account_id, "unknown"},
+    # A refused key or a revoked account fails every event from that
+    # account alike: one alert per account, not one per event.
+    connect_event_unmatched: {:stripe_account_id, "unknown"},
     # A volume that refuses deletes fails every one of them for the same
     # reason, so key on the reason rather than the path: one alert per cause.
     upload_delete_failed: {:reason_code, "unknown"},

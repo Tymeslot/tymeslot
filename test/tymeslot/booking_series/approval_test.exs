@@ -29,7 +29,6 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
   alias Tymeslot.BookingSeries.Notifications, as: SeriesNotifications
   alias Tymeslot.CalendarMock
   alias Tymeslot.MeetingPayments
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
@@ -38,6 +37,8 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
   alias Tymeslot.Meetings.Workers.ApprovalSweepWorker
   alias Tymeslot.PaidSeriesTestHelpers, as: Paid
   alias Tymeslot.Repo
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.SeriesAnnouncementWorker
 
@@ -373,9 +374,7 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       )
 
       # The completed webhook backfills the charge the refund is made on.
-      stub(StripeAdapterMock, :retrieve_payment_intent, fn "pi_SERIES", _opts ->
-        {:ok, %{"latest_charge" => "ch_SERIES"}}
-      end)
+      Paid.stub_charge_backfill()
 
       host = Paid.paid_host()
 
@@ -421,13 +420,14 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       pay(series)
       payment = MeetingPayments.payment_for_series(series.id)
 
-      expect(StripeAdapterMock, :create_refund, 1, fn params, _opts ->
-        assert params.charge == "ch_SERIES"
-        assert params.amount == 3 * Paid.price_cents()
-        {:ok, %{id: "re_SERIES"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["charge"] == "ch_SERIES"
+        assert request.form["amount"] == to_string(3 * Paid.price_cents())
+        StripeStubResponses.refund(request, "re_SERIES")
       end)
 
       assert {:ok, _declined} = SeriesApproval.decline(series, host.user, nil)
+      assert %{success: 1} = drain_refunds()
 
       assert statuses() == [:cancelled, :cancelled, :cancelled]
       reloaded = MeetingPayments.payment_for_series(series.id)
@@ -441,6 +441,7 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       expect_one_full_refund()
 
       assert {:ok, _withdrawn} = Meetings.cancel_meeting(List.last(meetings()))
+      assert %{success: 1} = drain_refunds()
 
       assert statuses() == [:cancelled, :cancelled, :cancelled]
       assert MeetingPayments.payment_for_series(series.id).status == :refunded
@@ -452,6 +453,7 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       past_deadline!()
 
       assert :ok = perform_job(ApprovalExpiryWorker, %{"meeting_id" => hd(meetings()).id})
+      assert %{success: 1} = drain_refunds()
 
       assert statuses() == [:expired, :expired, :expired]
       assert MeetingPayments.payment_for_series(series.id).status == :refunded
@@ -479,9 +481,9 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       assert {:ok, %{status: :awaiting_approval}} =
                Reschedule.execute(second.uid, move_to(15), host.user.id)
 
-      expect(StripeAdapterMock, :create_refund, 1, fn params, _opts ->
-        assert params.amount == Paid.price_cents()
-        {:ok, %{id: "re_SESSION"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["amount"] == to_string(Paid.price_cents())
+        StripeStubResponses.refund(request, "re_SESSION")
       end)
 
       assert {:ok, %MeetingSchema{status: :cancelled}} =
@@ -500,9 +502,9 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
     end
 
     defp expect_one_full_refund do
-      expect(StripeAdapterMock, :create_refund, 1, fn params, _opts ->
-        assert params.amount == 3 * Paid.price_cents()
-        {:ok, %{id: "re_SERIES"}}
+      StripeStub.expect(:create_refund, 1, fn request ->
+        assert request.form["amount"] == to_string(3 * Paid.price_cents())
+        StripeStubResponses.refund(request, "re_SERIES")
       end)
     end
   end
@@ -539,4 +541,7 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
 
     assert Enum.map(meetings(), & &1.start_time) == [Paid.at(7), Paid.at(14), Paid.at(21)]
   end
+
+  # A released request's refund job is due at once.
+  defp drain_refunds, do: Oban.drain_queue(queue: :payments, with_scheduled: true)
 end

@@ -8,15 +8,6 @@
 #
 # A file with bare top-level `Mox.defmock/2` calls is the idiomatic Mox pattern:
 # each call generates its mock module as compiled output.
-alias Tymeslot.Mocks.StripeBehaviours.{
-  StripeChargeBehaviour,
-  StripeCustomerBehaviour,
-  StripeInvoiceBehaviour,
-  StripeInvoicePaymentBehaviour,
-  StripeRefundBehaviour,
-  StripeSessionBehaviour,
-  StripeSubscriptionBehaviour
-}
 
 # --- Calendar ---
 Mox.defmock(Tymeslot.CalendarMock, for: Tymeslot.Integrations.Calendar.CalendarBehaviour)
@@ -57,22 +48,6 @@ Mox.defmock(Tymeslot.Integrations.HealthCheckMock,
 )
 
 # --- Payments ---
-Mox.defmock(Tymeslot.Payments.StripeMock, for: Tymeslot.Payments.Behaviours.StripeProvider)
-
 Mox.defmock(Tymeslot.Payments.SubscriptionManagerMock,
   for: Tymeslot.Payments.Behaviours.SubscriptionManager
 )
-
-Mox.defmock(Tymeslot.MeetingPayments.StripeAdapterMock,
-  for: Tymeslot.MeetingPayments.StripeAdapter
-)
-
-# Stripe internal mocks for testing the wrapper (behaviours in
-# Tymeslot.Mocks.StripeBehaviours).
-Mox.defmock(StripeCustomerMock, for: StripeCustomerBehaviour)
-Mox.defmock(StripeSessionMock, for: StripeSessionBehaviour)
-Mox.defmock(StripeSubscriptionMock, for: StripeSubscriptionBehaviour)
-Mox.defmock(StripeChargeMock, for: StripeChargeBehaviour)
-Mox.defmock(StripeInvoiceMock, for: StripeInvoiceBehaviour)
-Mox.defmock(StripeInvoicePaymentMock, for: StripeInvoicePaymentBehaviour)
-Mox.defmock(StripeRefundMock, for: StripeRefundBehaviour)
