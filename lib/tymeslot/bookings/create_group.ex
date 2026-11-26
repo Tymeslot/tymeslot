@@ -21,6 +21,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
   alias Tymeslot.Meetings.EmailVerificationJobs
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.MeetingTypes.FixedDates
@@ -96,6 +97,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
   verification email and its expiry job. A slot this seat creates is held
   too, with the seat's deadline, which only keeps it from the organiser: it
   expires through its seats (`Tymeslot.Meetings.EmailVerification.Seats`).
+  A later held seat joining a held slot moves the slot's deadline to its own.
   Verifying the seat later schedules everything an ungated seat schedules
   now. An ungated seat that finds a held slot (the host turned verification
   off during a hold) counts at once, so it brings the slot to life.
@@ -213,7 +215,16 @@ defmodule Tymeslot.Bookings.CreateGroup do
   # seat, because a type asking invitees to confirm their email cannot offer
   # a series (`Tymeslot.MeetingTypes.SeriesSettings.offered?/1`). Relaxing
   # that rule needs a held series seat to be designed first.
-  defp schedule_seat_jobs(%{meeting: meeting, participant: participant}, %DateTime{}, _opts) do
+  #
+  # A held slot's deadline is its latest held seat's, which is what the
+  # retention prune measures from, so a held seat joining one moves it on.
+  defp schedule_seat_jobs(
+         %{meeting: meeting, participant: participant} = booking,
+         %DateTime{},
+         _opts
+       ) do
+    :ok = hold_slot_until(booking, participant.verification_deadline_at)
+
     with :ok <- EmailScheduler.schedule_seat_verification_email(meeting.id, participant.id) do
       :ok = EmailVerificationJobs.schedule_seat_expiry(participant)
       {:ok, []}
@@ -232,6 +243,17 @@ defmodule Tymeslot.Bookings.CreateGroup do
 
     SlotActivation.schedule_seat_effects(meeting, participant, created?, opts)
   end
+
+  defp hold_slot_until(
+         %{
+           created_meeting?: false,
+           meeting: %MeetingSchema{status: :awaiting_verification} = slot
+         },
+         deadline
+       ),
+       do: MeetingQueries.extend_verification_deadline(slot.id, deadline)
+
+  defp hold_slot_until(_booking, _deadline), do: :ok
 
   # Used only when this seat creates the slot.
   defp group_meeting_attrs(meeting_attrs, meeting_type, nil),

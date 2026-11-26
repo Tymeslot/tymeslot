@@ -328,6 +328,21 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     |> Repo.delete_all()
   end
 
+  @doc """
+  Moves a held meeting's `verification_deadline_at` to `deadline` when that is
+  later, and never earlier. A meeting no longer `:awaiting_verification` is
+  left alone.
+  """
+  @spec extend_verification_deadline(Ecto.UUID.t(), DateTime.t()) :: :ok
+  def extend_verification_deadline(meeting_id, %DateTime{} = deadline) do
+    Meeting
+    |> where([m], m.id == ^meeting_id and m.status == :awaiting_verification)
+    |> where([m], m.verification_deadline_at < ^deadline)
+    |> Repo.update_all(set: [verification_deadline_at: deadline])
+
+    :ok
+  end
+
   @doc "Updates a meeting."
   @spec update_meeting(Meeting.t(), map()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
   def update_meeting(%Meeting{} = meeting, attrs) when is_map(attrs) do

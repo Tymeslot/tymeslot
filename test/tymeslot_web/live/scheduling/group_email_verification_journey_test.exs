@@ -273,20 +273,22 @@ defmodule TymeslotWeb.Live.Scheduling.GroupEmailVerificationJourneyTest do
   end
 
   # The page names the seat's own deadline, not the slot's: the slot's is its
-  # first held seat's, which a later booker never had.
+  # latest held seat's, which can be later than a new booker's (a slot held
+  # again keeps the latest deadline of the seats it still holds).
   @tag :capture_log
   test "a second held seat is told its own deadline", ctx do
     slot = book(ctx, @first)
-    first_deadline = DateTime.truncate(DateTime.add(DateTime.utc_now(), 5, :minute), :second)
+    slot_deadline = DateTime.truncate(DateTime.add(DateTime.utc_now(), 2, :hour), :second)
 
     Repo.update_all(where(MeetingSchema, id: ^slot.id),
-      set: [verification_deadline_at: first_deadline]
+      set: [verification_deadline_at: slot_deadline]
     )
 
     {view, booked} = book_view(ctx, @second)
     assert booked.id == slot.id
     held = seat(slot, @second)
-    assert Repo.reload!(slot).verification_deadline_at == first_deadline
+    assert DateTime.before?(held.verification_deadline_at, slot_deadline)
+    assert Repo.reload!(slot).verification_deadline_at == slot_deadline
 
     html = view |> element("[data-testid='check-inbox']") |> render()
 
@@ -296,7 +298,7 @@ defmodule TymeslotWeb.Live.Scheduling.GroupEmailVerificationJourneyTest do
                held.timezone
              )
 
-    refute html =~ LocalizationHelpers.format_meeting_datetime(first_deadline, held.timezone)
+    refute html =~ LocalizationHelpers.format_meeting_datetime(slot_deadline, held.timezone)
   end
 
   # A slot whose first seat counted at once has no deadline of its own; a

@@ -12,12 +12,14 @@ defmodule Tymeslot.Bookings.CreateGroupEmailVerificationTest do
   import Mox
   import Tymeslot.AvailabilityTestHelpers
   import Tymeslot.Factory
+  import Tymeslot.Test.ClockHelpers
 
   @moduletag :bookings
   @moduletag :integration
 
   alias Tymeslot.Bookings.Create
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.Recipient
@@ -156,6 +158,36 @@ defmodule Tymeslot.Bookings.CreateGroupEmailVerificationTest do
 
     assert [%{email: "second@example.com"}] =
              Recipient.for_meeting(Repo.get!(MeetingSchema, slot_id))
+  end
+
+  test "a lapsed held slot is kept a day from its last seat's deadline, not its first", ctx do
+    t0 = DateTime.utc_now(:second)
+    freeze_clock(t0)
+    assert {:ok, %MeetingSchema{id: slot_id}} = book(ctx, "first@example.com")
+
+    freeze_clock(DateTime.add(t0, 10, :minute))
+    assert {:ok, %MeetingSchema{id: ^slot_id}} = book(ctx, "second@example.com")
+
+    [first, second] =
+      %{id: slot_id} |> seats() |> Enum.sort_by(& &1.verification_deadline_at)
+
+    assert DateTime.after?(second.verification_deadline_at, first.verification_deadline_at)
+
+    assert Repo.get!(MeetingSchema, slot_id).verification_deadline_at ==
+             second.verification_deadline_at
+
+    freeze_clock(DateTime.add(second.verification_deadline_at, 1, :minute))
+    assert {:ok, _first_expired} = EmailVerification.expire_seat(first)
+    assert {:ok, _second_expired} = EmailVerification.expire_seat(second)
+    assert Repo.get!(MeetingSchema, slot_id).status == :expired
+
+    freeze_clock(DateTime.add(first.verification_deadline_at, 24 * 60 + 5, :minute))
+    EmailVerification.prune_unverified()
+    assert Repo.get(MeetingSchema, slot_id)
+
+    freeze_clock(DateTime.add(second.verification_deadline_at, 24 * 60 + 1, :minute))
+    EmailVerification.prune_unverified()
+    refute Repo.get(MeetingSchema, slot_id)
   end
 
   defp book(ctx, email) do
