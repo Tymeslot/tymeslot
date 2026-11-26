@@ -53,15 +53,18 @@ defmodule Tymeslot.MeetingPayments.Webhooks.RefundUpdatedTest do
     )
   end
 
-  # The refund as Stripe sends it in the event: its charge an id.
+  # The refund as Stripe sends it in the event: its charge an id. The
+  # metadata replaces the fixture's rather than merging into it, so `%{}` is
+  # a refund made in the dashboard, naming no row.
   defp stripe_refund(refund, status, metadata \\ nil) do
-    StripeFixtures.object("refund", %{
+    "refund"
+    |> StripeFixtures.object(%{
       "id" => "re_UPDATED",
       "amount" => refund.amount_cents,
       "charge" => "ch_UPDATED",
-      "status" => status,
-      "metadata" => metadata || %{"tymeslot_refund_id" => refund.id}
+      "status" => status
     })
+    |> Map.put("metadata", metadata || %{"tymeslot_refund_id" => refund.id})
   end
 
   defp event_for(stripe_refund) do

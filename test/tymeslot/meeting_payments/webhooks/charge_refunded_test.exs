@@ -379,12 +379,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
       Repo.delete!(refund)
 
       dashboard =
-        StripeFixtures.object("refund_with_charge", %{
+        "refund_with_charge"
+        |> StripeFixtures.object(%{
           "id" => "re_DASHBOARD",
           "amount" => 1_500,
-          "metadata" => %{},
           "charge" => %{"amount_refunded" => 1_500}
         })
+        |> Map.put("metadata", %{})
 
       StripeStub.expect(:list_refunds, StripeFixtures.list([dashboard]))
 
@@ -409,12 +410,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefundedTest do
       payment = Repo.update!(Changeset.change(payment, status: :disputed))
 
       dashboard =
-        StripeFixtures.object("refund_with_charge", %{
+        "refund_with_charge"
+        |> StripeFixtures.object(%{
           "id" => "re_DISPUTED_DASHBOARD",
           "amount" => 1_500,
-          "metadata" => %{},
           "charge" => %{"amount_refunded" => 1_500}
         })
+        |> Map.put("metadata", %{})
 
       StripeStub.expect(:list_refunds, StripeFixtures.list([dashboard]))
 

@@ -1,62 +1,55 @@
 {
-  "id": "sub_test1",
-  "object": "subscription",
-  "application": null,
-  "application_fee_percent": null,
-  "automatic_tax": {
-    "enabled": false,
-    "liability": null
+  "managed_payments": {
+    "enabled": false
   },
-  "billing_cycle_anchor": 1679609767,
-  "cancel_at": null,
-  "cancel_at_period_end": false,
+  "schedule": null,
+  "next_pending_invoice_item_invoice": null,
   "canceled_at": null,
+  "start_date": 1795683204,
   "cancellation_details": {
     "comment": null,
     "feedback": null,
+    "feedback_option": null,
     "reason": null
   },
-  "collection_method": "charge_automatically",
-  "created": 1679609767,
-  "currency": "usd",
-  "customer": "cus_test1",
-  "days_until_due": null,
-  "default_payment_method": null,
-  "default_source": null,
-  "default_tax_rates": [],
-  "description": null,
-  "discounts": null,
-  "ended_at": null,
-  "invoice_settings": {
-    "issuer": {
-      "type": "self"
-    }
+  "billing_mode": {
+    "flexible": {
+      "proration_discounts": "included"
+    },
+    "type": "flexible",
+    "updated_at": 1795683204
   },
+  "livemode": false,
+  "customer": "cus_test1",
+  "collection_method": "charge_automatically",
+  "latest_invoice": "in_test1",
   "items": {
-    "object": "list",
     "data": [
       {
+        "billing_thresholds": null,
+        "created": 1795683204,
+        "current_period_end": 1798275204,
+        "current_period_start": 1795683204,
+        "current_trial": null,
+        "discounts": [],
         "id": "si_Na6dzxczY5fwHx",
-        "object": "subscription_item",
-        "created": 1679609768,
-        "current_period_end": 1682288167,
-        "current_period_start": 1679609767,
         "metadata": {},
+        "object": "subscription_item",
         "plan": {
-          "id": "price_1MowQULkdIwHu7ixraBm864M",
-          "object": "plan",
           "active": true,
-          "amount": 1000,
-          "amount_decimal": "1000",
+          "amount": 500,
+          "amount_decimal": "500",
           "billing_scheme": "per_unit",
-          "created": 1679609766,
-          "currency": "usd",
-          "discounts": null,
+          "created": 1795683202,
+          "currency": "eur",
+          "id": "price_1MowQULkdIwHu7ixraBm864M",
           "interval": "month",
           "interval_count": 1,
           "livemode": false,
           "metadata": {},
+          "meter": null,
           "nickname": null,
+          "object": "plan",
           "product": "prod_Na6dGcTsmU0I4R",
           "tiers_mode": null,
           "transform_usage": null,
@@ -64,21 +57,22 @@
           "usage_type": "licensed"
         },
         "price": {
-          "id": "price_1MowQULkdIwHu7ixraBm864M",
-          "object": "price",
           "active": true,
           "billing_scheme": "per_unit",
-          "created": 1679609766,
-          "currency": "usd",
+          "created": 1795683202,
+          "currency": "eur",
           "custom_unit_amount": null,
+          "id": "price_1MowQULkdIwHu7ixraBm864M",
           "livemode": false,
           "lookup_key": null,
           "metadata": {},
           "nickname": null,
+          "object": "price",
           "product": "prod_Na6dGcTsmU0I4R",
           "recurring": {
             "interval": "month",
             "interval_count": 1,
+            "meter": null,
             "trial_period_days": null,
             "usage_type": "licensed"
           },
@@ -86,8 +80,8 @@
           "tiers_mode": null,
           "transform_quantity": null,
           "type": "recurring",
-          "unit_amount": 1000,
-          "unit_amount_decimal": "1000"
+          "unit_amount": 500,
+          "unit_amount_decimal": "500"
         },
         "quantity": 1,
         "subscription": "sub_test1",
@@ -95,33 +89,85 @@
       }
     ],
     "has_more": false,
+    "object": "list",
     "total_count": 1,
-    "url": "/v1/subscription_items?subscription=sub_test1"
+    "url": "redacted"
   },
-  "latest_invoice": "in_test1",
-  "livemode": false,
-  "metadata": {},
-  "next_pending_invoice_item_invoice": null,
-  "on_behalf_of": null,
+  "created": 1795683204,
+  "transfer_data": null,
+  "plan": {
+    "active": true,
+    "amount": 500,
+    "amount_decimal": "500",
+    "billing_scheme": "per_unit",
+    "created": 1795683202,
+    "currency": "eur",
+    "id": "price_1MowQULkdIwHu7ixraBm864M",
+    "interval": "month",
+    "interval_count": 1,
+    "livemode": false,
+    "metadata": {},
+    "meter": null,
+    "nickname": null,
+    "object": "plan",
+    "product": "prod_Na6dGcTsmU0I4R",
+    "tiers_mode": null,
+    "transform_usage": null,
+    "trial_period_days": null,
+    "usage_type": "licensed"
+  },
+  "application": null,
+  "billing_thresholds": null,
+  "cancel_at": null,
+  "trial_start": null,
+  "status": "active",
+  "description": null,
+  "id": "sub_test1",
+  "customer_account": null,
   "pause_collection": null,
+  "default_tax_rates": [],
+  "automatic_tax": {
+    "disabled_reason": null,
+    "enabled": false,
+    "liability": null
+  },
+  "invoice_settings": {
+    "account_tax_ids": null,
+    "custom_fields": null,
+    "description": null,
+    "footer": null,
+    "issuer": {
+      "type": "self"
+    }
+  },
+  "currency": "eur",
+  "quantity": 1,
+  "default_source": null,
+  "pending_update": null,
+  "object": "subscription",
+  "pending_setup_intent": null,
+  "on_behalf_of": null,
+  "discounts": [],
+  "billing_cycle_anchor": 1795683204,
+  "pending_invoice_item_interval": null,
+  "trial_end": null,
+  "billing_cycle_anchor_config": null,
+  "cancel_at_period_end": false,
+  "test_clock": null,
+  "default_payment_method": "pm_test2",
+  "days_until_due": null,
   "payment_settings": {
     "payment_method_options": null,
     "payment_method_types": null,
     "save_default_payment_method": "off"
   },
-  "pending_invoice_item_interval": null,
-  "pending_setup_intent": null,
-  "pending_update": null,
-  "schedule": null,
-  "start_date": 1679609767,
-  "status": "active",
-  "test_clock": null,
-  "transfer_data": null,
-  "trial_end": null,
+  "metadata": {},
+  "ended_at": null,
   "trial_settings": {
     "end_behavior": {
+      "billing_cycle_anchor": "now",
       "missing_payment_method": "create_invoice"
     }
   },
-  "trial_start": null
+  "application_fee_percent": null
 }

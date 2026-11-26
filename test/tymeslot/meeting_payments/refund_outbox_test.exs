@@ -275,7 +275,7 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
           "charge" => %{"amount_refunded" => 2_000}
         })
 
-      other = StripeFixtures.object("refund", %{"id" => "re_OTHER", "metadata" => %{}})
+      other = "refund" |> StripeFixtures.object(%{"id" => "re_OTHER"}) |> Map.put("metadata", %{})
       StripeStub.expect(:list_refunds, StripeFixtures.list([other, made]))
 
       assert :ok = perform_job(ExecuteRefund, %{refund_id: refund.id})
@@ -416,14 +416,17 @@ defmodule Tymeslot.MeetingPayments.RefundOutboxTest do
     end
   end
 
+  # Its metadata replaces the fixture's: a refund sent under a legacy key
+  # names its payment and no refund row.
   defp legacy_refund(id, payment, created_at) do
-    StripeFixtures.object("refund_with_charge", %{
+    "refund_with_charge"
+    |> StripeFixtures.object(%{
       "id" => id,
       "amount" => 2_000,
       "created" => DateTime.to_unix(created_at),
-      "metadata" => %{"booking_payment_id" => payment.id},
       "charge" => %{"amount_refunded" => 2_000}
     })
+    |> Map.put("metadata", %{"booking_payment_id" => payment.id})
   end
 
   describe "a refund with a legacy key" do

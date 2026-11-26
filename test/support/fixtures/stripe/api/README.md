@@ -8,25 +8,25 @@ The reference pages were read at `docs.stripe.com/api/<resource>/object?api-vers
 
 | File | Provenance |
 |---|---|
-| `customer.json` | API reference example (`customers/object`), fetched 2026-11-22 |
-| `customer_deleted.json` | API reference example (`customers/delete` response), fetched 2026-11-22 |
-| `checkout_session_payment.json` | API reference example (`checkout/sessions/object`), fetched 2026-11-22, unchanged: an open payment-mode session has `payment_intent: null`, as in the `checkout/sessions/create` response example |
+| `customer.json` | recorded 2026-11-26 |
+| `customer_deleted.json` | recorded 2026-11-26 |
+| `checkout_session_payment.json` | recorded 2026-11-26: an open payment-mode session has `payment_intent: null`, as in the `checkout/sessions/create` response example |
 | `checkout_session_paid.json` | API reference example (`checkout/sessions/object`), fetched 2026-11-22; `status: "complete"`, `payment_status: "paid"`, `payment_intent` set, `url: null` |
-| `checkout_session_subscription.json` | API reference example (`checkout/sessions/object`), fetched 2026-11-22; `mode: "subscription"`, `customer` set |
-| `checkout_session_expired.json` | API reference example (`checkout/sessions/object`), fetched 2026-11-22; `status: "expired"`, `url: null` |
-| `subscription.json` | API reference example (`subscriptions/object`), fetched 2026-11-22 |
-| `subscription_canceling.json` | API reference example (`subscriptions/object`), fetched 2026-11-22; `cancel_at_period_end: true`, `cancel_at` at the item's period end, `canceled_at`, `cancellation_details.reason` |
-| `subscription_canceled.json` | API reference example (`subscriptions/object`), fetched 2026-11-22; `status: "canceled"`, `canceled_at`, `ended_at`, `cancellation_details.reason` |
-| `charge.json` | API reference example (`charges/object`), fetched 2026-11-22; `payment_intent` set |
-| `charge_with_refunds.json` | API reference example (`charges/object`), fetched 2026-11-22; `amount_refunded` and an expanded `refunds` list holding `refund.json` |
-| `invoice.json` | API reference example (`invoices/object`), fetched 2026-11-22 |
+| `checkout_session_subscription.json` | recorded 2026-11-26; `mode: "subscription"`, `customer` set |
+| `checkout_session_expired.json` | recorded 2026-11-26; `status: "expired"`, `url: null` |
+| `subscription.json` | recorded 2026-11-26 |
+| `subscription_canceling.json` | recorded 2026-11-26; `cancel_at_period_end: true`, `cancel_at` at the item's period end, `canceled_at`, `cancellation_details.reason` |
+| `subscription_canceled.json` | recorded 2026-11-26; `status: "canceled"`, `canceled_at`, `ended_at`, `cancellation_details.reason` |
+| `charge.json` | recorded 2026-11-26; `payment_intent` set |
+| `charge_with_refunds.json` | recorded 2026-11-26; `amount_refunded` and an expanded `refunds` list holding `refund.json` |
+| `invoice.json` | recorded 2026-11-26 |
 | `invoice_payment.json` | API reference example (`invoice-payment/object`), fetched 2026-11-22 |
-| `refund.json` | API reference example (`refunds/object`), fetched 2026-11-22 |
-| `refund_with_charge.json` | API reference example (`refunds/object`), fetched 2026-11-22; `charge` expanded to `charge.json` with `amount_refunded` set |
-| `payment_intent_with_latest_charge.json` | API reference example (`payment_intents/object`), fetched 2026-11-22; `status: "succeeded"`, amounts matching the charge, `payment_method`, `latest_charge` expanded to `charge.json` |
+| `refund.json` | recorded 2026-11-26 |
+| `refund_with_charge.json` | recorded 2026-11-26; `charge` expanded to `charge.json` with `amount_refunded` set |
+| `payment_intent_with_latest_charge.json` | recorded 2026-11-26; `status: "succeeded"`, amounts matching the charge, `payment_method`, `latest_charge` expanded to `charge.json` |
 | `dispute_lost.json` | API reference example (`disputes/object`), fetched 2026-11-22; `status: "lost"`, `is_charge_refundable: false`, `charge` and `payment_intent` set |
-| `account.json` | API reference example (`accounts/object`), fetched 2026-11-22 |
-| `billing_portal_session.json` | API reference example (`customer_portal/sessions/object`), fetched 2026-11-22 |
+| `account.json` | recorded 2026-11-26 |
+| `billing_portal_session.json` | recorded 2026-11-26 |
 
 ## `2025-11-17.clover/errors/`
 

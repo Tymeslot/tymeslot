@@ -15,7 +15,9 @@ defmodule Tymeslot.StripeLiveContract do
     "Customers.create (subscription flow)" => "customer",
     "Customers.delete" => "customer_deleted",
     "CheckoutSessions.create (subscription)" => "checkout_session_subscription",
-    "CheckoutSessions.expire (subscription)" => "checkout_session_expired",
+    # An expired session keeps its mode's keys: compared with the subscription
+    # one, not with `checkout_session_expired`, which is in payment mode.
+    "CheckoutSessions.expire (subscription)" => "checkout_session_subscription",
     "Subscriptions.retrieve" => "subscription",
     "Subscriptions.update (cancel at period end)" => "subscription_canceling",
     "Subscriptions.cancel" => "subscription_canceled",
@@ -148,12 +150,16 @@ defmodule Tymeslot.StripeLiveContract do
 
   defp same_kind?(fake, live) do
     with [_whole, prefix] <- Regex.run(@object_id, fake),
-         [_whole, ^prefix] <- Regex.run(@object_id, live) do
-      true
+         [_whole, live_prefix] <- Regex.run(@object_id, live) do
+      object_kind(prefix) == object_kind(live_prefix)
     else
       _other -> false
     end
   end
+
+  # A live id names its mode (`cs_test_a1B2…`) where a fixture id does not
+  # (`cs_test1`), so the kind is the prefix without it.
+  defp object_kind(prefix), do: String.replace(prefix, ~r/_(test|live)$/, "")
 
   @doc """
   Turns a live object into fixture content: live ids become their fixture ids,
@@ -168,6 +174,11 @@ defmodule Tymeslot.StripeLiveContract do
 
   defp clean(map, ids) when is_map(map) do
     Map.new(map, fn
+      # The suite's own markers (`live-<unix>`) are not what Stripe sends
+      # Tymeslot: a fixture's metadata is what a request without any carries.
+      {"metadata", %{} = metadata} ->
+        {"metadata", Map.reject(metadata, fn {_key, v} -> live_marker?(v) end)}
+
       {key, value} when is_binary(value) ->
         {key, if(redact_key?(key, value), do: "redacted", else: clean(value, ids))}
 
@@ -185,6 +196,8 @@ defmodule Tymeslot.StripeLiveContract do
   end
 
   defp clean(other, _ids), do: other
+
+  defp live_marker?(value), do: is_binary(value) and String.starts_with?(value, "live-")
 
   defp redact_key?(key, value) do
     key in @redacted_keys or
