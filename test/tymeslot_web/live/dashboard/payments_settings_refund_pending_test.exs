@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsRefundPendingTest do
 
   @moduletag :payments
 
+  import ExUnit.CaptureLog, only: [with_log: 1]
   import Phoenix.LiveViewTest
   import Tymeslot.AuthTestHelpers
   import Tymeslot.ConfigTestHelpers, only: [setup_config: 2]
@@ -199,6 +200,29 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsRefundPendingTest do
 
     refute has_element?(view, "#refund-modal")
     assert render(view) =~ "This payment can no longer be refunded from Tymeslot."
+  end
+
+  # The refund and its retrying job are recorded before Stripe is called, so
+  # a crash during the call leaves the refund pending: the host must see it
+  # submitted, not be told to try again and refund a second time.
+  test "a refund whose dialog task crashes after recording it is shown as submitted", %{
+    conn: conn,
+    payment: payment
+  } do
+    StripeStub.stub(:create_refund, fn _request -> raise "connection reset mid-request" end)
+
+    view = open(conn)
+
+    {html, _log} =
+      with_log(fn -> submit_refund(view, payment, %{"refund_type" => "full"}) end)
+
+    assert html =~
+             "Refund submitted. Stripe has not confirmed it yet; Tymeslot keeps trying and emails the attendee once it goes through."
+
+    refute html =~ "Something went wrong while issuing the refund."
+    refute has_element?(view, "#refund-modal")
+    assert has_element?(view, "#outstanding-refund-#{payment.id}", "Refund processing")
+    assert [%{status: :pending, amount_cents: 5000}] = RefundQueries.list_for_payment(payment.id)
   end
 
   test "a refund Stripe declines says so and emails the host", %{conn: conn, payment: payment} do

@@ -344,14 +344,15 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   # between the two. The refund is recorded under the payment's row lock,
   # scoped to the host, so a forged or raced request still cannot refund
   # another host's payment, and a second submit while it is pending is
-  # refused (`:refund_in_progress`) rather than refunding twice.
+  # refused (`:refund_in_progress`) rather than refunding twice. The task is
+  # named by the payment so that a crashed one can still be traced to it.
   defp process_refund(socket, payment, amount_cents) do
     user_id = socket.assigns.current_user.id
 
     {:noreply,
      start_async(
        socket,
-       :issue_refund,
+       {:issue_refund, payment.id},
        Tasks.with_context(fn ->
          MeetingPayments.refund_now(payment, amount_cents, :host, host_user_id: user_id)
        end)
@@ -359,7 +360,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   end
 
   @impl Phoenix.LiveComponent
-  def handle_async(:issue_refund, {:ok, {:ok, _refund}}, socket) do
+  def handle_async({:issue_refund, _payment_id}, {:ok, {:ok, _refund}}, socket) do
     Flash.info(
       dgettext(
         "dashboard_payments",
@@ -370,9 +371,32 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
     {:noreply, refund_settled(socket)}
   end
 
-  # Recorded, and Tymeslot keeps trying: the host is not invited to retry.
-  def handle_async(:issue_refund, {:ok, {pending, _refund}}, socket)
+  def handle_async({:issue_refund, _payment_id}, {:ok, {pending, _refund}}, socket)
       when pending in [:pending, :stuck] do
+    refund_submitted(socket)
+  end
+
+  def handle_async({:issue_refund, _payment_id}, {:ok, {:error, reason}}, socket) do
+    handle_refund_failure(socket, reason)
+  end
+
+  # The refund is recorded, with the job that retries it, before Stripe is
+  # called, so a task that crashed may have left one pending. Telling the host
+  # to try again then would invite a second refund on top of it.
+  def handle_async({:issue_refund, payment_id}, {:exit, reason}, socket) do
+    case MeetingPayments.get_payment_for_host(payment_id, socket.assigns.current_user.id) do
+      {:ok, payment} ->
+        if MeetingPayments.refund_pending?(payment),
+          do: refund_submitted(socket),
+          else: handle_refund_failure(socket, reason)
+
+      {:error, :not_found} ->
+        handle_refund_failure(socket, reason)
+    end
+  end
+
+  # Recorded, and Tymeslot keeps trying: the host is not invited to retry.
+  defp refund_submitted(socket) do
     Flash.info(
       dgettext(
         "dashboard_payments",
@@ -381,14 +405,6 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
     )
 
     {:noreply, refund_settled(socket)}
-  end
-
-  def handle_async(:issue_refund, {:ok, {:error, reason}}, socket) do
-    handle_refund_failure(socket, reason)
-  end
-
-  def handle_async(:issue_refund, {:exit, reason}, socket) do
-    handle_refund_failure(socket, reason)
   end
 
   defp handle_refund_failure(socket, reason) do
