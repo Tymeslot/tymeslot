@@ -24,6 +24,8 @@ defmodule Tymeslot.Meetings.SeatHolds do
 
   @type broadcast_message :: {:paid, binary()} | :expired
 
+  @overdue_grace_seconds 5 * 60
+
   @doc """
   Fetches a hold by id. Unscoped: for system callers (the payment webhook,
   the expiry worker) and the booker's own payment page, which reaches the
@@ -53,7 +55,21 @@ defmodule Tymeslot.Meetings.SeatHolds do
   defdelegate list_held_for_meeting(meeting_id), to: SeatHoldQueries
 
   @doc """
-  Up to `limit` holds still `held` past `cutoff`: holds whose payment
+  The moment before which a hold still `held` has overrun its window: its
+  `expires_at` plus a grace for the expiry webhook still on its way. Such
+  a hold's payment outcome never reached it; the sweeper settles it
+  (`Tymeslot.Meetings.Workers.ExpireSeatHolds`), and it no longer stands
+  for an open checkout.
+  """
+  @spec overdue_cutoff(DateTime.t()) :: DateTime.t()
+  def overdue_cutoff(%DateTime{} = now) do
+    now
+    |> DateTime.add(-@overdue_grace_seconds, :second)
+    |> DateTime.truncate(:second)
+  end
+
+  @doc """
+  Up to `limit` holds still `held` past `cutoff` (`overdue_cutoff/1`): holds whose payment
   outcome never reached them, those a sweep looked at least recently
   (`mark_swept/1`) first.
   """

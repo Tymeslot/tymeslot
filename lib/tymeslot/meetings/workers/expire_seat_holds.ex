@@ -46,7 +46,6 @@ defmodule Tymeslot.Meetings.Workers.ExpireSeatHolds do
   alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Meetings.SeatHoldSchema
 
-  @grace_seconds 5 * 60
   @batch_limit 200
 
   @type sweep_result :: %{
@@ -58,10 +57,7 @@ defmodule Tymeslot.Meetings.Workers.ExpireSeatHolds do
 
   @impl Oban.Worker
   def perform(_job) do
-    cutoff =
-      Clock.utc_now()
-      |> DateTime.add(-@grace_seconds, :second)
-      |> DateTime.truncate(:second)
+    cutoff = SeatHolds.overdue_cutoff(Clock.utc_now())
 
     result =
       cutoff
