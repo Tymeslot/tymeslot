@@ -54,14 +54,19 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     end
   end
 
-  # Payment `b`'s application fee less the share its refunds returned.
+  # Payment `b`'s application fee less the share its refunds returned. Only
+  # Tymeslot's own refunds ask Stripe to return the fee; one made in the
+  # Stripe dashboard (`:external`) returns none, so its amount is taken off
+  # the refunds made first. A refund made before refunds were recorded one
+  # by one has no row and counts as Tymeslot's, which it was.
   defmacrop net_application_fee(b) do
     quote do
       fragment(
-        "COALESCE(?, 0) - COALESCE(ROUND(COALESCE(?, 0)::numeric * ? / NULLIF(?, 0)), 0)",
+        "COALESCE(?, 0) - COALESCE(ROUND(COALESCE(?, 0)::numeric * GREATEST(? - (SELECT COALESCE(SUM(r.amount_cents), 0) FROM booking_payment_refunds AS r WHERE r.booking_payment_id = ? AND r.status = 'succeeded' AND r.source = 'external'), 0) / NULLIF(?, 0)), 0)",
         unquote(b).application_fee_cents,
         unquote(b).application_fee_cents,
         unquote(b).stripe_refunded_cents,
+        unquote(b).id,
         unquote(b).amount_cents
       )
     end

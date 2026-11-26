@@ -85,6 +85,40 @@ defmodule Tymeslot.MeetingPayments.LifetimeStatsQueriesTest do
     assert platform_fee == 18
   end
 
+  # A refund made in the Stripe dashboard is recorded as external and returns
+  # no fee; only Tymeslot's own refund beside it does.
+  test "a refund made in the Stripe dashboard returns no platform fee" do
+    payment =
+      insert(:paid_booking_payment,
+        host_user_id: 7,
+        status: :partially_refunded,
+        amount_cents: 2_500,
+        refunded_amount_cents: 1_500,
+        stripe_refunded_cents: 1_500,
+        application_fee_cents: 13
+      )
+
+    insert(:booking_payment_refund,
+      booking_payment: payment,
+      source: :host,
+      status: :succeeded,
+      amount_cents: 1_000
+    )
+
+    insert(:booking_payment_refund,
+      booking_payment: payment,
+      source: :external,
+      status: :succeeded,
+      amount_cents: 500
+    )
+
+    assert [%{currency: "eur", platform_fee: platform_fee}] =
+             BookingPayments.lifetime_stats_for_host(7)
+
+    # Only Tymeslot's 1_000 returns fee: 13 - round(13 * 1_000 / 2_500) = 8.
+    assert platform_fee == 8
+  end
+
   test "leaves out pending payments and other hosts' payments" do
     insert(:booking_payment, host_user_id: 7, status: :pending)
     insert(:paid_booking_payment, host_user_id: 8)
