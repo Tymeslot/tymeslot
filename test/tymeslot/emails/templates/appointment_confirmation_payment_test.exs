@@ -131,6 +131,35 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationPaymentTest do
 
       refute email.html_body =~ "View receipt"
     end
+
+    # Stripe's test card 4000 0000 0000 0259 opens a dispute the moment the
+    # charge is captured, so the dispute can land before this email renders.
+    test "renders the receipt for a payment already disputed" do
+      booking_payment = %{
+        status: :disputed,
+        amount_cents: 5000,
+        currency: "eur",
+        application_fee_cents: 25,
+        paid_at: ~U[2026-05-08 14:32:00Z],
+        stripe_charge_id: "ch_TEST_DISPUTED",
+        stripe_account_id: "acct_TEST"
+      }
+
+      StripeStub.expect(
+        :retrieve_charge,
+        1,
+        StripeFixtures.object("charge", %{
+          "receipt_url" => "https://pay.stripe.com/receipts/r_DISPUTED"
+        })
+      )
+
+      details = build_appointment_details(%{booking_payment: booking_payment})
+      email = AppointmentConfirmation.render(:attendee, "attendee@example.com", details)
+
+      assert email.text_body =~ "PAYMENT RECEIPT"
+      assert email.text_body =~ "€50.00 paid"
+      assert email.html_body =~ "https://pay.stripe.com/receipts/r_DISPUTED"
+    end
   end
 
   describe "organizer received-amount block" do
@@ -185,6 +214,24 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationPaymentTest do
 
     test "omits received-amount block for free booking" do
       details = build_appointment_details(%{booking_payment: nil})
+      email = AppointmentConfirmation.render(:organizer, "host@example.com", details)
+
+      refute email.text_body =~ "PAYMENT RECEIVED"
+      refute email.html_body =~ "Tymeslot platform fee"
+    end
+
+    test "omits received-amount block while the payment is disputed" do
+      booking_payment = %{
+        status: :disputed,
+        amount_cents: 5000,
+        currency: "eur",
+        application_fee_cents: 25,
+        paid_at: ~U[2026-05-08 14:32:00Z],
+        stripe_charge_id: "ch_TEST_HOST_DISPUTED",
+        stripe_account_id: "acct_TEST"
+      }
+
+      details = build_appointment_details(%{booking_payment: booking_payment})
       email = AppointmentConfirmation.render(:organizer, "host@example.com", details)
 
       refute email.text_body =~ "PAYMENT RECEIVED"
