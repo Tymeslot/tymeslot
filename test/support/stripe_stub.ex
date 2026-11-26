@@ -39,10 +39,11 @@ defmodule Tymeslot.StripeStub do
   `stripe-should-retry: false` so the client sends it once, and fails the test
   when it ends, as does an `expect/3` response left unused.
 
-  The client retries a 409, a 429, a 5xx on a GET or DELETE, and a transport
-  error, up to 3 attempts in all, so an `expect/3` of such a response on a GET
-  needs 3 entries to reach the caller as a failure (or use `stub/2`). A 5xx on
-  a POST is not retried.
+  The client retries a 409, a 429 whose code is `lock_timeout` (not a rate
+  limit), a 5xx on a GET or DELETE, and a transport error, up to 3 attempts in
+  all, so an `expect/3` of such a response on a GET needs 3 entries to reach
+  the caller as a failure (or use `stub/2`). A 5xx on a POST and a rate-limit
+  429 are not retried.
 
   Requests are answered for the test process and every process that follows
   it through `$callers` (see `allow/1`); `shared!/1` widens that to every

@@ -10,8 +10,11 @@ defmodule Tymeslot.Integrations.Stripe.RetryPolicy do
 
   - At most 3 attempts.
   - Stripe's `stripe-should-retry` header, when present, overrides the status.
-  - 409 (an idempotency conflict) and 429 are retried for every method; any
-    other 4xx is final.
+  - 409 (an idempotency conflict) is retried for every method, and so is a 429
+    whose error code is `lock_timeout` (another request held a lock on the
+    object). Any other 429 is a rate limit, which a resend a few hundred
+    milliseconds later only hits again, so it is final here and left to the
+    caller's own retry, as is any other 4xx.
   - A 5xx is retried for GET and DELETE only. Stripe stores a POST's 5xx
     against its idempotency key and replays it for 24 hours, so sending the
     same POST again gets the same answer.
@@ -46,7 +49,8 @@ defmodule Tymeslot.Integrations.Stripe.RetryPolicy do
   @connect_reasons [:econnrefused, :nxdomain, :ehostunreach]
 
   @type outcome ::
-          {:response, status :: integer(), headers :: [{String.t(), String.t()}]}
+          {:response, status :: integer(), headers :: [{String.t(), String.t()}],
+           code :: String.t() | nil}
           | {:transport, phase :: :connect | :after_send, reason :: term()}
 
   @type inputs :: %{
@@ -72,20 +76,21 @@ defmodule Tymeslot.Integrations.Stripe.RetryPolicy do
     if retryable?(request.method, outcome), do: within_deadline(request, inputs), else: :stop
   end
 
-  defp retryable?(method, {:response, status, headers}) do
+  defp retryable?(method, {:response, status, headers, code}) do
     case should_retry_header(headers) do
       "true" -> true
       "false" -> false
-      _absent -> retryable_status?(method, status)
+      _absent -> retryable_status?(method, status, code)
     end
   end
 
   defp retryable?(_method, {:transport, phase, _reason}) when phase in [:connect, :after_send],
     do: true
 
-  defp retryable_status?(_method, status) when status in [409, 429], do: true
-  defp retryable_status?(method, status) when status >= 500, do: method in [:get, :delete]
-  defp retryable_status?(_method, _status), do: false
+  defp retryable_status?(_method, 409, _code), do: true
+  defp retryable_status?(_method, 429, code), do: code == "lock_timeout"
+  defp retryable_status?(method, status, _code) when status >= 500, do: method in [:get, :delete]
+  defp retryable_status?(_method, _status, _code), do: false
 
   defp should_retry_header(headers) do
     Enum.find_value(headers, fn {name, value} -> name == "stripe-should-retry" && value end)

@@ -266,13 +266,15 @@ defmodule Tymeslot.Integrations.Stripe.Client do
         {:ok, map, %{status: status, request_id: Error.request_id(headers)}}
 
       _not_an_object ->
-        {:error, Error.unexpected_body(status, headers, operation), {:response, status, headers}}
+        {:error, Error.unexpected_body(status, headers, operation),
+         {:response, status, headers, nil}}
     end
   end
 
   defp interpret({:ok, %Req.Response{status: status, body: body} = response}, operation) do
     headers = header_list(response)
-    {:error, Error.from_response(status, headers, body, operation), {:response, status, headers}}
+    error = Error.from_response(status, headers, body, operation)
+    {:error, error, {:response, status, headers, error.code}}
   end
 
   defp interpret({:error, %Req.TransportError{reason: reason}}, operation) do

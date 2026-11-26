@@ -336,6 +336,26 @@ defmodule Tymeslot.Integrations.Stripe.ClientTest do
            }
   end
 
+  test "a 429 lock timeout is retried, while a rate-limit 429 is returned after one attempt" do
+    stub_stripe(fn
+      1, conn ->
+        json(conn, 429, ~s({"error":{"type":"invalid_request_error","code":"lock_timeout"}}))
+
+      2, conn ->
+        json(conn, 200, @refund_body)
+
+      _call, conn ->
+        json(conn, 429, ~s({"error":{"type":"invalid_request_error","code":"rate_limit"}}))
+    end)
+
+    assert {:ok, _refund} = Client.run(refund_request())
+    for _attempt <- 1..2, do: assert_received({:stripe_request, _request})
+
+    assert {:error, %Error{status: 429, code: "rate_limit"}} = Client.run(refund_request())
+    assert_received {:stripe_request, _request}
+    refute_received {:stripe_request, _request}
+  end
+
   test "a missing object or an unreachable connected account logs at debug, leaving the level to the caller" do
     LogCapture.attach(logger_level: :debug)
 

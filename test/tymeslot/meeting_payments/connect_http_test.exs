@@ -229,14 +229,14 @@ defmodule Tymeslot.MeetingPayments.ConnectHttpTest do
       assert headers["idempotency-key"] == "tymeslot:refund:#{refund.id}:1"
     end
 
-    test "a refund still rate limited after the retries stays pending" do
+    test "a rate-limited refund is sent once and stays pending" do
       payment = insert(:paid_booking_payment, meeting: insert(:meeting))
 
-      StripeStub.expect(:create_refund, 3, {:error_fixture, "rate_limit"})
+      StripeStub.expect(:create_refund, {:error_fixture, "rate_limit"})
 
       assert {:pending, %{status: :pending}} = MeetingPayments.refund_now(payment, 600, :host)
 
-      assert length(StripeStub.requests(:create_refund)) == 3
+      assert length(StripeStub.requests(:create_refund)) == 1
       assert BookingPaymentQueries.get(payment.id).refunded_amount_cents == 0
     end
   end
