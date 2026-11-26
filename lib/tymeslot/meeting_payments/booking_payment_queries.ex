@@ -57,6 +57,19 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     end
   end
 
+  # Payment `b`'s application fee less the share its refunds returned.
+  defmacrop net_application_fee(b) do
+    quote do
+      fragment(
+        "COALESCE(?, 0) - COALESCE(ROUND(COALESCE(?, 0)::numeric * ? / NULLIF(?, 0)), 0)",
+        unquote(b).application_fee_cents,
+        unquote(b).application_fee_cents,
+        unquote(b).stripe_refunded_cents,
+        unquote(b).amount_cents
+      )
+    end
+  end
+
   @doc """
   Fills in each payment's `pending_refund_cents` (what its pending refunds
   add up to) as `query` reads it, so the refundable balance of a listed
@@ -408,6 +421,9 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
 
   Grouped because a host who changed their default currency holds money in
   more than one, and amounts in different currencies cannot be added up.
+
+  `platform_fee` is net of the share Stripe returns with each refund, in
+  proportion to the amount refunded. A lost dispute returns no fee.
   """
   @spec lifetime_stats(integer()) :: [
           %{
@@ -429,7 +445,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
           currency: b.currency,
           received: type(coalesce(sum(b.amount_cents), 0), :integer),
           refunded: type(coalesce(sum(b.refunded_amount_cents), 0), :integer),
-          platform_fee: type(coalesce(sum(b.application_fee_cents), 0), :integer)
+          platform_fee: type(coalesce(sum(net_application_fee(b)), 0), :integer)
         }
 
     Repo.all(query)
