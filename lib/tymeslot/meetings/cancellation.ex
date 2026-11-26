@@ -386,14 +386,13 @@ defmodule Tymeslot.Meetings.Cancellation do
     payments = BookingPayments.seat_payments_for_meeting(cancelled.id, organizer_user_id)
     {refundable, _outside_window} = BookingPayments.split_by_refund_window(payments)
 
+    # What each seat holds is read before its refund is recorded, which
+    # counts as pending against it from then on.
+    seat_money = BookingPayments.seat_money(payments)
+
     with :ok <- seen(payments, seen_ids),
          {:ok, scheduled} <- schedule_refunds(refundable, organizer_user_id, refund?) do
-      {:ok,
-       %{
-         released_holds: released,
-         refunds_scheduled: scheduled,
-         seat_money: BookingPayments.seat_money(payments)
-       }}
+      {:ok, %{released_holds: released, refunds_scheduled: scheduled, seat_money: seat_money}}
     end
   end
 
