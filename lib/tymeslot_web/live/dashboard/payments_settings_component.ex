@@ -253,7 +253,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   # A payment refundable but for its pending refunds opens too: the dialog
   # shows them being processed, with nothing left to submit.
   defp open_refund_modal(socket, payment) do
-    if MeetingPayments.refundable?(%{payment | pending_refund_cents: 0}) do
+    if MeetingPayments.refundable_ignoring_pending?(payment) do
       {:noreply, socket |> reset_refund_form() |> ModalHook.show_modal(:refund, payment)}
     else
       Flash.error(

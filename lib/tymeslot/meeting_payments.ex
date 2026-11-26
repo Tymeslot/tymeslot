@@ -444,6 +444,22 @@ defmodule Tymeslot.MeetingPayments do
   defdelegate refundable?(payment), to: Refunds
 
   @doc """
+  Whether `refundable?/1` would hold were none of the payment's refunds
+  pending: a payment whose pending refunds hold its whole balance is still
+  one Tymeslot can refund, just with nothing left to submit.
+  """
+  @spec refundable_ignoring_pending?(booking_payment() | nil) :: boolean()
+  def refundable_ignoring_pending?(nil), do: false
+  def refundable_ignoring_pending?(payment), do: refundable?(%{payment | pending_refund_cents: 0})
+
+  @doc """
+  What the attendee is still owed, in cents, pending refunds included: the
+  amount paid less what was refunded or a lost dispute took back.
+  """
+  @spec refund_owed_cents(booking_payment()) :: non_neg_integer()
+  def refund_owed_cents(payment), do: RefundedTotal.refundable_cents(payment, 0)
+
+  @doc """
   Returns `true` when the host still holds money the attendee has not been
   given back, whether or not the refund window has passed; see
   `Refunds.refund_outstanding?/1`.

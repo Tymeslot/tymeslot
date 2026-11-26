@@ -4,8 +4,9 @@ defmodule Tymeslot.MeetingPaymentsTest do
   own: `platform_configured?/0` (the predicate the admin settings UI uses to
   decide whether the "Meeting payments" toggle is unlockable; a real Stripe
   platform secret key must be present, and the `"sk_test_fake"` placeholder
-  shipped in dev/test fixtures does not count), `connect_display_state/1`, and
-  `host_currency/1`.
+  shipped in dev/test fixtures does not count), `connect_display_state/1`,
+  `host_currency/1`, and the refund figures the payments screen reads
+  (`refund_owed_cents/1`, `refundable_ignoring_pending?/1`).
   """
 
   use Tymeslot.DataCase, async: false
@@ -219,6 +220,66 @@ defmodule Tymeslot.MeetingPaymentsTest do
       }
 
       assert MeetingPayments.connect_display_state(account) == :pending_review
+    end
+  end
+
+  describe "refund_owed_cents/1" do
+    test "counts pending refunds as still owed" do
+      payment =
+        build(:paid_booking_payment,
+          amount_cents: 5000,
+          refunded_amount_cents: 1000,
+          pending_refund_cents: 2500
+        )
+
+      assert MeetingPayments.refund_owed_cents(payment) == 4000
+    end
+
+    test "is zero once the whole amount is refunded" do
+      payment =
+        build(:paid_booking_payment,
+          status: :refunded,
+          amount_cents: 5000,
+          refunded_amount_cents: 5000
+        )
+
+      assert MeetingPayments.refund_owed_cents(payment) == 0
+    end
+  end
+
+  describe "refundable_ignoring_pending?/1" do
+    test "holds when pending refunds take up the whole balance" do
+      payment =
+        build(:paid_booking_payment, amount_cents: 5000, pending_refund_cents: 5000)
+
+      refute MeetingPayments.refundable?(payment)
+      assert MeetingPayments.refundable_ignoring_pending?(payment)
+    end
+
+    test "does not hold past the refund window" do
+      payment =
+        build(:paid_booking_payment,
+          amount_cents: 5000,
+          pending_refund_cents: 5000,
+          paid_at: DateTime.add(DateTime.utc_now(:second), -61, :day)
+        )
+
+      refute MeetingPayments.refundable_ignoring_pending?(payment)
+    end
+
+    test "does not hold once everything is refunded" do
+      payment =
+        build(:paid_booking_payment,
+          status: :refunded,
+          amount_cents: 5000,
+          refunded_amount_cents: 5000
+        )
+
+      refute MeetingPayments.refundable_ignoring_pending?(payment)
+    end
+
+    test "does not hold for a missing payment" do
+      refute MeetingPayments.refundable_ignoring_pending?(nil)
     end
   end
 end
