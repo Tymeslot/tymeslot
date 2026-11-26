@@ -183,8 +183,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   @doc """
   Reads what cancelling `meeting` can refund the host `user_id` again, at
   confirm, against `paid`, what the dialog showed when it opened:
-  `{:ok, current}` when the same payments are still owed, `{:changed,
-  current}` when one was paid, refunded or released meanwhile. A refund
+  `{:ok, paid}` when the same payments are still owed, `{:changed,
+  current}` when one was paid, refunded or released meanwhile. The refund
+  is then made against the payments as the dialog showed them, so a balance
+  that changed meanwhile is refused rather than silently resized. A refund
   choice is only ever made against payments the host saw: a seat paid after
   the dialog opened would otherwise be left out of a full refund, or kept
   without the host ever acknowledging it.
@@ -194,7 +196,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
     current = payments_for(meeting, user_id)
 
     if payment_ids(current) == payment_ids(paid),
-      do: {:ok, current},
+      do: {:ok, paid},
       else: {:changed, current}
   end
 
