@@ -18,6 +18,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Stripe.Charges
+  alias Tymeslot.Integrations.Stripe.Error, as: StripeError
   alias Tymeslot.Payments.Behaviours.WebhookHandler
   alias Tymeslot.Payments.{Config, PaymentQueries, PubSub}
   alias Tymeslot.Workers.SendConfiguredEmail
@@ -116,8 +117,12 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
           end
         end
 
-      {:error, :stripe_api_error, _message} ->
-        {:error, :retry_later, "Stripe API unavailable"}
+      {:error, :permanent, _reason} = unreadable ->
+        alert_admin_dispute_created(dispute_id, nil, amount, reason)
+        unreadable
+
+      {:error, :retry_later, _reason} = retry ->
+        retry
     end
   end
 
@@ -145,8 +150,8 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
           {:ok, :dispute_updated}
         end
 
-      {:error, :stripe_api_error, _message} ->
-        {:error, :retry_later, "Stripe API unavailable"}
+      {:error, _retry_or_permanent, _reason} = unreadable ->
+        unreadable
     end
   end
 
@@ -198,8 +203,14 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
           {:ok, :dispute_closed}
         end
 
-      {:error, :stripe_api_error, _message} ->
-        {:error, :retry_later, "Stripe API unavailable"}
+      {:error, :permanent, _reason} = unreadable ->
+        if status == "lost",
+          do: alert_admin_dispute_lost(dispute_id, nil, dispute["amount"], dispute["reason"])
+
+        unreadable
+
+      {:error, :retry_later, _reason} = retry ->
+        retry
     end
   end
 
@@ -215,19 +226,39 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
     )
   end
 
+  # The disputed charge says whose dispute it is. Stripe redelivers an event
+  # that is not acknowledged for three days, which helps only when the read
+  # failed for a passing reason (`StripeError.retryable?/1`), or for want of
+  # an API key, which configuring one puts right. Any other failure (a charge
+  # Stripe does not have, say) would fail the same way on every delivery, so
+  # the event is acknowledged unrouted; its handler alerts the operator to a
+  # new or lost dispute, as for one linked to no user.
   defp fetch_charge(charge_id) do
     case Charges.retrieve(charge_id, []) do
-      {:ok, charge} ->
-        {:ok, charge}
-
-      {:error, reason} ->
-        Logger.error("Failed to fetch charge from Stripe",
-          charge_id: charge_id,
-          reason: LogFormat.reason(reason)
-        )
-
-        {:error, :stripe_api_error, "Failed to fetch charge from Stripe API"}
+      {:ok, charge} -> {:ok, charge}
+      {:error, reason} -> charge_unreadable(transient?(reason), charge_id, reason)
     end
+  end
+
+  defp transient?(:missing_api_key), do: true
+  defp transient?(reason), do: StripeError.retryable?(reason)
+
+  defp charge_unreadable(true = _transient, charge_id, reason) do
+    Logger.warning("Failed to fetch disputed charge from Stripe, retrying",
+      charge_id: charge_id,
+      reason: LogFormat.reason(reason)
+    )
+
+    {:error, :retry_later, "Stripe API unavailable"}
+  end
+
+  defp charge_unreadable(false = _transient, charge_id, reason) do
+    Logger.error("Disputed charge unreadable for good, event acknowledged unrouted",
+      charge_id: charge_id,
+      reason: LogFormat.reason(reason)
+    )
+
+    {:error, :permanent, :charge_unreadable}
   end
 
   defp get_charge_customer_id(charge), do: charge["customer"]
