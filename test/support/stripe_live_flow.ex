@@ -246,8 +246,9 @@ defmodule Tymeslot.StripeLiveFlow do
     end
   end
 
+  # A deleted connected account answers 403 `account_invalid`, not a 404.
   defp already_gone?(%Error{message: message} = error) do
-    Error.resource_missing?(error) or
+    Error.resource_missing?(error) or Error.account_invalid?(error) or
       (is_binary(message) and message =~ ~r/already (been )?(canceled|cancelled|deleted)/i)
   end
 end
