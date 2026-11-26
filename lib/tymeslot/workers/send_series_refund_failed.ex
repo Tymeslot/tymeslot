@@ -1,12 +1,15 @@
 defmodule Tymeslot.Workers.SendSeriesRefundFailed do
   @moduledoc """
   Runs jobs queued before the release that brought in the refund outbox
-  (`booking_payment_refunds`); delete in the release after it.
+  (`booking_payment_refunds`), and the ones
+  `Tymeslot.MeetingPayments.Workers.SeriesHostRefund` (itself kept only for
+  series refunds queued then) inserts when it gives up on a refund it could
+  not record; delete both in the release after it. A refund that was
+  recorded and then failed is announced per refund by
+  `Tymeslot.Workers.SendRefundFailed`.
 
   Such a job tells the host that the refund of a series payment, made when
-  they cancelled the series' remaining sessions, could not be made. Nothing
-  inserts such jobs: a failed refund is announced per refund by
-  `Tymeslot.Workers.SendRefundFailed`.
+  they cancelled the series' remaining sessions, could not be made.
 
   A run sends that worker's email (`Tymeslot.Emails.Templates.RefundFailed`,
   worded for a series cancellation) for the job's `booking_payment_id` and

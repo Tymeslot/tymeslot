@@ -19,8 +19,17 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
   Whether the refund is made already is the job's own record: an earlier
   attempt that recorded it holds the job's delivery claim
   (`DeliveryClaims`), committed with what it recorded, so a rerun records
-  nothing. A refund no retry can make (outside the refund window, under
-  dispute, not paid, more than remains) discards the job.
+  nothing.
+
+  A refund no retry can make (outside the refund window, under dispute,
+  not paid, more than remains) discards the job. Another refund of the
+  payment still pending (`:refund_in_progress`) settles within minutes, so
+  that refusal is retried, as is any other failure. When the job gives up
+  on the refund, discarded or failed on its last attempt, the host is
+  emailed (`Tymeslot.Workers.SendSeriesRefundFailed`): the series payment
+  reaches their outstanding-refunds list only once none of its sessions
+  goes ahead, so the email is how they learn the money is still theirs to
+  return. No email goes out when the payment is gone or already refunded.
   """
 
   use Oban.Worker,
@@ -34,27 +43,26 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.Repo
   alias Tymeslot.Workers.Backoff
   alias Tymeslot.Workers.DeliveryClaims
+  alias Tymeslot.Workers.SendSeriesRefundFailed
 
   @claim "series_host_refund"
 
   @base_backoff_seconds 60
   @max_backoff_seconds 3_600
 
-  @unretryable [
-    :not_found,
-    :not_paid,
-    :outside_refund_window,
-    :under_dispute,
-    :already_refunded,
-    :invalid_amount,
-    :refund_in_progress
-  ]
+  # Refusals that leave the host nothing to return: no payment of theirs,
+  # or its money refunded already.
+  @nothing_owed [:not_found, :already_refunded]
+
+  # Refusals no retry can turn round; the money stays with the host.
+  @unretryable [:not_paid, :outside_refund_window, :under_dispute, :invalid_amount]
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args} = job) do
@@ -62,16 +70,18 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
       {:ok, _requested} ->
         :ok
 
-      {:error, reason} when reason in @unretryable ->
-        Logger.error("Series host refund cannot be made",
-          booking_payment_id: args["booking_payment_id"],
-          amount_cents: args["amount_cents"],
-          reason: reason
-        )
+      {:error, reason} when reason in @nothing_owed ->
+        log_failure(job, args, reason)
+        {:discard, reason}
 
+      {:error, reason} when reason in @unretryable ->
+        log_failure(job, args, reason)
+        tell_host(args)
         {:discard, reason}
 
       {:error, reason} ->
+        log_failure(job, args, reason)
+        if job.attempt >= job.max_attempts, do: tell_host(args)
         {:error, reason}
     end
   end
@@ -80,6 +90,8 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
   def backoff(%Oban.Job{attempt: attempt}),
     do: Backoff.exponential(attempt, @base_backoff_seconds, @max_backoff_seconds)
 
+  # A raise (a dropped connection, say) is an attempt failing like any
+  # other, so the last one still tells the host.
   defp request(job, %{
          "booking_payment_id" => id,
          "host_user_id" => host_user_id,
@@ -92,6 +104,8 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
       nil -> {:error, :not_found}
       true -> {:ok, :requested}
     end
+  rescue
+    exception -> {:error, exception}
   end
 
   # The claim and the refund commit together; a refusal rolls both back. A
@@ -121,4 +135,26 @@ defmodule Tymeslot.MeetingPayments.Workers.SeriesHostRefund do
 
   defp legacy(%Oban.Job{id: id, inserted_at: inserted_at}),
     do: [legacy_idempotency_key: "series_refund:#{id}", legacy_since: inserted_at]
+
+  defp tell_host(%{"booking_payment_id" => id, "amount_cents" => amount}) do
+    case Oban.insert(SendSeriesRefundFailed.new(%{booking_payment_id: id, amount_cents: amount})) do
+      {:ok, _job} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Could not queue the series refund failure email",
+          booking_payment_id: id,
+          reason: LogFormat.reason(reason)
+        )
+    end
+  end
+
+  defp log_failure(job, args, reason) do
+    Logger.error("Series host refund cannot be made",
+      booking_payment_id: args["booking_payment_id"],
+      amount_cents: args["amount_cents"],
+      attempt: job.attempt,
+      reason: LogFormat.reason(reason)
+    )
+  end
 end
