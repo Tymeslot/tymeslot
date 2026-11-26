@@ -445,6 +445,8 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceBookingDialogsTest do
       assert has_element?(lv, "#cancel-meeting-form", "2 participants paid for this session")
       assert has_element?(lv, "input[name=cancel_refund_choice][value=none][checked]")
       refute has_element?(lv, "input[name=cancel_refund_choice][value=full][checked]")
+      # Acknowledged for the one seat shown before, so asked again for both.
+      refute has_element?(lv, "input[name=cancel_refund_no_refund_ack][checked]")
       assert reload(session).status == :confirmed
       assert cancellation_refunds() == []
     end

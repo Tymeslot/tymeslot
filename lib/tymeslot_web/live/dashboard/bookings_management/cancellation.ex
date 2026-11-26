@@ -15,7 +15,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import Phoenix.Component, only: [assign: 2, assign: 3]
+  import Phoenix.Component, only: [assign: 2, assign: 3, update: 3]
 
   alias Tymeslot.Bookings.Refusal
   alias Tymeslot.Infrastructure.Logging.LogFormat
@@ -182,9 +182,12 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
     end
   end
 
+  # The choice stays, but a no-refund acknowledgement was given for the
+  # payments as they were, so the host gives it again for these.
   defp payments_changed(socket, fresh) do
     socket
     |> assign(fresh)
+    |> update(:cancel_refund_form, &%{&1 | acknowledged: false})
     |> assign(:cancel_refund_error, %{payments: payments_changed_message()})
   end
 
