@@ -97,9 +97,10 @@ defmodule Tymeslot.Meetings.SeatWrites do
     # Snapshotted once, at creation, onto the meeting row itself — see
     # `Tymeslot.Meetings.group?/1`. Not re-read from the meeting type later.
     attrs =
-      meeting_attrs
-      |> Map.put(:capacity, seat_request.max_participants)
-      |> then(&if(hooks.hold, do: Map.put(&1, :status, :awaiting_payment), else: &1))
+      Map.merge(meeting_attrs, %{
+        capacity: seat_request.max_participants,
+        status: slot_status(meeting_attrs, hooks)
+      })
 
     case Scheduling.create_group_meeting_with_conflict_check(attrs,
            exclude_uid: hooks.exclude_from_conflicts.()
@@ -113,6 +114,13 @@ defmodule Tymeslot.Meetings.SeatWrites do
         Repo.rollback(reason)
     end
   end
+
+  # Only a hold creates a slot awaiting payment; a caller's status never does.
+  defp slot_status(_meeting_attrs, %{hold: hold}) when hold not in [nil, false],
+    do: :awaiting_payment
+
+  defp slot_status(%{status: :awaiting_verification}, _hooks), do: :awaiting_verification
+  defp slot_status(_meeting_attrs, _hooks), do: :confirmed
 
   # Gates on the meeting's own capacity, not the caller's
   # `seat_request.max_participants` (which is only the correct capacity for
