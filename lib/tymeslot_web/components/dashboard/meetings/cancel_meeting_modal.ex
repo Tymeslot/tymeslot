@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
   alias TymeslotWeb.Components.CoreComponents.Modal
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
 
-  import TymeslotWeb.Components.PaymentHelpers, only: [format_amount: 2]
+  import TymeslotWeb.Components.PaymentHelpers, only: [format_amount: 2, format_totals: 1]
 
   @doc """
   Renders a cancel meeting confirmation modal.
@@ -309,9 +309,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
     assigns =
       assign(assigns,
         count: summary.count,
-        total: join_totals(summary.totals),
+        total: format_totals(summary.totals),
         outside_window_count: outside_window.count,
-        outside_window_total: join_totals(outside_window.totals)
+        outside_window_total: format_totals(outside_window.totals)
       )
 
     ~H"""
@@ -374,9 +374,6 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
     </.info_box>
     """
   end
-
-  defp join_totals(totals),
-    do: Enum.map_join(totals, " + ", &format_amount(&1.amount_cents, &1.currency))
 
   attr :id_prefix, :string, required: true, doc: "prefixes the acknowledgement error's id"
   attr :refund_form, :map, required: true

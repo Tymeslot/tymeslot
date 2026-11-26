@@ -2,9 +2,10 @@ defmodule TymeslotWeb.Components.PaymentHelpers do
   @moduledoc """
   Template helpers for payment amounts that may be absent.
 
-  Used by `TymeslotWeb.Dashboard.PaymentsSettingsComponent`,
-  `TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal` and the
-  booking pages' price line.
+  Used by `TymeslotWeb.Dashboard.PaymentsSettingsComponent`, the
+  confirmations of a cancellation or delete that refunds paid seats
+  (`TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal` among
+  them) and the booking pages' price line.
   """
 
   alias Tymeslot.MeetingPayments.Money
@@ -36,4 +37,13 @@ defmodule TymeslotWeb.Components.PaymentHelpers do
     do: Money.format(cents, currency, locale: locale)
 
   def format_amount(_cents, _currency, _locale), do: ""
+
+  @doc """
+  Formats each currency's total of a `%{currency, amount_cents}` list, as
+  `Tymeslot.MeetingPayments.BookingPayments.seat_money_summary/1` gives
+  them, joined with " + ".
+  """
+  @spec format_totals([%{currency: String.t(), amount_cents: integer()}]) :: String.t()
+  def format_totals(totals),
+    do: Enum.map_join(totals, " + ", &format_amount(&1.amount_cents, &1.currency))
 end

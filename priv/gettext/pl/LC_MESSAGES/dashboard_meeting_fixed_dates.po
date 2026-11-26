@@ -239,3 +239,16 @@ msgstr "Godzina %{time} występuje w dniu %{on_date} dwa razy, bo tego dnia prze
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
 msgstr "Ten termin nie jest już dostępny. Wybierz inny."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} paid by %{count} person is refunded in full."
+msgid_plural "%{amount} paid by %{count} people is refunded in full."
+msgstr[0] "Kwota %{amount} wpłacona przez %{count} osobę zostanie zwrócona w całości."
+msgstr[1] "Kwota %{amount} wpłacona przez %{count} osoby zostanie zwrócona w całości."
+msgstr[2] "Kwota %{amount} wpłacona przez %{count} osób zostanie zwrócona w całości."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "The date could not be cancelled. Please try again."
+msgstr "Nie udało się odwołać terminu. Spróbuj ponownie."

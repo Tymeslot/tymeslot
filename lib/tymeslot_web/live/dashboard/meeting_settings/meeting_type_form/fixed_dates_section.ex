@@ -35,6 +35,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Components.CoreComponents.Buttons
+  alias TymeslotWeb.Components.PaymentHelpers
   alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
@@ -59,6 +60,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
     doc: "`SessionHandlers.clock_change_notice/2` for the date just planned or moved"
 
   attr :confirming_session_id, :string, default: nil
+
+  attr :confirming_seat_refunds, :map,
+    default: nil,
+    doc: "the paid seats cancelling that date refunds (`PlannedSessions.seat_refunds/1`)"
 
   attr :editing_session, :map,
     default: nil,
@@ -177,6 +182,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FixedDatesSectio
                     session.participants,
                     count: session.participants
                   )}
+                  <span
+                    :if={@confirming_seat_refunds && @confirming_seat_refunds.count > 0}
+                    data-testid="cancel-session-refunds"
+                  >
+                    {dngettext(
+                      "dashboard_meeting_fixed_dates",
+                      "%{amount} paid by %{count} person is refunded in full.",
+                      "%{amount} paid by %{count} people is refunded in full.",
+                      @confirming_seat_refunds.count,
+                      count: @confirming_seat_refunds.count,
+                      amount: PaymentHelpers.format_totals(@confirming_seat_refunds.totals)
+                    )}
+                  </span>
                 </span>
                 <.action_button
                   size={:sm}

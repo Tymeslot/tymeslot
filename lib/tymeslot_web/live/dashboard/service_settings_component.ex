@@ -44,6 +44,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
      |> assign(:payments_accepted, true)
      |> assign(:slug_draft, "")
      |> assign(:delete_sign_ups, {0, 0})
+     |> assign(:delete_seat_refunds, nil)
      |> ModalHook.mount_modal(delete_meeting_type: false, slug: false)}
   end
 
@@ -307,7 +308,10 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
         type ->
           {:noreply,
            socket
-           |> assign(:delete_sign_ups, MeetingTypes.upcoming_sign_ups(type))
+           |> assign(
+             delete_sign_ups: MeetingTypes.upcoming_sign_ups(type),
+             delete_seat_refunds: MeetingTypes.upcoming_seat_refunds(type)
+           )
            |> ModalHook.show_modal(:delete_meeting_type, type)}
       end
     end)

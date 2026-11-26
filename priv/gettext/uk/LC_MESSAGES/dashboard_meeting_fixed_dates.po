@@ -239,3 +239,16 @@ msgstr "Час %{time} %{on_date} настає двічі, бо годинник
 #, elixir-autogen, elixir-format
 msgid "This time is no longer available. Please choose another time."
 msgstr "Цей час більше недоступний. Виберіть інший."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/fixed_dates_section.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} paid by %{count} person is refunded in full."
+msgid_plural "%{amount} paid by %{count} people is refunded in full."
+msgstr[0] "%{count} особа сплатила %{amount}; ці кошти буде повернено в повному обсязі."
+msgstr[1] "%{count} особи сплатили %{amount}; ці кошти буде повернено в повному обсязі."
+msgstr[2] "%{count} осіб сплатили %{amount}; ці кошти буде повернено в повному обсязі."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/session_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "The date could not be cancelled. Please try again."
+msgstr "Не вдалося скасувати дату. Спробуйте ще раз."
