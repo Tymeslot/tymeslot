@@ -9,11 +9,13 @@ defmodule Tymeslot.Workers.AccountDeletionWorker do
   sweep never queues a second one; a restore deletes the waiting job. A
   refusal from the deletion hook (billing unreachable, say) is retried with
   Oban's backoff, and once the attempts run out the sweep tries again the
-  next day. The last attempt of each run raises an
-  `:account_deletion_stalled` admin alert, as a refusal that persists would
-  otherwise repeat daily with nothing but a log line; the alert is deduplicated
-  per account for 24 hours. A deletion re-requested while the old job is still executing
-  conflicts with it, and gets its job from the next sweep.
+  next day. A refusal that persists would otherwise repeat daily with nothing
+  but a log line, so it raises an `:account_deletion_stalled` admin alert:
+  on every attempt that Stripe refuses with an error retrying cannot fix,
+  and on the last attempt of each run for any other refusal. The alert is
+  deduplicated per account for 24 hours, so the operator hears once a day
+  however many attempts fail. A deletion re-requested while the old job is
+  still executing conflicts with it, and gets its job from the next sweep.
   """
 
   use Oban.Worker,
