@@ -329,13 +329,15 @@ defmodule Tymeslot.CalendarGrid.IcsImport.CutoffTest do
     end
 
     # Each of these series runs on for centuries yet; stepping every
-    # occurrence since 1900, once per suggested date, takes minutes.
+    # occurrence since 1900, once per suggested date, takes minutes. Most
+    # are worked out directly; a few BYDAY ones are stepped for two years,
+    # as `RecurrenceExpander.last_start/2`'s own tests cover in full.
     @tag timeout: 20_000
     test "judges a COUNT series from long ago without stepping through it" do
       series =
         for n <- 1..(IcsImport.max_events() + 1) do
           rule =
-            if rem(n, 2) == 0,
+            if n > 10,
               do: "RRULE:FREQ=DAILY;COUNT=999999",
               else: "RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;COUNT=999999"
 
