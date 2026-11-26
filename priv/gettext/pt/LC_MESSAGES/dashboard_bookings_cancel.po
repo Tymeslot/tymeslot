@@ -276,3 +276,8 @@ msgstr "Marque a confirmação para cancelar sem reembolsar os participantes."
 #, elixir-autogen, elixir-format
 msgid "The payments for this meeting changed while this was open. Check them and choose again."
 msgstr "Os pagamentos desta reunião mudaram enquanto esta janela estava aberta. Confira-os e escolha de novo."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Session cancelled. No payment could be refunded automatically: they are older than the 60-day refund window. You can refund them from Stripe."
+msgstr "Sessão cancelada. Nenhum pagamento pôde ser reembolsado automaticamente, pois já passaram do prazo de reembolso de 60 dias. Você pode reembolsá-los pelo Stripe."

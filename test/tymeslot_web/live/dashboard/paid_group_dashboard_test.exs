@@ -233,6 +233,29 @@ defmodule TymeslotWeb.Dashboard.PaidGroupDashboardTest do
 
       assert status(ctx.session) == :cancelled
       assert [%{amount_cents: 3000}] = refund_jobs()
+      assert render(view) =~ "Session cancelled. Refunds are on their way."
+    end
+
+    test "a full refund with every seat outside the refund window says none was refunded",
+         %{conn: conn} = ctx do
+      paid_seat(ctx, "old@example.com",
+        amount_cents: 2500,
+        paid_at: DateTime.add(DateTime.utc_now(:second), -61, :day)
+      )
+
+      view = open_cancel_dialog(conn, ctx.session)
+
+      view
+      |> form("#cancel-meeting-form", %{"cancel_refund_choice" => "full"})
+      |> render_submit()
+
+      assert status(ctx.session) == :cancelled
+      assert refund_jobs() == []
+      html = render(view)
+      refute html =~ "Refunds are on their way."
+
+      assert html =~
+               "Session cancelled. No payment could be refunded automatically: they are older than the 60-day refund window. You can refund them from Stripe."
     end
 
     test "with full refunds schedules a refund per seat", %{conn: conn} = ctx do

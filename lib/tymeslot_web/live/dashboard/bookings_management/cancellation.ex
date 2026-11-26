@@ -215,14 +215,31 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   # paid or refunded between the recheck and the cancellation's locked read
   # of the seats, so nothing was cancelled.
   defp cancel_checked(user_id, meeting, paid, refund_action) do
+    # Read before the cancellation records its refunds, which leave the
+    # seats nothing outstanding.
+    settled = settled_action(refund_action, paid)
+
     result =
       Meetings.cancel_meeting_with_refund(meeting, user_id, refund_action,
         seat_payment_ids: Enum.map(paid.cancel_seat_payments, & &1.id)
       )
 
     emit_confirm(user_id, meeting.id, result)
-    outcome(meeting, refund_action, result)
+    outcome(meeting, settled, result)
   end
+
+  # A full refund of a group session refunds only the seats inside the
+  # refund window. The cancellation settled exactly the seats the dialog
+  # showed (any others roll it back), so when none of them is inside the
+  # window nothing was refunded, and the host is told to refund from Stripe.
+  defp settled_action(:refund_seats, %{cancel_seat_payments: seats}) do
+    case BookingPayments.split_by_refund_window(seats) do
+      {[], [_ | _]} -> :seats_outside_refund_window
+      _ -> :refund_seats
+    end
+  end
+
+  defp settled_action(refund_action, _paid), do: refund_action
 
   # What the cancel dialog's assigns say the cancellation can refund.
   defp paid(assigns), do: Map.merge(no_payments(), Map.take(assigns, Map.keys(no_payments())))
@@ -405,6 +422,13 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Cancellation do
   # Each paid seat's refund is its own job, so the refunds follow.
   defp success_message(:refund_seats),
     do: dgettext("dashboard_bookings_cancel", "Session cancelled. Refunds are on their way.")
+
+  defp success_message(:seats_outside_refund_window),
+    do:
+      dgettext(
+        "dashboard_bookings_cancel",
+        "Session cancelled. No payment could be refunded automatically: they are older than the 60-day refund window. You can refund them from Stripe."
+      )
 
   defp success_message(:none),
     do: dgettext("dashboard_bookings_cancel", "Meeting cancelled successfully")
