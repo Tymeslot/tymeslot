@@ -33,11 +33,13 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccount do
 
   @behaviour ExpectedJobOutcome
 
-  # A deleted or disconnected account is expected; the
+  # A deleted or disconnected account is expected: Stripe answers
+  # `resource_missing` for an account it does not know and `account_invalid`
+  # for one that has revoked the platform's access, and the
   # `account.application.deauthorized` webhook settles its row. Any other
   # permanent refusal (an invalid key, say) stays recorded.
   @impl ExpectedJobOutcome
-  def expected_outcome?(reason), do: StripeError.resource_missing?(reason)
+  def expected_outcome?(reason), do: account_gone?(reason)
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"stripe_account_id" => stripe_account_id}})
@@ -54,7 +56,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccount do
 
       {:error, %StripeError{} = error} ->
         Logger.log(
-          if(StripeError.resource_missing?(error), do: :info, else: :warning),
+          if(account_gone?(error), do: :info, else: :warning),
           "ResyncConnectAccount could not retrieve Stripe account",
           stripe_account_id: stripe_account_id,
           operation: error.operation,
@@ -79,4 +81,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccount do
     Logger.error("ResyncConnectAccount missing stripe_account_id", args: LogFormat.reason(args))
     {:discard, "missing stripe_account_id"}
   end
+
+  defp account_gone?(reason),
+    do: StripeError.resource_missing?(reason) or StripeError.account_invalid?(reason)
 end

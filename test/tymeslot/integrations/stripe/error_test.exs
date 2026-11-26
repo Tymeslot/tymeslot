@@ -121,6 +121,18 @@ defmodule Tymeslot.Integrations.Stripe.ErrorTest do
     end
   end
 
+  describe "account_invalid?/1" do
+    test "is true by code" do
+      assert Error.account_invalid?(%Error{code: "account_invalid", status: 403})
+    end
+
+    test "is false for another 403, a missing resource and a non-error" do
+      refute Error.account_invalid?(%Error{type: "invalid_request_error", status: 403})
+      refute Error.account_invalid?(%Error{code: "resource_missing", status: 404})
+      refute Error.account_invalid?(:missing_api_key)
+    end
+  end
+
   describe "message/1" do
     test "names the operation, type, status, request and Stripe's message" do
       error = Error.from_response(404, [{"request-id", "req_1"}], @missing_body, :retrieve_refund)

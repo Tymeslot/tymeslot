@@ -117,6 +117,17 @@ defmodule Tymeslot.Integrations.Stripe.Error do
   def resource_missing?(_other), do: false
 
   @doc """
+  Whether Stripe refused a call made on a connected account's behalf because
+  the platform has no access to that account: code `account_invalid`, which
+  Stripe sends once the account is deleted or has revoked the platform's
+  access. False for any other value, including a 403 with another code (a
+  restricted key lacking a permission, say).
+  """
+  @spec account_invalid?(term()) :: boolean()
+  def account_invalid?(%__MODULE__{code: "account_invalid"}), do: true
+  def account_invalid?(_other), do: false
+
+  @doc """
   `"Stripe <operation> failed: <type> (HTTP <status>, request <request_id>): <message>"`,
   leaving out the parts the error lacks. A transport failure ends with its reason
   when that is an atom.

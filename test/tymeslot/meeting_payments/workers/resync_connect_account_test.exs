@@ -92,6 +92,29 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccountTest do
       assert reloaded.charges_enabled == false
     end
 
+    test "an account that revoked the platform's access cancels the job as an expected outcome" do
+      {user, _account} = insert_active_account("acct_REVOKED")
+
+      StripeStub.stub(
+        :retrieve_account,
+        {403,
+         %{
+           "error" => %{
+             "type" => "invalid_request_error",
+             "code" => "account_invalid",
+             "message" =>
+               "The provided key does not have access to account 'acct_REVOKED' (or that account does not exist). Application access may have been revoked."
+           }
+         }}
+      )
+
+      assert {:cancel, %StripeError{code: "account_invalid"} = error} =
+               perform_job(ResyncConnectAccount, %{"stripe_account_id" => "acct_REVOKED"})
+
+      assert ResyncConnectAccount.expected_outcome?(error)
+      assert ConnectAccountQueries.live_for_user(user.id).status == :active
+    end
+
     test "a 403 permission error cancels the job and is not an expected outcome" do
       insert_active_account("acct_FORBIDDEN")
 
