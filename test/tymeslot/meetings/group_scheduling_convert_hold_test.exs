@@ -153,6 +153,15 @@ defmodule Tymeslot.Meetings.GroupSchedulingConvertHoldTest do
       def check_access(_user_id, _feature), do: :ok
     end
 
+    defmodule DenyMeetingPaymentsChecker do
+      @moduledoc false
+      @behaviour Tymeslot.Features.CheckerBehaviour
+
+      @impl Tymeslot.Features.CheckerBehaviour
+      def check_access(_user_id, :meeting_payments), do: {:error, :insufficient_plan}
+      def check_access(_user_id, _feature), do: :ok
+    end
+
     setup ctx do
       lapsed = slot(ctx, status: :expired)
 
@@ -183,9 +192,16 @@ defmodule Tymeslot.Meetings.GroupSchedulingConvertHoldTest do
       assert_refused(ctx.hold)
     end
 
-    test "is refused once its host no longer takes payments", ctx do
+    # The payment has already been taken: refusing the seat would only hand
+    # it back, so losing the means to take a new one does not.
+    test "still books once its host's Stripe account is gone", ctx do
       Repo.delete_all(ConnectAccountSchema)
-      assert_refused(ctx.hold)
+      assert_booked(ctx.hold)
+    end
+
+    test "still books once its host's plan no longer takes payments", ctx do
+      setup_config(:tymeslot, feature_access_checker: DenyMeetingPaymentsChecker)
+      assert_booked(ctx.hold)
     end
 
     test "is refused once its slot has started", ctx do
@@ -196,6 +212,15 @@ defmodule Tymeslot.Meetings.GroupSchedulingConvertHoldTest do
       )
 
       assert_refused(ctx.hold)
+    end
+
+    defp assert_booked(hold) do
+      assert {:ok, {:ok, booking}} =
+               Repo.transaction(fn -> CreateGroup.complete_paid_hold(hold.id) end)
+
+      assert booking.created_meeting?
+      assert %{status: :converted} = SeatHolds.get(hold.id)
+      assert Repo.get!(MeetingSchema, booking.meeting.id).status == :confirmed
     end
 
     defp assert_refused(hold) do

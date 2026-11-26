@@ -134,12 +134,24 @@ defmodule Tymeslot.Bookings.Create.Prepare do
   def validate_admission(%{organizer_user_id: nil}), do: {:error, :organizer_required}
 
   def validate_admission(%{organizer_user_id: user_id} = booking_data) do
+    with :ok <- validate_taking_bookings(booking_data),
+         do: validate_payments_available(booking_data, user_id)
+  end
+
+  @doc """
+  `validate_admission/1` without the payments check, for a booking whose
+  payment has already been taken: an organiser still taking bookings, an
+  active type, an invitation where the type asks for one, and a group type
+  still taking seats.
+  """
+  @spec validate_taking_bookings(map()) :: :ok | {:error, atom()}
+  def validate_taking_bookings(%{organizer_user_id: nil}), do: {:error, :organizer_required}
+
+  def validate_taking_bookings(%{organizer_user_id: user_id} = booking_data) do
     with :ok <- validate_host_accepting(user_id),
          :ok <- validate_meeting_type_active(booking_data),
          :ok <- validate_invitation(booking_data),
-         :ok <- CreateGroup.ensure_taking_seats(booking_data) do
-      validate_payments_available(booking_data, user_id)
-    end
+         do: CreateGroup.ensure_taking_seats(booking_data)
   end
 
   @doc """

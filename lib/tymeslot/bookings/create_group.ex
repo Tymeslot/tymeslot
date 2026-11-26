@@ -266,12 +266,14 @@ defmodule Tymeslot.Bookings.CreateGroup do
 
   # The type as it stands now decides whether it takes a new meeting, and
   # its limit is the new meeting's capacity. It must take this booking were
-  # it made now (`Prepare.validate_admission/1`, `validate_single_allowed/1`:
-  # its host still taking bookings, the type active, not paused and still
-  # accepting payments, single sessions allowed), still charge for a group
-  # seat, and the slot must not have started. Its schedule, notice and limits
-  # are not asked again: the booker chose the slot while they held, and paid
-  # for it.
+  # it made now (`Prepare.validate_taking_bookings/1`,
+  # `validate_single_allowed/1`: its host still taking bookings, the type
+  # active and not paused, single sessions allowed), still charge for a group
+  # seat, and the slot must not have started. Whether the host can take a
+  # payment now is not asked: this one has already been taken, and refusing
+  # the seat would only hand it back (or, on a disconnected account, leave a
+  # refund nobody can make). Its schedule, notice and limits are not asked
+  # again either: the booker chose the slot while they held, and paid for it.
   defp late_slot(hold, meeting) do
     with %MeetingTypeSchema{} = type <- late_slot_type(meeting),
          true <- late_slot_bookable?(type, meeting) do
@@ -297,7 +299,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
     MeetingTypeSchema.group?(type) and Prepare.paid?(booking_data) and
       not FixedDates.sessions?(type) and
       DateTime.after?(meeting.start_time, Clock.utc_now()) and
-      Prepare.validate_admission(booking_data) == :ok and
+      Prepare.validate_taking_bookings(booking_data) == :ok and
       Prepare.validate_single_allowed(booking_data) == :ok
   end
 
