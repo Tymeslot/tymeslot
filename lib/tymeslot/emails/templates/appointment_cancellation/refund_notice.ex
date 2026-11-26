@@ -49,13 +49,30 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation.RefundNotice do
 
   @doc """
   Builds the notice from the `:booking_payment` snapshot in
-  `appointment_details`, or from the `:seat_money` summary of a group
-  meeting the host cancelled (`Tymeslot.Notifications.Email.GroupMeetingEmails`),
-  or returns `nil` when no money is outstanding.
+  `appointment_details`, or from the `:seat_money` of a group meeting the
+  host cancelled (`Tymeslot.Meetings.Cancellation.seat_refund/0`, handed on by
+  `Tymeslot.Notifications.Email.GroupMeetingEmails`), or returns `nil` when
+  no money is outstanding.
+
+  Amounts are formatted here, so they follow the locale the email is
+  rendered in.
   """
   @spec build(map()) :: notice()
-  def build(%{seat_money: %{choice: _choice, count: _count, amount: _amount} = seats}),
-    do: seats
+  def build(%{
+        seat_money: %{
+          choice: choice,
+          count: count,
+          totals: totals,
+          outside_window: outside_window
+        }
+      }) do
+    %{
+      choice: choice,
+      count: count,
+      amount: format_totals(totals),
+      outside_window: %{count: outside_window.count, amount: format_totals(outside_window.totals)}
+    }
+  end
 
   def build(appointment_details) do
     payment = Map.get(appointment_details, :booking_payment)
@@ -65,6 +82,11 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation.RefundNotice do
       %{amount: Formatting.format_currency(outstanding, payment.currency)}
     end
   end
+
+  # Each currency's total in that currency, listed with commas rather than a
+  # translated connective.
+  defp format_totals(totals),
+    do: Enum.map_join(totals, ", ", &Formatting.format_currency(&1.amount_cents, &1.currency))
 
   @doc "Renders the notice as MJML, or an empty string when there is none."
   @spec html(notice()) :: String.t()

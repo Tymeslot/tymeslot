@@ -33,7 +33,6 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
 
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Emails.EmailScheduler
-  alias Tymeslot.Emails.Shared.Formatting
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
@@ -204,7 +203,7 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
       organizer_details =
         meeting
         |> AppointmentBuilder.for_organizer_of_group(length(participants))
-        |> Map.put(:seat_money, seat_money(seat_refund))
+        |> Map.put(:seat_money, seat_refund)
 
       meeting.organizer_email
       |> Config.email_service_module().send_cancellation_email_to_organizer(organizer_details)
@@ -270,24 +269,6 @@ defmodule Tymeslot.Notifications.Email.GroupMeetingEmails do
         requested_at
       )
     end)
-  end
-
-  # What the organiser is told of the paid seats' money, or nil when no seat
-  # was paid: each currency's total formatted in that currency, listed with
-  # commas rather than a translated connective.
-  defp seat_money(nil), do: nil
-
-  defp seat_money(%{choice: choice, outside_window: outside_window} = seats) do
-    seats
-    |> seat_amount()
-    |> Map.merge(%{choice: choice, outside_window: seat_amount(outside_window)})
-  end
-
-  defp seat_amount(%{count: count, totals: totals}) do
-    amount =
-      Enum.map_join(totals, ", ", &Formatting.format_currency(&1.amount_cents, &1.currency))
-
-    %{count: count, amount: amount}
   end
 
   defp send_seat_meeting_cancellation_email(meeting, participant) do

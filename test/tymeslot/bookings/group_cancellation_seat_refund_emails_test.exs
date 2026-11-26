@@ -17,8 +17,10 @@ defmodule Tymeslot.Bookings.GroupCancellationSeatRefundEmailsTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.Emails.Templates.AppointmentCancellation
   alias Tymeslot.EmailServiceMock
+  alias Tymeslot.Repo
   alias Tymeslot.Workers.EmailWorker
 
   setup :verify_on_exit!
@@ -51,7 +53,7 @@ defmodule Tymeslot.Bookings.GroupCancellationSeatRefundEmailsTest do
       )
     end
 
-    %{meeting: meeting}
+    %{meeting: meeting, organizer: organizer}
   end
 
   defp cancel_job(meeting, extra) do
@@ -83,8 +85,8 @@ defmodule Tymeslot.Bookings.GroupCancellationSeatRefundEmailsTest do
     assert details.seat_money == %{
              choice: :full,
              count: 2,
-             amount: "€80.00",
-             outside_window: %{count: 0, amount: ""}
+             totals: [%{currency: "eur", amount_cents: 8000}],
+             outside_window: %{count: 0, totals: []}
            }
 
     assert email.text_body =~ "€80.00 is being refunded to 2 participants."
@@ -98,8 +100,8 @@ defmodule Tymeslot.Bookings.GroupCancellationSeatRefundEmailsTest do
     assert details.seat_money == %{
              choice: :none,
              count: 2,
-             amount: "€80.00",
-             outside_window: %{count: 0, amount: ""}
+             totals: [%{currency: "eur", amount_cents: 8000}],
+             outside_window: %{count: 0, totals: []}
            }
 
     assert email.html_body =~ "Refunds outstanding"
@@ -120,7 +122,7 @@ defmodule Tymeslot.Bookings.GroupCancellationSeatRefundEmailsTest do
         seat_refund("full", [%{"currency" => "eur", "amount_cents" => 1234}])
       )
 
-    assert details.seat_money.amount == "€12.34"
+    assert details.seat_money.totals == [%{currency: "eur", amount_cents: 1234}]
     assert email.text_body =~ "€12.34 is being refunded to 2 participants."
     refute email.text_body =~ "€80.00"
   end
@@ -131,11 +133,23 @@ defmodule Tymeslot.Bookings.GroupCancellationSeatRefundEmailsTest do
       %{"currency" => "usd", "amount_cents" => 5000}
     ]
 
-    {details, email} = organiser_copy(ctx.meeting, seat_refund("none", totals))
+    {_details, email} = organiser_copy(ctx.meeting, seat_refund("none", totals))
 
-    assert details.seat_money.amount == "€80.00, $50.00"
     assert email.text_body =~ "You still hold €80.00, $50.00 from 2 participants."
     assert email.html_body =~ "€80.00, $50.00"
+  end
+
+  # The job runs in no particular locale; the amounts are formatted with the
+  # rest of the organiser's copy, in the organiser's language.
+  test "the organiser's copy formats the seats' money in the organiser's locale", ctx do
+    ctx.organizer
+    |> Changeset.change(locale: "de")
+    |> Repo.update!()
+
+    {_details, email} = organiser_copy(ctx.meeting, seat_refund("full"))
+
+    assert email.text_body =~ "80,00\u00A0€"
+    refute email.text_body =~ "€80.00"
   end
 
   # A job enqueued before seats past the refund window were told apart
@@ -154,9 +168,8 @@ defmodule Tymeslot.Bookings.GroupCancellationSeatRefundEmailsTest do
       }
     }
 
-    {details, email} = organiser_copy(ctx.meeting, extra)
+    {_details, email} = organiser_copy(ctx.meeting, extra)
 
-    assert details.seat_money.outside_window == %{count: 1, amount: "€40.00"}
     assert email.text_body =~ "REFUNDS OUTSTANDING:"
 
     assert email.text_body =~
