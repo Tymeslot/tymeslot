@@ -30,6 +30,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard
 
   attr :account, :map, required: true
+  attr :myself, :any, required: true, doc: "The payments component, which handles Check again"
+  attr :checking, :boolean, default: false, doc: "A status check with Stripe is in flight"
 
   @spec status_card(map()) :: Phoenix.LiveView.Rendered.t()
   def status_card(assigns) do
@@ -57,6 +59,18 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
         >
           {dgettext("dashboard_payments", "Finish setup in Stripe")}
         </.action_link>
+        <%!-- Nothing brings the host back from Stripe's dashboard, so they ask for the check. --%>
+        <.loading_button
+          id="stripe-connect-check-again"
+          variant={:secondary}
+          size={:sm}
+          loading={@checking}
+          loading_text={dgettext("dashboard_payments", "Checking…")}
+          phx-click="check_connect_status"
+          phx-target={@myself}
+        >
+          {dgettext("dashboard_payments", "Check again")}
+        </.loading_button>
       </:actions>
       <:actions :if={@state == :incomplete and not oauth_connected?(@account)}>
         <%!--
@@ -153,7 +167,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
     if oauth_connected?(account) do
       dgettext(
         "dashboard_payments",
-        "Your Stripe account is connected, but Stripe still needs some details before it can take payments. Finish setup in Stripe, then reload this page."
+        "Your Stripe account is connected, but Stripe still needs some details before it can take payments. Finish setup in Stripe, then choose Check again."
       )
     else
       dgettext(

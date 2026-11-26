@@ -521,11 +521,6 @@ msgstr "Zu viele Anfragen. Bitte versuchen Sie es später erneut."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
-msgid "Your Stripe account is connected, but Stripe still needs some details before it can take payments. Finish setup in Stripe, then reload this page."
-msgstr "Ihr Stripe-Konto ist verbunden, aber Stripe benötigt noch einige Angaben, bevor Sie Zahlungen annehmen können. Schließen Sie die Einrichtung in Stripe ab und laden Sie diese Seite anschließend neu."
-
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
-#, elixir-autogen, elixir-format
 msgid "Your Stripe account is not connected yet. Connect it to start accepting payments."
 msgstr "Ihr Stripe-Konto ist noch nicht verbunden. Verbinden Sie es, um Zahlungen annehmen zu können."
 
@@ -571,3 +566,28 @@ msgstr "Stripe hat diese Rückerstattung abgelehnt. Prüfen Sie die Zahlung in I
 #, elixir-autogen, elixir-format
 msgid "Lost in a dispute:"
 msgstr "Durch Anfechtung verloren:"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Check again"
+msgstr "Erneut prüfen"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Checking…"
+msgstr "Wird geprüft…"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not reach Stripe to check your account. Please try again."
+msgstr "Stripe konnte nicht erreicht werden, um Ihr Konto zu prüfen. Bitte versuchen Sie es erneut."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe still needs some details. Finish setup in Stripe, then check again."
+msgstr "Stripe benötigt noch einige Angaben. Schließen Sie die Einrichtung in Stripe ab und prüfen Sie anschließend erneut."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account is connected, but Stripe still needs some details before it can take payments. Finish setup in Stripe, then choose Check again."
+msgstr "Ihr Stripe-Konto ist verbunden, aber Stripe benötigt noch einige Angaben, bevor Sie Zahlungen annehmen können. Schließen Sie die Einrichtung in Stripe ab und wählen Sie anschließend „Erneut prüfen“."

@@ -521,11 +521,6 @@ msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
-msgid "Your Stripe account is connected, but Stripe still needs some details before it can take payments. Finish setup in Stripe, then reload this page."
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
-#, elixir-autogen, elixir-format
 msgid "Your Stripe account is not connected yet. Connect it to start accepting payments."
 msgstr ""
 
@@ -570,4 +565,29 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Lost in a dispute:"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Check again"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Checking…"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not reach Stripe to check your account. Please try again."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe still needs some details. Finish setup in Stripe, then check again."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account is connected, but Stripe still needs some details before it can take payments. Finish setup in Stripe, then choose Check again."
 msgstr ""

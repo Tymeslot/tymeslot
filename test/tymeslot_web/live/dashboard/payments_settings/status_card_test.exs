@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCardTest do
   alias TymeslotWeb.Dashboard.PaymentsSettings.StatusCard
 
   defp render_card(account) do
-    render_component(&StatusCard.status_card/1, account: account)
+    render_component(&StatusCard.status_card/1, account: account, myself: nil)
   end
 
   describe "status_card/1 state machine" do
@@ -152,7 +152,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCardTest do
         })
 
       assert html =~
-               "Your Stripe account is connected, but Stripe still needs some details before it can take payments. Finish setup in Stripe, then reload this page."
+               "Your Stripe account is connected, but Stripe still needs some details before it can take payments. Finish setup in Stripe, then choose Check again."
 
       assert [link] =
                html
@@ -160,6 +160,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCardTest do
                |> Floki.find(~s(a[href="https://dashboard.stripe.com/"]))
 
       assert Floki.text(link) =~ "Finish setup in Stripe"
+      assert html =~ ~s(phx-click="check_connect_status")
       refute html =~ ~s(action="/dashboard/payments/connect")
       refute html =~ "Connect your Stripe account"
     end

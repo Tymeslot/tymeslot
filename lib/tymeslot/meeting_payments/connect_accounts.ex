@@ -22,6 +22,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   alias Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Workers.SendConnectAccountRestricted
 
   @type account :: ConnectAccountSchema.t()
@@ -241,6 +242,49 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
     if Features.meeting_payments_allowed?(user_id),
       do: :ok,
       else: Features.check_access(user_id, :meeting_payments)
+  end
+
+  @doc """
+  Reads the host's Connect account from Stripe now and records what it says.
+
+  For a host who has just finished a step in Stripe's own dashboard, where no
+  return link brings them back, so that the payments page can show the result
+  without waiting for the `account.updated` webhook. Rate limited per host,
+  since each check is a Stripe API call. A host with no Stripe account yet has
+  nothing to check (`{:error, :not_found}`).
+  """
+  @spec refresh_for_user(integer()) ::
+          :ok
+          | {:error, :not_found}
+          | {:error, :rate_limited, String.t()}
+          | {:error, term()}
+  def refresh_for_user(user_id) do
+    with :ok <- RateLimiter.check(:connect_status_check, user_id) do
+      case ConnectAccountQueries.live_for_user(user_id) do
+        %{stripe_account_id: stripe_account_id} when is_binary(stripe_account_id) ->
+          resync_from_stripe(stripe_account_id)
+
+        _none_or_placeholder ->
+          {:error, :not_found}
+      end
+    end
+  end
+
+  @doc """
+  Fetches the Connect account `stripe_account_id` from Stripe and reconciles
+  the local row against it with `apply_account_event/2`.
+  """
+  @spec resync_from_stripe(String.t()) :: :ok | {:error, term()}
+  def resync_from_stripe(stripe_account_id) do
+    # Taken before the fetch, so an event emitted while it is in flight is not
+    # dropped as older than a snapshot that may not include it. An
+    # account.updated webhook emitted before this moment but delivered later
+    # is still treated as stale.
+    read_at = DateTime.utc_now(:second)
+
+    with {:ok, account} <- Accounts.retrieve_connected(stripe_account_id) do
+      apply_account_event(account, read_at)
+    end
   end
 
   @doc """

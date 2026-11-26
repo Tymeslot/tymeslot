@@ -938,3 +938,8 @@ msgstr "nie może być większe niż %{max} przy tym odstępie, aby każda sesja
 #, elixir-autogen, elixir-format
 msgid "Meeting types that ask invitees to confirm their email cannot be booked as a series."
 msgstr "Typów spotkań, które proszą zaproszonych o potwierdzenie adresu e-mail, nie można rezerwować jako serii."
+
+#: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe account checks"
+msgstr "sprawdzeń konta Stripe"

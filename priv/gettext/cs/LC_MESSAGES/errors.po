@@ -941,3 +941,8 @@ msgstr "smí být při tomto opakování nejvýše %{max}, aby každý termín s
 #, elixir-autogen, elixir-format
 msgid "Meeting types that ask invitees to confirm their email cannot be booked as a series."
 msgstr "Typy schůzek, které žádají pozvané o potvrzení e-mailu, nelze rezervovat jako sérii."
+
+#: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe account checks"
+msgstr "kontroly účtu Stripe"

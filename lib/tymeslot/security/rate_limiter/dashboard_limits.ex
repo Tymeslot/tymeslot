@@ -204,6 +204,15 @@ defmodule Tymeslot.Security.RateLimiter.DashboardLimits do
       limit: 10,
       window_ms: 10 * @minute,
       operation: "quick add meeting"
+    ],
+    # Each check is a Stripe API call made on the host's behalf.
+    connect_status_check: [
+      prefix: "connect_status_check",
+      scope: :user,
+      limit: 10,
+      window_ms: 10 * @minute,
+      operation: "Stripe account status check",
+      action: dgettext_noop("errors", "Stripe account checks")
     ]
   }
 

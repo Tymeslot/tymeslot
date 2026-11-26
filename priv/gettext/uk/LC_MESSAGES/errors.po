@@ -934,3 +934,8 @@ msgstr "має бути не більше %{max} за такого ритму, �
 #, elixir-autogen, elixir-format
 msgid "Meeting types that ask invitees to confirm their email cannot be booked as a series."
 msgstr "Типи зустрічей, які просять запрошених підтвердити електронну пошту, не можна бронювати як серію."
+
+#: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe account checks"
+msgstr "перевірок облікового запису Stripe"

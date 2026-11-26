@@ -521,11 +521,6 @@ msgstr "Troppe richieste. Riprova più tardi."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
-msgid "Your Stripe account is connected, but Stripe still needs some details before it can take payments. Finish setup in Stripe, then reload this page."
-msgstr "Il tuo account Stripe è collegato, ma Stripe ha ancora bisogno di alcune informazioni prima di poter accettare pagamenti. Completa la configurazione in Stripe, poi ricarica questa pagina."
-
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
-#, elixir-autogen, elixir-format
 msgid "Your Stripe account is not connected yet. Connect it to start accepting payments."
 msgstr "Il tuo account Stripe non è ancora collegato. Collegalo per iniziare ad accettare pagamenti."
 
@@ -571,3 +566,28 @@ msgstr "Stripe ha rifiutato questo rimborso. Controlla il pagamento nella dashbo
 #, elixir-autogen, elixir-format
 msgid "Lost in a dispute:"
 msgstr "Perso in una contestazione:"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Check again"
+msgstr "Verifica di nuovo"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Checking…"
+msgstr "Verifica in corso…"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not reach Stripe to check your account. Please try again."
+msgstr "Impossibile contattare Stripe per verificare il tuo account. Riprova."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe still needs some details. Finish setup in Stripe, then check again."
+msgstr "Stripe ha ancora bisogno di alcune informazioni. Completa la configurazione in Stripe, poi verifica di nuovo."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account is connected, but Stripe still needs some details before it can take payments. Finish setup in Stripe, then choose Check again."
+msgstr "Il tuo account Stripe è collegato, ma Stripe ha ancora bisogno di alcune informazioni prima di poter accettare pagamenti. Completa la configurazione in Stripe, poi scegli «Verifica di nuovo»."

@@ -27,7 +27,6 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccount do
 
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.Integrations.Stripe.Accounts
   alias Tymeslot.Integrations.Stripe.Error, as: StripeError
   alias Tymeslot.MeetingPayments.ConnectAccounts
 
@@ -44,15 +43,9 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccount do
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"stripe_account_id" => stripe_account_id}})
       when is_binary(stripe_account_id) do
-    # Taken before the fetch, so an event emitted while it is in flight is not
-    # dropped as older than a snapshot that may not include it. An
-    # account.updated webhook emitted before this moment but delivered later
-    # is still treated as stale.
-    read_at = DateTime.utc_now(:second)
-
-    case Accounts.retrieve_connected(stripe_account_id) do
-      {:ok, account} ->
-        ConnectAccounts.apply_account_event(account, read_at)
+    case ConnectAccounts.resync_from_stripe(stripe_account_id) do
+      :ok ->
+        :ok
 
       {:error, %StripeError{} = error} ->
         Logger.log(
@@ -68,7 +61,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccount do
         if StripeError.retryable?(error), do: {:error, error}, else: {:cancel, error}
 
       {:error, reason} ->
-        Logger.warning("ResyncConnectAccount could not retrieve Stripe account",
+        Logger.warning("ResyncConnectAccount could not resync Stripe account",
           stripe_account_id: stripe_account_id,
           reason: LogFormat.reason(reason)
         )

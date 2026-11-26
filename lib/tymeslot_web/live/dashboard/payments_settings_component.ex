@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
 
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.ConnectAccounts
 
   import TymeslotWeb.Dashboard.PaymentsSettings.ConnectCta, only: [connect_cta: 1]
   import TymeslotWeb.Dashboard.PaymentsSettings.CurrencySelector, only: [currency_selector: 1]
@@ -50,6 +51,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
      |> assign(:refund_error, nil)
      |> assign(:refund_form, @blank_refund_form)
      |> assign(:connect_account, nil)
+     |> assign(:checking_status, false)
      |> assign(:payments, [])
      |> assign(:outstanding_refunds, [])
      |> assign(:outstanding_refunds_summary, %{count: 0, totals: []})
@@ -87,7 +89,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
       </div>
 
       <div :if={not is_nil(@connect_account)} class="space-y-8">
-        <.status_card account={@connect_account} />
+        <.status_card account={@connect_account} myself={@myself} checking={@checking_status} />
 
         <%!--
           The operational sections (currency, payments, stats) only make sense
@@ -173,6 +175,27 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
 
         {:noreply, socket}
     end
+  end
+
+  # The check is a Stripe API call, run as a task so the button's loading
+  # state paints while it is in flight.
+  def handle_event(
+        "check_connect_status",
+        _params,
+        %{assigns: %{checking_status: true}} = socket
+      ),
+      do: {:noreply, socket}
+
+  def handle_event("check_connect_status", _params, socket) do
+    user_id = socket.assigns.current_user.id
+
+    {:noreply,
+     socket
+     |> assign(:checking_status, true)
+     |> start_async(
+       :check_connect_status,
+       Tasks.with_context(fn -> ConnectAccounts.refresh_for_user(user_id) end)
+     )}
   end
 
   def handle_event("change_currency", %{"currency" => currency}, socket) do
@@ -335,6 +358,15 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
     }
   end
 
+  defp still_incomplete_notice do
+    Flash.info(
+      dgettext(
+        "dashboard_payments",
+        "Stripe still needs some details. Finish setup in Stripe, then check again."
+      )
+    )
+  end
+
   defp reset_refund_form(socket),
     do: assign(socket, refund_error: nil, refund_form: @blank_refund_form)
 
@@ -360,6 +392,31 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   end
 
   @impl Phoenix.LiveComponent
+  def handle_async(:check_connect_status, result, socket) do
+    socket = assign(socket, :checking_status, false)
+
+    case result do
+      {:ok, :ok} ->
+        socket = assign_payments_state(socket, socket.assigns.current_user)
+        if needs_onboarding?(socket.assigns.connect_account), do: still_incomplete_notice()
+        {:noreply, socket}
+
+      {:ok, {:error, :rate_limited, message}} ->
+        Flash.error(message)
+        {:noreply, socket}
+
+      _failed ->
+        Flash.error(
+          dgettext(
+            "dashboard_payments",
+            "Could not reach Stripe to check your account. Please try again."
+          )
+        )
+
+        {:noreply, socket}
+    end
+  end
+
   def handle_async({:issue_refund, _payment_id}, {:ok, {:ok, _refund}}, socket) do
     Flash.info(
       dgettext(

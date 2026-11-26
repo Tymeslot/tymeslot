@@ -13,8 +13,20 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.Workers.ResyncConnectAccount
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
+  alias Tymeslot.StripeConnectTestHelpers
   alias Tymeslot.StripeStub
   alias Tymeslot.StripeStubResponses
+
+  defp oauth_incomplete_account(user, stripe_account_id) do
+    insert(:connect_account,
+      user: user,
+      stripe_account_id: stripe_account_id,
+      oauth_connected_at: DateTime.utc_now(:second),
+      charges_enabled: false,
+      payouts_enabled: false,
+      details_submitted: false
+    )
+  end
 
   defp create_onboarded_user do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now(:second))
@@ -342,6 +354,69 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       {:ok, view, _html} = live(conn, "/dashboard/integrations?tab=payments")
 
       assert has_element?(view, "button[phx-click=open_disconnect_modal]")
+    end
+
+    # A host who finishes in Stripe's own dashboard comes back by no return
+    # link, so Check again reads the account from Stripe there and then.
+    test "Check again shows an OAuth account Stripe has since enabled as ready", %{conn: conn} do
+      user = create_onboarded_user()
+      oauth_incomplete_account(user, "acct_check_ready")
+
+      StripeConnectTestHelpers.expect_retrieve("acct_check_ready", %{
+        "charges_enabled" => true,
+        "payouts_enabled" => true,
+        "details_submitted" => true,
+        "default_currency" => "eur"
+      })
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, "/dashboard/integrations?tab=payments")
+
+      view |> element("#stripe-connect-check-again") |> render_click()
+      # The toast is sent once the task's result is handled, so render again.
+      render_async(view, 5_000)
+      html = render(view)
+
+      assert html =~ "Connected and ready"
+      refute has_element?(view, "#stripe-connect-check-again")
+
+      assert %{charges_enabled: true} =
+               ConnectAccountQueries.by_stripe_account_id("acct_check_ready")
+    end
+
+    test "Check again says so when Stripe still needs details", %{conn: conn} do
+      user = create_onboarded_user()
+      oauth_incomplete_account(user, "acct_check_incomplete")
+      StripeConnectTestHelpers.expect_retrieve("acct_check_incomplete", %{})
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, "/dashboard/integrations?tab=payments")
+
+      view |> element("#stripe-connect-check-again") |> render_click()
+      # The toast is sent once the task's result is handled, so render again.
+      render_async(view, 5_000)
+      html = render(view)
+
+      assert html =~ "Stripe still needs some details. Finish setup in Stripe, then check again."
+      assert has_element?(view, "#stripe-connect-check-again")
+    end
+
+    test "Check again reports a Stripe that cannot be reached", %{conn: conn} do
+      user = create_onboarded_user()
+      oauth_incomplete_account(user, "acct_check_down")
+      # A 5xx on a GET is sent 3 times in all.
+      StripeStub.expect(:retrieve_account, 3, {:error_fixture, "api_error"})
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, "/dashboard/integrations?tab=payments")
+
+      view |> element("#stripe-connect-check-again") |> render_click()
+      # The toast is sent once the task's result is handled, so render again.
+      render_async(view, 5_000)
+      html = render(view)
+
+      assert html =~ "Could not reach Stripe to check your account. Please try again."
+      assert html =~ "Finish connecting Stripe"
     end
 
     test "lets the host disconnect an account that never finished onboarding", %{conn: conn} do

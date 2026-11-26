@@ -520,11 +520,6 @@ msgstr "Zbyt wiele żądań. Spróbuj ponownie później."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
-msgid "Your Stripe account is connected, but Stripe still needs some details before it can take payments. Finish setup in Stripe, then reload this page."
-msgstr "Konto Stripe jest podłączone, ale Stripe potrzebuje jeszcze kilku informacji, zanim będzie można przyjmować płatności. Dokończ konfigurację w Stripe, a potem odśwież tę stronę."
-
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
-#, elixir-autogen, elixir-format
 msgid "Your Stripe account is not connected yet. Connect it to start accepting payments."
 msgstr "Konto Stripe nie jest jeszcze podłączone. Podłącz je, aby zacząć przyjmować płatności."
 
@@ -571,3 +566,28 @@ msgstr "Stripe odrzucił ten zwrot. Sprawdź płatność w panelu Stripe."
 #, elixir-autogen, elixir-format
 msgid "Lost in a dispute:"
 msgstr "Utracono w sporze:"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Check again"
+msgstr "Sprawdź ponownie"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Checking…"
+msgstr "Sprawdzanie…"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not reach Stripe to check your account. Please try again."
+msgstr "Nie udało się połączyć ze Stripe, aby sprawdzić konto. Spróbuj ponownie."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe still needs some details. Finish setup in Stripe, then check again."
+msgstr "Stripe nadal potrzebuje kilku informacji. Dokończ konfigurację w Stripe, a potem sprawdź ponownie."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account is connected, but Stripe still needs some details before it can take payments. Finish setup in Stripe, then choose Check again."
+msgstr "Konto Stripe jest podłączone, ale Stripe potrzebuje jeszcze kilku informacji, zanim będzie można przyjmować płatności. Dokończ konfigurację w Stripe, a potem wybierz „Sprawdź ponownie”."

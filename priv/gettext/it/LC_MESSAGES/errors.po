@@ -918,3 +918,8 @@ msgstr "non può superare %{max} con questa cadenza, in modo che ogni sessione c
 #, elixir-autogen, elixir-format
 msgid "Meeting types that ask invitees to confirm their email cannot be booked as a series."
 msgstr "I tipi di riunione che chiedono agli invitati di confermare la loro email non possono essere prenotati come serie."
+
+#: lib/tymeslot/security/rate_limiter/dashboard_limits.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe account checks"
+msgstr "verifiche dell'account Stripe"

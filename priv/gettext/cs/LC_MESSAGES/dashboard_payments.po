@@ -524,11 +524,6 @@ msgstr "Příliš mnoho požadavků. Zkuste to prosím později."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
-msgid "Your Stripe account is connected, but Stripe still needs some details before it can take payments. Finish setup in Stripe, then reload this page."
-msgstr "Váš účet Stripe je připojený, ale Stripe ještě potřebuje některé údaje, než bude moci přijímat platby. Dokončete nastavení ve Stripe a poté tuto stránku obnovte."
-
-#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
-#, elixir-autogen, elixir-format
 msgid "Your Stripe account is not connected yet. Connect it to start accepting payments."
 msgstr "Váš účet Stripe ještě není připojený. Připojte jej a začněte přijímat platby."
 
@@ -575,3 +570,28 @@ msgstr "Stripe toto vrácení platby odmítl. Zkontrolujte platbu na nástěnce 
 #, elixir-autogen, elixir-format
 msgid "Lost in a dispute:"
 msgstr "Strženo po prohraném sporu:"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Check again"
+msgstr "Zkontrolovat znovu"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Checking…"
+msgstr "Kontrola…"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Could not reach Stripe to check your account. Please try again."
+msgstr "Při kontrole vašeho účtu se nepodařilo navázat spojení se Stripe. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Stripe still needs some details. Finish setup in Stripe, then check again."
+msgstr "Stripe ještě potřebuje některé údaje. Dokončete nastavení ve Stripe a poté to zkontrolujte znovu."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account is connected, but Stripe still needs some details before it can take payments. Finish setup in Stripe, then choose Check again."
+msgstr "Váš účet Stripe je připojený, ale Stripe ještě potřebuje některé údaje, než bude moci přijímat platby. Dokončete nastavení ve Stripe a poté zvolte „Zkontrolovat znovu“."
