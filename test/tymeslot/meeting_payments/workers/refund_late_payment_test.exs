@@ -3,7 +3,8 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
   A late-payment refund job queued before the refund outbox: it records
   the refund under the key its earlier attempts may have used, so a refund
   one of them made at Stripe is replayed rather than made twice, and leaves
-  the rest to `ExecuteRefund`.
+  the rest to `ExecuteRefund`, or raises an admin alert when its last
+  attempt cannot record the refund either.
   """
 
   use Tymeslot.DataCase, async: false
@@ -14,6 +15,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
   @moduletag :capture_log
 
   import Ecto.Query, only: [from: 2]
+  import Tymeslot.AdminAlertsCaptureHelpers
   import Tymeslot.Factory
 
   alias Ecto.Changeset
@@ -26,6 +28,8 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
   alias Tymeslot.StripeStub
   alias Tymeslot.StripeStubResponses
   alias Tymeslot.Workers.SendBookingPaymentRefunded
+
+  setup :capture_admin_alerts
 
   setup do
     host = insert(:user)
@@ -139,6 +143,27 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
     assert refund_emails(payment) == 1
   end
 
+  # A job built by hand without the time it was queued gives its refund a
+  # legacy key with no date, which the refund's changeset refuses: the
+  # insert raises, as a fault in the database would.
+  describe "an attempt that cannot record the refund" do
+    test "is retried without an alert", %{payment: payment} do
+      assert {:error, %Ecto.InvalidChangesetError{}} = undated_job(payment, 9)
+
+      assert refunds(payment) == []
+      refute_received {:send_alert, _type, _payload}
+    end
+
+    test "raises an alert on the job's last attempt", %{payment: payment} do
+      assert {:error, %Ecto.InvalidChangesetError{}} = undated_job(payment, 10)
+
+      payment_id = payment.id
+
+      assert_received {:send_alert, :late_payment_refund_failed,
+                       %{booking_payment_id: ^payment_id, reason_code: _code}}
+    end
+  end
+
   test "a payment that is gone is discarded" do
     assert {:discard, :not_found} =
              perform_job(RefundLatePayment, %{booking_payment_id: UUID.generate()})
@@ -156,6 +181,14 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
       max_attempts: 10,
       inserted_at: Keyword.get(opts, :inserted_at, DateTime.utc_now())
     )
+  end
+
+  defp undated_job(payment, attempt) do
+    RefundLatePayment.perform(%Oban.Job{
+      args: %{"booking_payment_id" => payment.id},
+      attempt: attempt,
+      max_attempts: 10
+    })
   end
 
   defp refunds(payment),

@@ -30,6 +30,19 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesRefundFailedTest do
     end
   end
 
+  describe "the alert for a late-payment refund its job could not record" do
+    test ":late_payment_refund_failed names the payment, the reason and the job to retry" do
+      metadata = %{booking_payment_id: "bp_1", oban_job_id: 7, reason_code: "refund_in_progress"}
+
+      msg = AlertTypes.format_message(:late_payment_refund_failed, metadata)
+
+      assert msg =~ "Refund of booking payment bp_1"
+      assert msg =~ "(refund_in_progress)"
+      assert msg =~ "still owed"
+      assert msg =~ "retry Oban job 7"
+    end
+  end
+
   describe "the alert for a refund its job could not settle" do
     test ":refund_stuck names the refund, its source, the payment and its attempts" do
       metadata = %{refund_id: "rf_1", source: :host, booking_payment_id: "bp_1", attempt: 9}

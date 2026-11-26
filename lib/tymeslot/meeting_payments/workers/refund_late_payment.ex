@@ -26,6 +26,11 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePayment do
   earlier attempt whose refund `charge.refunded` recorded after that
   attempt's own transaction rolled back) has the attendee emailed once.
   The refund is recorded under a delivery claim, so a rerun records none.
+
+  Any other failure (another refund of the payment still pending, a raise)
+  is retried over about four hours; when the last attempt fails too, a
+  `:late_payment_refund_failed` admin alert is raised, as nobody else
+  learns that the attendee is still owed the money.
   """
 
   use Oban.Worker,
@@ -35,7 +40,9 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePayment do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Refunds
@@ -60,7 +67,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePayment do
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"booking_payment_id" => id} = args} = job) do
     case MeetingPayments.get_payment(id) do
-      %BookingPaymentSchema{} = payment -> payment |> request(job, args) |> result(id)
+      %BookingPaymentSchema{} = payment -> payment |> request(job, args) |> result(job, id)
       nil -> {:discard, :not_found}
     end
   end
@@ -69,10 +76,14 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePayment do
   def backoff(%Oban.Job{attempt: attempt}),
     do: Backoff.exponential(attempt, @base_backoff_seconds, @max_backoff_seconds)
 
+  # A raise (a dropped connection, say) is an attempt failing like any
+  # other, so the last one is still alerted on.
   defp request(payment, job, args) do
     if DeliveryClaims.claimed?(job.id, @claim),
       do: {:ok, :requested},
       else: request_once(payment, job, Map.get(args, "reason", "late"))
+  rescue
+    exception -> {:error, exception}
   end
 
   # The claim and the refund commit together; a refusal rolls both back.
@@ -99,11 +110,11 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePayment do
   defp claim(nil), do: :claimed
   defp claim(job_id), do: DeliveryClaims.claim(job_id, @claim)
 
-  defp result({:ok, _requested}, _id), do: :ok
-  defp result({:error, :already_refunded}, id), do: notify_attendee_once(id)
-  defp result({:error, :not_found}, _id), do: {:discard, :not_found}
+  defp result({:ok, _requested}, _job, _id), do: :ok
+  defp result({:error, :already_refunded}, _job, id), do: notify_attendee_once(id)
+  defp result({:error, :not_found}, _job, _id), do: {:discard, :not_found}
 
-  defp result({:error, reason}, id) when reason in @unretryable do
+  defp result({:error, reason}, _job, id) when reason in @unretryable do
     Logger.warning("Late payment refund cannot be made automatically, left to the host",
       booking_payment_id: id,
       reason: reason
@@ -112,7 +123,10 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePayment do
     {:discard, reason}
   end
 
-  defp result({:error, reason}, _id), do: {:error, reason}
+  defp result({:error, reason}, job, id) do
+    if job.attempt >= job.max_attempts, do: alert(job, id, reason)
+    {:error, reason}
+  end
 
   # Unique over every state, the insert sends the email only if nothing
   # sent it for this payment before.
@@ -126,5 +140,18 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePayment do
       {:ok, _job} -> :ok
       {:error, reason} -> {:error, reason}
     end
+  end
+
+  defp alert(job, id, reason) do
+    Logger.error("Late payment refund failed for good",
+      booking_payment_id: id,
+      reason: LogFormat.reason(reason)
+    )
+
+    AdminAlerts.report(:late_payment_refund_failed,
+      summary: "A payment that completed after its slot was taken could not be refunded",
+      reason: reason,
+      context: %{booking_payment_id: id, oban_job_id: job.id}
+    )
   end
 end

@@ -35,6 +35,9 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.DedupKey do
     # Every reconcile of the payment's refunds finds a duplicate again, and
     # one refund may be made more than twice: one alert per Stripe refund.
     refund_duplicated: {:duplicate_stripe_refund_id, "unknown"},
+    # A late-payment refund job that could not record its refund leaves no
+    # refund row to key on: one alert per payment, whatever the reason text.
+    late_payment_refund_failed: {:booking_payment_id, "unknown"},
     # One alert per account: two accounts failing must not collapse into one.
     connect_revocation_failed: {:stripe_account_id, "unknown"},
     # A refused key or a revoked account fails every event from that

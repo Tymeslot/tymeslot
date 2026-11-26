@@ -43,6 +43,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     refund_stuck: %{category: "Payment", severity: :error},
     refund_failure_reversed: %{category: "Payment", severity: :warning},
     refund_duplicated: %{category: "Payment", severity: :error},
+    late_payment_refund_failed: %{category: "Payment", severity: :error},
     connect_revocation_failed: %{category: "Payment", severity: :error},
     connect_event_unmatched: %{category: "Payment", severity: :error},
     account_deletion_stalled: %{category: "Account", severity: :error},

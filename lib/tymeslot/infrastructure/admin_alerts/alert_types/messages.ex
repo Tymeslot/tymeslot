@@ -174,6 +174,19 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
       "the difference with the host and the attendee"
   end
 
+  # The job is unique per payment and reason over every state, so a fresh
+  # one cannot be inserted: retrying means retrying this one.
+  def format_message(:late_payment_refund_failed, metadata) do
+    get = &Map.get(metadata, &1, "unknown")
+
+    "Refund of booking payment #{get.(:booking_payment_id)}, owed in full to the attendee " <>
+      "(paid after its slot was taken, to a host whose account is being deleted, or left " <>
+      "with the host by a decided dispute), could not be recorded on any attempt " <>
+      "(#{reason_text(metadata)}); the attendee is still owed the money. Refund the " <>
+      "booking from the host's payments settings or the Stripe dashboard, or once the " <>
+      "cause is fixed retry Oban job #{get.(:oban_job_id)}"
+  end
+
   def format_message(:refund_stuck, metadata) do
     get = &Map.get(metadata, &1, "unknown")
 
