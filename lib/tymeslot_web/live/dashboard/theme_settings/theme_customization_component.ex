@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
   @impl Phoenix.LiveComponent
   @spec update(map(), Socket.t()) :: {:ok, Socket.t()}
   def update(%{consume_upload: field}, socket),
-    do: {:ok, consume_upload_and_notify(socket, field)}
+    do: {:ok, AssetUploads.consume(socket, field)}
 
   def update(assigns, socket) do
     theme_id = assigns[:theme_id] || Catalog.default_id()
@@ -86,7 +86,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div class="space-y-8" phx-hook="AutoUpload" id="theme-customization-uploads">
+    <div class="space-y-8" id="theme-customization-uploads">
       <Components.toolbar
         profile={@profile}
         theme_id={@theme_id}
@@ -127,15 +127,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
 
   def handle_event("theme:" <> _action, _params, socket), do: {:noreply, socket}
 
-  # Every upload form sends this on change and on submit; its hidden
-  # `asset_field` input names the field. A name the theme does not declare is
-  # ignored rather than turned into an atom.
-  def handle_event("upload_asset", params, socket) do
-    case upload_field(socket.assigns.theme_id, params) do
-      nil -> {:noreply, socket}
-      field -> {:noreply, consume_upload_and_notify(socket, field)}
-    end
-  end
+  # Every upload form sends this on change, which LiveView needs to validate
+  # the selection. Saving waits for the upload's progress callback
+  # (`AssetUploads`), so there is nothing to do here.
+  def handle_event("upload_asset", _params, socket), do: {:noreply, socket}
 
   # Private functions
 
@@ -185,36 +180,6 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
 
   defp put_panel_ui(socket, group, ui),
     do: update(socket, :panel_ui, &Map.put(&1, group.key, ui))
-
-  # `AutoUpload` (mounted at the root of this component's markup, see
-  # `render/1`) only clears the file picker once it receives "upload-complete",
-  # so re-selecting the same background file after a successful upload needs
-  # this pushed explicitly. `AssetUploads.consume/2` doesn't report
-  # success directly, so success is inferred from the stored path changing;
-  # a no-op (not ready yet, rate-limited, or a validation error) leaves the
-  # path untouched and pushes nothing.
-  defp consume_upload_and_notify(socket, field) do
-    path_before = stored_path(socket.assigns.customization, field)
-    socket = AssetUploads.consume(socket, field)
-    path_after = stored_path(socket.assigns.customization, field)
-
-    if path_after != path_before do
-      push_event(socket, "upload-complete", %{})
-    else
-      socket
-    end
-  end
-
-  defp stored_path(customization, field), do: customization.settings[Atom.to_string(field)]
-
-  defp upload_field(theme_id, %{"asset_field" => name}) when is_binary(name) do
-    theme_id
-    |> ThemeCustomizations.asset_fields()
-    |> Keyword.keys()
-    |> Enum.find(&(Atom.to_string(&1) == name))
-  end
-
-  defp upload_field(_theme_id, _params), do: nil
 
   # Every theme edit shares one limit; a refusal is also counted per action.
   @spec with_customization_limit(Socket.t(), String.t(), (-> {:noreply, Socket.t()})) ::

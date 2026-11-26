@@ -297,6 +297,20 @@ defmodule Tymeslot.Notifications.Orchestrator do
   end
 
   @doc """
+  Schedules the organiser's email that `meeting`, a group slot held again
+  after its last confirmed seat left, is going ahead after all, brought back
+  by `participant`'s seat.
+  """
+  @spec schedule_seat_slot_revived(%{atom() => term()}, %{atom() => term()}) ::
+          {:ok, atom()} | {:error, term()}
+  def schedule_seat_slot_revived(meeting, participant) do
+    case get_email_worker_module().schedule_seat_slot_revived_email(meeting.id, participant.id) do
+      :ok -> {:ok, :seat_slot_revived_scheduled}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
   Schedules the cancellation email job for one seat on a group meeting;
   `slot` is what the seat's leaving did to its slot
   (`t:Seats.slot_outcome/0`).

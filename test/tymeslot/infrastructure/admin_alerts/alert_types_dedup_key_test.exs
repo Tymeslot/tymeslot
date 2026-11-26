@@ -12,26 +12,16 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesDedupKeyTest do
   @keyed [
     {:new_error, %{error_id: 42}, "new_error:42"},
     {:error_regression, %{error_id: 42, occurrence_id: 7}, "error_regression:42:7"},
-    {:payment_event_enqueue_failed, %{event: "invoice.paid"},
-     "payment_event_enqueue_failed:invoice.paid"},
     {:analytics_tracking_anomaly, %{kind: :missing_views},
      "analytics_tracking_anomaly:missing_views"},
     {:invalid_calendar_event,
      %{calendar_integration_id: 9, provider: :google, reason_message: "no start"},
      "invalid_calendar_event:google:9:no start"},
-    {:payment_event_orphaned, %{event_type: "invoice.paid", event_id: "evt_1"},
-     "payment_event_orphaned:invoice.paid:evt_1"},
-    {:payment_event_orphaned, %{event_type: "invoice.paid", job_id: 5},
-     "payment_event_orphaned:invoice.paid:job 5"},
     {:recipient_email_rejected, %{meeting_id: 3}, "recipient_email_rejected:meeting 3"},
-    {:contact_recipient_rejected, %{recipients_masked: "c***@example.com"},
-     "contact_recipient_rejected:c***@example.com"},
     {:calendar_sync_error, %{calendar_integration_id: 9, reason_code: :timeout},
      "calendar_sync_error:integration 9:timeout"},
     {:calendar_sync_error, %{meeting_id: 3, reason_message: "gone"},
      "calendar_sync_error:meeting 3:gone"},
-    {:dunning_stalled, %{stripe_subscription_id: "sub_1", days_past_due: 40},
-     "dunning_stalled:sub_1"},
     {:integration_health_failure,
      %{signal: :caldav, band: "severe", run_date: "2026-11-17", incident_started_at: nil},
      "integration_health_failure:caldav:2026-11-17:severe"},
@@ -54,8 +44,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesDedupKeyTest do
      "connect_revocation_failed:acct_1"},
     {:connect_event_unmatched, %{stripe_account_id: "acct_1", event_id: "evt_1"},
      "connect_event_unmatched:acct_1"},
-    {:subscription_withdrawal_unfinished, %{withdrawal_id: 13},
-     "subscription_withdrawal_unfinished:13"},
     {:upload_delete_failed, %{reason_code: :eacces}, "upload_delete_failed:eacces"},
     {:stripe_webhook_secret_missing, %{env_var: "STRIPE_WEBHOOK_SECRET"},
      "stripe_webhook_secret_missing:STRIPE_WEBHOOK_SECRET"},
@@ -68,13 +56,9 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesDedupKeyTest do
   @empty [
     {:new_error, "new_error:"},
     {:error_regression, "error_regression::"},
-    {:payment_event_enqueue_failed, "payment_event_enqueue_failed:unknown"},
     {:analytics_tracking_anomaly, "analytics_tracking_anomaly:unknown"},
-    {:payment_event_orphaned, "payment_event_orphaned:unknown:job unknown"},
     {:recipient_email_rejected, "Recipient permanently undeliverable: unknown"},
-    {:contact_recipient_rejected, "contact_recipient_rejected:unknown"},
     {:calendar_sync_error, "calendar_sync_error:unknown:unknown"},
-    {:dunning_stalled, "dunning_stalled:unknown"},
     {:oban_jobs_force_discarded, "oban_jobs_force_discarded::"},
     {:circuit_breaker_open, "circuit_breaker_open::unknown"},
     {:database_pool_pressure, "database_pool_pressure::unknown"},
@@ -86,7 +70,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesDedupKeyTest do
     {:refund_duplicated, "refund_duplicated:unknown"},
     {:connect_revocation_failed, "connect_revocation_failed:unknown"},
     {:connect_event_unmatched, "connect_event_unmatched:unknown"},
-    {:subscription_withdrawal_unfinished, "subscription_withdrawal_unfinished:unknown"},
     {:upload_delete_failed, "upload_delete_failed:unknown"},
     {:stripe_webhook_secret_missing, "stripe_webhook_secret_missing:"},
     {:invalid_calendar_event, "Invalid calendar event: unknown"},
@@ -112,8 +95,8 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesDedupKeyTest do
   end
 
   test "a field present with a nil value is interpolated as an empty string" do
-    assert AlertTypes.dedup_key(:dunning_stalled, %{stripe_subscription_id: nil}) ==
-             "dunning_stalled:"
+    assert AlertTypes.dedup_key(:account_deletion_stalled, %{user_id: nil}) ==
+             "account_deletion_stalled:"
 
     assert AlertTypes.dedup_key(:new_error, %{error_id: nil}) == "new_error:"
   end

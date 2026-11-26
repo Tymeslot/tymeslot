@@ -2,7 +2,7 @@
  * Tests for the canvas renderer (calendar/render.js), run against jsdom.
  */
 import { afterEach, describe, expect, test } from "vitest";
-import { renderGrid, renderList, renderSkeleton } from "../../calendar/render.js";
+import { dateLabel, renderGrid, renderList, renderSkeleton } from "../../calendar/render.js";
 import { metricsFor } from "../../calendar/viewport.js";
 import { addDays, normaliseEvent, parseWall } from "../../calendar/time.js";
 
@@ -454,6 +454,23 @@ test("renderList flags a request", () => {
   );
   expect(container.querySelector('[data-event-id="booking-1"] .cal-list-flag').textContent).toBe("Request");
   expect(container.querySelector('[data-event-id="event-1"] .cal-list-flag')).toBeNull();
+});
+
+describe("dateLabel", () => {
+  const french = {
+    weekdays: ["lun.", "mar.", "mer.", "jeu.", "ven.", "sam.", "dim."],
+    months: ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."],
+    first_of_month: "1er",
+  };
+
+  test("writes the first of the month as the ordinal the server sends", () => {
+    expect(dateLabel("2026-10-01", french)).toBe("jeu. 1er oct.");
+  });
+
+  test("writes every other day as a plain number", () => {
+    expect(dateLabel("2026-10-02", french)).toBe("ven. 2 oct.");
+    expect(dateLabel("2026-10-01", strings)).toBe("Thu 1 Oct");
+  });
 });
 
 describe("renderGrid metrics", () => {

@@ -72,7 +72,8 @@ defmodule Tymeslot.Emails.EmailActions do
     seat_reschedule_request: "send_seat_reschedule_request",
     seat_reminder: "send_seat_reminder",
     seat_session_moved: "send_seat_session_moved",
-    seat_email_verification: "send_seat_email_verification"
+    seat_email_verification: "send_seat_email_verification",
+    seat_slot_revived: "send_seat_slot_revived"
   }
 
   @actions %{
@@ -118,6 +119,8 @@ defmodule Tymeslot.Emails.EmailActions do
     "send_seat_email_verification" =>
       {["meeting_id", "participant_id"],
        {BookingVerificationEmails, :handle_seat_verification_email, :with_job_id}},
+    "send_seat_slot_revived" =>
+      {["meeting_id", "participant_id"], {SeatEmails, :handle_seat_slot_revived_email}},
     "send_seat_session_moved" =>
       {["meeting_id", "participant_id", "from"],
        {GroupMeetingEmails, :handle_seat_session_moved, :with_job_id}},

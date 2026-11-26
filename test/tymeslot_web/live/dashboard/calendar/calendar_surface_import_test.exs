@@ -360,7 +360,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
       upload(lv, oversized())
 
       dialogue = lv |> element("#calendar-import-too-many") |> render()
-      assert dialogue =~ "This file holds 1002 events, from 1 May 2026 to 5 November 2026."
+      assert dialogue =~ "This file holds 1,002 events, from 1 May 2026 to 5 November 2026."
       assert dialogue =~ "A repeating event counts once"
       assert dialogue =~ "subscribe to it by URL"
       refute has_element?(lv, "#calendar-import-start")
@@ -370,7 +370,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
       assert render(option(lv, "2025-10-14")) =~ "disabled"
       assert render(option(lv, "2026-04-14")) =~ "disabled"
       assert render(option(lv, "2026-07-14")) =~ "checked"
-      assert dialogue =~ "1002 events, more than 1000"
+      assert dialogue =~ "1,002 events, more than 1,000"
       refute dialogue =~ "Export a shorter date range"
 
       # A date that does not fit is never taken, whatever the form sends.
@@ -386,7 +386,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
       refute has_element?(lv, "#calendar-import-too-many")
       summary = lv |> element(~s([data-testid="calendar-import-summary"])) |> render()
       assert summary =~ "Found 1 event."
-      assert summary =~ "1001 events before 14 October 2026 are left out."
+      assert summary =~ "1,001 events before 14 October 2026 are left out."
 
       start_import(lv)
 
@@ -432,11 +432,33 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
       # From 12 and 6 months back all 1,002 are kept; from 3 months back none.
       dialogue = none_fit_dialogue(conn, oversized("20260501", "20260502"))
 
-      assert dialogue =~ "1002 events, more than 1000"
+      assert dialogue =~ "1,002 events, more than 1,000"
       assert dialogue =~ "No events from this date on"
       assert dialogue =~ @too_many_or_none
       refute dialogue =~ @too_many_from_today
       refute dialogue =~ @all_ended
+    end
+
+    test "in German, groups the counts and the limit with a full stop", %{
+      conn: conn,
+      user: user
+    } do
+      user |> Changeset.change(locale: "de") |> Repo.update!()
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      open_import(lv)
+      upload(lv, oversized())
+
+      dialogue = lv |> element("#calendar-import-too-many") |> render()
+      assert dialogue =~ "1.002 Ereignisse"
+      assert dialogue =~ "1.000"
+      refute dialogue =~ "1002"
+
+      lv |> element("#calendar-import-narrow") |> render_click()
+      render_async(lv)
+
+      summary = lv |> element(~s([data-testid="calendar-import-summary"])) |> render()
+      assert summary =~ "1.001 Ereignisse"
     end
 
     test "in Italian, puts the elided article before a range from the 8th to the 11th", %{
@@ -450,7 +472,7 @@ defmodule TymeslotWeb.Dashboard.Calendar.CalendarSurfaceImportTest do
       upload(lv, oversized("20260508", "20261111"))
 
       dialogue = lv |> element("#calendar-import-too-many") |> render()
-      assert dialogue =~ "1002 eventi, dall&#39;8 maggio 2026 all&#39;11 novembre 2026."
+      assert dialogue =~ "1.002 eventi, dall&#39;8 maggio 2026 all&#39;11 novembre 2026."
     end
   end
 

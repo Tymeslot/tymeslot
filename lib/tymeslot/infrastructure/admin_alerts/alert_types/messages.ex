@@ -1,8 +1,8 @@
 defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
   @moduledoc """
   Human-readable messages for admin alert types, reached through
-  `AlertTypes.format_message/2`. Every type registered in `AlertTypes` has a
-  clause here.
+  `AlertTypes.format_message/2`. Every type in Core's own registry has a
+  clause here; a provider's types are formatted by the provider.
   """
 
   @doc """
@@ -128,48 +128,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
     "#{Map.get(metadata, :summary)}: #{kind} in #{source}: #{reason_text(metadata)}"
   end
 
-  def format_message(:reconciliation_discrepancies, metadata) do
-    count = Map.get(metadata, :discrepancies_count, "unknown")
-    "Payment reconciliation found #{count} discrepancies"
-  end
-
-  def format_message(:reconciliation_incomplete, metadata) do
-    count = Map.get(metadata, :unresolved_count, "unknown")
-
-    "Payment reconciliation could not look up #{count} subscriptions at Stripe, " <>
-      "so it did not check for subscriptions missing there"
-  end
-
-  def format_message(:subscription_not_in_database, metadata) do
-    stripe_id = Map.get(metadata, :stripe_subscription_id, "unknown")
-    "Active Stripe subscription #{stripe_id} has no matching database record"
-  end
-
-  def format_message(:payment_event_enqueue_failed, metadata) do
-    event = Map.get(metadata, :event, "unknown")
-    detail = Map.get(metadata, :summary) || Map.get(metadata, :reason_message, "unknown")
-    "Payment event enqueue failed for #{event}: #{detail}"
-  end
-
-  # The day count is deliberately in the message: the admin needs to see how
-  # long the row has been stalled. It is what makes the message unusable as a
-  # dedup key, which is why this type has its own `dedup_key/2` clause.
-  def format_message(:dunning_stalled, metadata) do
-    stripe_id = Map.get(metadata, :stripe_subscription_id, "unknown")
-    days = Map.get(metadata, :days_past_due, "unknown")
-
-    "Dunning stalled for subscription #{stripe_id}: #{days} days past due is beyond the " <>
-      "auto-cancel guard, so it is never cancelled and still grants Pro; manual review required"
-  end
-
-  def format_message(:account_deletion_billing_sync_failed, metadata) do
-    user_id = Map.get(metadata, :user_id, "unknown")
-    detail = Map.get(metadata, :reason_message, "unknown")
-
-    "Subscription renewal for user #{user_id} could not be synced with an account deletion " <>
-      "after every retry (#{detail}); check the subscription at Stripe by hand"
-  end
-
   def format_message(:account_deletion_held_last_admin, metadata) do
     user_id = Map.get(metadata, :user_id, "unknown")
 
@@ -184,19 +142,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
 
     "Account deletion for user #{user_id} failed after every retry (#{detail}); the daily " <>
       "sweep tries again, but the account stays past its deletion date until the cause is fixed"
-  end
-
-  # Discarded after the snooze cap because the subscription, customer or
-  # dispute it refers to never appeared. The ids are what the operator needs
-  # to find the event in Stripe and reconcile it by hand.
-  def format_message(:payment_event_orphaned, metadata) do
-    event_type = Map.get(metadata, :event_type, "unknown")
-    event_id = Map.get(metadata, :event_id) || "unknown"
-    referent = Map.get(metadata, :referent_id) || "unknown"
-    summary = Map.get(metadata, :summary, "its referent never appeared")
-
-    "Payment event #{event_type} (ID: #{event_id}, referent: #{referent}) discarded: " <>
-      "#{summary} (#{reason_text(metadata)})"
   end
 
   # The refund row is settled `failed`, so nothing retries it; the payment
@@ -263,17 +208,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
       "check the charge in the Stripe dashboard"
   end
 
-  def format_message(:subscription_withdrawal_unfinished, metadata) do
-    user_id = Map.get(metadata, :user_id, "unknown")
-    withdrawal_id = Map.get(metadata, :withdrawal_id, "unknown")
-    stripe_id = Map.get(metadata, :stripe_subscription_id, "unknown")
-
-    "Withdrawal #{withdrawal_id} of user #{user_id} (subscription #{stripe_id}) is recorded " <>
-      "but unfinished (#{reason_text(metadata)}); the host may still be owed a refund or a " <>
-      "cancellation. Once the cause is fixed, finish it from a release shell or ask the host " <>
-      "to press Finish my withdrawal"
-  end
-
   # One alert per integration and sync run (`Calendar.InvalidEventReport`).
   def format_message(:invalid_calendar_event, %{count: count} = metadata) do
     provider = Map.get(metadata, :provider, "unknown")
@@ -310,23 +244,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
       [] -> "#{summary}: #{reason}"
       labels -> "#{summary} (#{Enum.join(labels, ", ")}): #{reason}"
     end
-  end
-
-  # Unlike `:recipient_email_rejected`, the refused address is our own inbox,
-  # so every enquiry bounces until it is reactivated with the mail provider.
-  def format_message(:contact_recipient_rejected, metadata) do
-    recipient =
-      case Map.get(metadata, :recipients_masked) do
-        masked when is_binary(masked) and masked != "" -> " (#{masked})"
-        _none -> ""
-      end
-
-    action = Map.get(metadata, :action, "unknown")
-    job_id = Map.get(metadata, :job_id, "unknown")
-
-    "The configured contact recipient#{recipient} is being rejected by the mail provider, " <>
-      "so incoming enquiries are not being delivered; reactivate the address with the provider " <>
-      "(#{action}, job #{job_id}: #{reason_text(metadata)})"
   end
 
   # A configured email (a payment notice, say) is lost once Oban stops
@@ -414,7 +331,8 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.Messages do
   end
 
   # The reason as `AdminAlerts.report/2` flattens it: the normalised message,
-  # falling back to the bare code for callers that set only that.
+  # falling back to the bare code for callers that set only that. Providers
+  # reach it through `AlertTypes.reason_text/1`.
   @doc false
   @spec reason_text(map()) :: term()
   def reason_text(metadata) do

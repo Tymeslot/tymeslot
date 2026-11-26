@@ -5,8 +5,9 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
   that stays inside a phone-width embed. LiveViewTest cannot see any of those:
   it never runs the hook, and the panels only exist once the hook draws them.
 
-  A booking page's Date question and the create-event modal are the two
-  journeys; the rest pins what went wrong in the review of `<.select>`.
+  A booking page's Date question and the calendar side panel's Starts and
+  Ends are the two journeys; the rest pins what went wrong in the review of
+  `<.select>`.
   """
   use TymeslotWeb.BrowserCase, async: false
 
@@ -15,11 +16,14 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
   import TymeslotWeb.E2E.BookerSteps
 
   alias Ecto.Changeset
+  alias Tymeslot.CalendarMock
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
+  alias Tymeslot.TestMocks
   alias TymeslotWeb.Endpoint
 
   @moduletag :e2e
@@ -27,94 +31,113 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
 
   @question "cf-start"
 
-  describe "the create-event modal" do
+  describe "the event panel's Starts and Ends" do
+    setup do
+      TestMocks.stub_no_calendar_events()
+      AvailabilityCache.clear_all()
+      test_pid = self()
+
+      Mox.stub(CalendarMock, :update_event, fn uid, _payload, _context ->
+        send(test_pid, {:updated, uid})
+        :ok
+      end)
+
+      :ok
+    end
+
     feature "dates and times chosen by keyboard, by mouse and by typing reach the server", %{
       session: session
     } do
-      session = open_create_modal(session)
+      {session, row} = open_event_panel(session)
+      day = DateTime.to_date(row.start_at)
+      next_day = day |> Date.add(1) |> Date.to_iso8601()
 
       # Keyboard: open the end date's calendar, one day on, Enter.
-      end_date = hidden_value(session, "end-date")
-      next_day = end_date |> Date.from_iso8601!() |> Date.add(1) |> Date.to_iso8601()
-
       session
-      |> click(css("#create-event-end-date-trigger"))
-      |> assert_open("create-event-end-date")
-      |> assert_active_date(end_date)
+      |> click(css("#calendar-panel-end-date-trigger"))
+      |> assert_open("calendar-panel-end-date")
+      |> assert_active_date(Date.to_iso8601(day))
       |> send_keys([:right_arrow, :enter])
-      |> assert_closed("create-event-end-date")
-      |> assert_active_element("create-event-end-date-trigger")
-      |> assert_hidden("end-date", next_day)
+      |> assert_closed("calendar-panel-end-date")
+      |> assert_active_element("calendar-panel-end-date-trigger")
+      |> assert_hidden("end_date", next_day)
 
       # Mouse: the time list, then the half-past option.
       session
-      |> click(css("#create-event-start-time-trigger"))
-      |> assert_has(css("#create-event-start-time-time-panel [role='option']", minimum: 96))
-      |> click(css("#create-event-start-time-time-panel [role='option']", text: "10:30 AM"))
-      |> assert_closed("create-event-start-time")
-      |> assert_hidden("start-time", "10:30")
+      |> click(css("#calendar-panel-start-time-trigger"))
+      |> assert_has(css("#calendar-panel-start-time-time-panel [role='option']", minimum: 96))
+      |> click(css("#calendar-panel-start-time-time-panel [role='option']", text: "10:30 AM"))
+      |> assert_closed("calendar-panel-start-time")
+      |> assert_hidden("start_time", "10:30")
 
       # Typing: a 12-hour time in a field showing either clock, committed by Tab.
       session
-      |> fill_in(css("#create-event-end-time"), with: "3:45 pm")
+      |> fill_in(css("#calendar-panel-end-time"), with: "3:45 pm")
       |> send_keys([:tab])
-      |> assert_hidden("end-time", "15:45")
+      |> assert_hidden("end_time", "15:45")
 
-      # The server has taken them: an unrelated re-render keeps every value.
-      session
-      |> click(css("#create-event-title"))
-      |> send_keys(["Picker lunch"])
+      # The server has written all three: the panel re-renders from the saved
+      # event, and the row carries them.
+      assert_hidden(session, "end_date", next_day)
+      assert_hidden(session, "start_time", "10:30")
+      assert_text_value(session, "calendar-panel-start-time", "10:30 AM")
 
-      assert_hidden(session, "end-date", next_day)
-      assert_hidden(session, "start-time", "10:30")
+      eventually(
+        fn ->
+          saved = Repo.reload!(row)
 
-      assert_text_value(session, "create-event-start-time", time_text("10:30"))
+          assert DateTime.compare(saved.start_at, DateTime.new!(day, ~T[10:30:00], "Etc/UTC")) ==
+                   :eq
 
-      click(session, css("[phx-click='save_event']"))
-
-      eventually(fn -> not has?(session, css("#create-event-modal")) end, timeout: 5000)
+          assert DateTime.compare(
+                   saved.end_at,
+                   DateTime.new!(Date.add(day, 1), ~T[15:45:00], "Etc/UTC")
+                 ) == :eq
+        end,
+        timeout: 5000
+      )
     end
 
-    feature "Escape closes the calendar and leaves the modal open", %{session: session} do
-      session = open_create_modal(session)
+    feature "Escape closes the calendar and leaves the panel open", %{session: session} do
+      {session, _row} = open_event_panel(session)
 
       session
-      |> click(css("#create-event-start-date-trigger"))
-      |> assert_open("create-event-start-date")
+      |> click(css("#calendar-panel-start-date-trigger"))
+      |> assert_open("calendar-panel-start-date")
       |> send_keys([:escape])
-      |> assert_closed("create-event-start-date")
-      |> assert_has(css("#create-event-modal"))
+      |> assert_closed("calendar-panel-start-date")
+      |> assert_has(css("#calendar-panel-timing"))
     end
 
     feature "pressing the button of an open calendar closes it", %{session: session} do
-      session = open_create_modal(session)
+      {session, _row} = open_event_panel(session)
 
       session
-      |> click(css("#create-event-start-date-trigger"))
-      |> assert_open("create-event-start-date")
-      |> click(css("#create-event-start-date-trigger"))
-      |> assert_closed("create-event-start-date")
+      |> click(css("#calendar-panel-start-date-trigger"))
+      |> assert_open("calendar-panel-start-date")
+      |> click(css("#calendar-panel-start-date-trigger"))
+      |> assert_closed("calendar-panel-start-date")
 
       assert [false] =
                evaluate_script(session, """
-               return [document.getElementById("create-event-start-date-date-panel").matches(":popover-open")];
+               return [document.getElementById("calendar-panel-start-date-date-panel").matches(":popover-open")];
                """)
     end
 
     feature "a field out of view opens nothing and leaves Escape to the page", %{session: session} do
-      session = open_create_modal(session)
+      {session, _row} = open_event_panel(session)
 
       session =
         execute_script(session, """
-        const control = document.querySelector("#create-event-start-date-field [data-picker-part]");
+        const control = document.querySelector("#calendar-panel-start-date-field [data-picker-part]");
         control.getBoundingClientRect = () => ({top: -500, bottom: -460, left: 0, width: 100});
-        document.getElementById("create-event-start-date-trigger").click();
+        document.getElementById("calendar-panel-start-date-trigger").click();
         """)
 
       assert ["false", false] =
                evaluate_script(session, """
-               const trigger = document.getElementById("create-event-start-date-trigger");
-               const panel = document.getElementById("create-event-start-date-date-panel");
+               const trigger = document.getElementById("calendar-panel-start-date-trigger");
+               const panel = document.getElementById("calendar-panel-start-date-date-panel");
                return [trigger.getAttribute("aria-expanded"), panel.matches(":popover-open")];
                """)
 
@@ -133,17 +156,17 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
     feature "a browser without popovers shows the native control and no panel", %{
       session: session
     } do
-      session = open_create_modal(session)
+      {session, _row} = open_event_panel(session)
 
       assert ["none", "none", "block"] =
                session
                |> execute_script("""
-               document.getElementById("create-event-start-date-field").dataset.pickerForceNative = "";
+               document.getElementById("calendar-panel-start-date-field").dataset.pickerForceNative = "";
                """)
                |> evaluate_script("""
-               const field = document.getElementById("create-event-start-date-field");
+               const field = document.getElementById("calendar-panel-start-date-field");
                const display = (selector) => getComputedStyle(field.querySelector(selector)).display;
-               return [display("[data-picker-part]"), getComputedStyle(document.getElementById("create-event-start-date-date-panel")).display, display("[data-picker-native]")];
+               return [display("[data-picker-part]"), getComputedStyle(document.getElementById("calendar-panel-start-date-date-panel")).display, display("[data-picker-native]")];
                """)
     end
   end
@@ -292,41 +315,57 @@ defmodule TymeslotWeb.E2E.DateTimePickerTest do
     |> click(css("#definition_type-panel [role='option']", text: label))
   end
 
-  defp open_create_modal(session) do
-    {session, user} = log_in_via_browser(session)
-    insert(:calendar_integration, user: user, is_active: true)
+  # An organiser in UTC (so a date is the same day on the server, in the
+  # browser and in the test) with one writable Google calendar holding an
+  # hour-long event at 11:00 a week ahead, opened in the side panel the way
+  # an organiser reaches it: the event's preview, then Edit.
+  defp open_event_panel(session) do
+    {session, user} =
+      log_in_via_browser(session, %{dashboard_tour_seen_at: DateTime.utc_now(:second)})
 
-    session
-    |> visit("/dashboard/calendar")
-    |> wait_for_live()
-    |> assert_has(css("#calendar-create-zone"))
-    |> simulate_grid_drag()
-    |> assert_has(css("#create-event-start-date-field"))
+    {:ok, profile} = Profiles.get_or_create_profile(user.id)
+    {:ok, _profile} = Profiles.update_timezone(profile, "Etc/UTC")
+
+    integration =
+      insert(:calendar_integration,
+        user: user,
+        provider: "google",
+        is_active: true,
+        calendar_list: [%{"id" => "work", "name" => "Work", "selected" => true}]
+      )
+
+    day = Date.add(Date.utc_today(), 7)
+    start_at = DateTime.new!(day, ~T[11:00:00], "Etc/UTC")
+
+    row =
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        provider: "google",
+        provider_calendar_id: "work",
+        summary: "Picker lunch",
+        start_at: start_at,
+        end_at: DateTime.add(start_at, 60, :minute),
+        all_day: false,
+        sync_state: "synced"
+      )
+
+    session =
+      session
+      |> resize_window(1280, 800)
+      |> visit("/dashboard/calendar?view=day&date=#{Date.to_iso8601(day)}")
+      |> wait_for_live()
+      |> assert_has(css("#calendar-canvas[aria-busy='false']"))
+      |> click(css(".cal-col .cal-ev", text: "Picker lunch"))
+      |> click(css("#calendar-preview-edit"))
+      |> assert_has(css("#calendar-panel-start-date-field"))
+
+    {session, row}
   end
-
-  # As `dashboard_calendar_test.exs` opens it: the hook snaps real mouse events
-  # to the grid.
-  defp simulate_grid_drag(session) do
-    execute_script(session, """
-    const col = document.querySelector('[data-day-col]');
-    const rect = col.getBoundingClientRect();
-    const x = rect.left + Math.floor(rect.width / 2);
-    const y = rect.top + 100;
-    const base = { bubbles: true, cancelable: true, view: window, button: 0 };
-    col.dispatchEvent(new MouseEvent('mousedown', { ...base, clientX: x, clientY: y }));
-    document.dispatchEvent(new MouseEvent('mousemove', { ...base, clientX: x, clientY: y + 30 }));
-    document.dispatchEvent(new MouseEvent('mouseup',   { ...base, clientX: x, clientY: y + 30 }));
-    """)
-
-    session
-  end
-
-  defp time_text("10:30"), do: "10:30 AM"
 
   defp hidden_value(session, name) do
     [value] =
       evaluate_script(session, """
-      return [document.querySelector("#create-event-time-form [name='#{name}']").value];
+      return [document.querySelector("#calendar-panel-timing [name='#{name}']").value];
       """)
 
     value

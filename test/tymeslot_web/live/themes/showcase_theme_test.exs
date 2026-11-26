@@ -426,7 +426,8 @@ defmodule TymeslotWeb.Live.Themes.ShowcaseThemeTest do
       ])
       |> render_upload("logo.png")
 
-      assert_push_event(view, "upload-complete", %{})
+      # `render/1` pings the LiveView, so the save the progress callback queued has run.
+      render(view)
 
       logo_path = saved(profile)["logo_path"]
       assert logo_path =~ ~r{^themes/#{profile.id}/97/images/}

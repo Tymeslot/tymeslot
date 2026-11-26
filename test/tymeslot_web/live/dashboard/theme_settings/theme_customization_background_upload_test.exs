@@ -5,11 +5,13 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
   image or video. An uploaded image and an uploaded video both stay stored,
   whatever is shown, until that same upload is replaced or removed.
 
-  A successful upload pushes "upload-complete" so the `AutoUpload` hook clears
-  the file picker, mirroring the avatar upload fixes (dashboard and
-  onboarding), and what is published carries none of the uploaded file's
-  metadata. Preset choices are clicked on the real buttons, so a picker that
-  stopped sending `phx-value-choice` fails here.
+  What is published carries none of the uploaded file's metadata. Preset
+  choices are clicked on the real buttons, so a picker that stopped sending
+  `phx-value-choice` fails here.
+
+  An upload is saved by its progress callback in a later message to the
+  LiveView, so each test calls `render/1`, which pings the LiveView, before
+  reading what was saved.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -120,33 +122,6 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
   describe "background image upload" do
     setup :isolated_upload_root
 
-    test "a successful upload pushes upload-complete so the AutoUpload hook clears the picker",
-         %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/pages")
-
-      view
-      |> element("button[phx-value-theme='1']", "Customise Style")
-      |> render_click()
-
-      # Switch to the image tab, which renders the upload form.
-      view
-      |> element("button[phx-click='theme:set_browsing_type'][phx-value-type='image']")
-      |> render_click()
-
-      image = %{
-        last_modified: System.system_time(:millisecond),
-        name: "background.png",
-        content: @valid_png,
-        type: "image/png"
-      }
-
-      view
-      |> file_input("#theme-background-image-form", :background_image_path, [image])
-      |> render_upload("background.png")
-
-      assert_push_event(view, "upload-complete", %{})
-    end
-
     test "an image upload becomes the background and keeps the uploaded video stored",
          %{conn: conn, profile: profile} do
       video_rel = "themes/#{profile.id}/1/videos/old.mp4"
@@ -183,7 +158,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
       |> file_input("#theme-background-image-form", :background_image_path, [image])
       |> render_upload("background.png")
 
-      assert_push_event(view, "upload-complete", %{})
+      render(view)
 
       saved = ThemeCustomizations.get_by_profile_and_theme(profile.id, "1")
       assert saved.settings["background_type"] == "image"
@@ -215,7 +190,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
       |> file_input("#theme-background-image-form", :background_image_path, [image])
       |> render_upload("background.png")
 
-      assert_push_event(view, "upload-complete", %{})
+      render(view)
 
       saved = ThemeCustomizations.get_by_profile_and_theme({profile.id, page.id}, "1")
       assert saved.settings["background_image_path"] =~ "themes/#{profile.id}/1/images/"
@@ -239,7 +214,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
       |> file_input("#theme-background-image-form", :background_image_path, [image])
       |> render_upload("garden.webp")
 
-      assert_push_event(view, "upload-complete", %{})
+      render(view)
 
       customization = ThemeCustomizations.get_by_profile_and_theme(profile.id, "1")
       response = get(build_conn(), "/uploads/" <> customization.settings["background_image_path"])
@@ -263,7 +238,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
       |> file_input("#theme-background-image-form", :background_image_path, [image])
       |> render_upload("IMG_0042.JPG")
 
-      assert_push_event(view, "upload-complete", %{})
+      render(view)
 
       customization = ThemeCustomizations.get_by_profile_and_theme(profile.id, "1")
       assert customization.settings["background_image_path"] =~ ~r/\.jpg\z/
@@ -407,7 +382,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
         |> file_input("#theme-background-video-form", :background_video_path, [video_entry()])
         |> render_upload("clip.mp4")
 
-        assert_push_event(view, "upload-complete", %{})
+        render(view)
 
         saved = ThemeCustomizations.get_by_profile_and_theme(profile.id, theme_id)
         path = saved.settings["background_video_path"]
@@ -485,7 +460,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
       |> file_input("#theme-background-video-form", :background_video_path, [webm])
       |> render_upload("clip.mp4")
 
-      assert_push_event(view, "upload-complete", %{})
+      render(view)
 
       first = ThemeCustomizations.get_by_profile_and_theme(profile.id, theme_id)
       first_path = first.settings["background_video_path"]
@@ -504,7 +479,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationBackgroundUpload
       |> file_input("#theme-background-video-form", :background_video_path, [video_entry()])
       |> render_upload("clip.mp4")
 
-      assert_push_event(view, "upload-complete", %{})
+      render(view)
 
       second = ThemeCustomizations.get_by_profile_and_theme(profile.id, theme_id)
       second_path = second.settings["background_video_path"]

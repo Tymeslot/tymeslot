@@ -25,7 +25,6 @@ const DashboardHooks = {
   ChartReadout,
   // Eager: a lazy load could miss the first keystroke it has to count.
   UnsavedChanges,
-  AutoUpload: lazyHook("AutoUpload", () => import("../hooks/auto_upload")),
   EmbedPreview: lazyHook("EmbedPreview", () => import("../hooks/embed_preview")),
   MeetingTypeSortable: lazyHook("MeetingTypeSortable", () => import("../hooks/meeting_type_sortable")),
   QuestionsSortable: lazyHook("QuestionsSortable", () => import("../hooks/questions_sortable")),

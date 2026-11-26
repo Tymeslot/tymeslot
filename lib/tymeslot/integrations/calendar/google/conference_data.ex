@@ -85,6 +85,19 @@ defmodule Tymeslot.Integrations.Calendar.Google.ConferenceData do
   def remove, do: :remove
 
   @doc """
+  `raw_event`, a cached raw Google event, as a write carrying the
+  `conference_data` change leaves it: without a conference after `remove/0`,
+  and carrying the request after a `createRequest`, so `booking_conference?/1`
+  and `meet_status/1` read the cached copy as Google now holds the event,
+  before a sync brings back the conference Google makes for it.
+  """
+  @spec put_on_event(map(), :remove | map()) :: map()
+  def put_on_event(raw_event, :remove), do: Map.delete(raw_event, "conferenceData")
+
+  def put_on_event(raw_event, %{createRequest: request}),
+    do: Map.put(raw_event, "conferenceData", %{"createRequest" => stringify_keys(request)})
+
+  @doc """
   Extracts the Google Meet URL from a raw Google Calendar event, the video
   entry point of its `conferenceData`. Returns `nil` when it has none, which
   includes a conference Google is still creating.
@@ -133,4 +146,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.ConferenceData do
   # ── Private ───────────────────────────────────────────────────────────────
 
   defp generate_request_id, do: Base.encode16(:crypto.strong_rand_bytes(8))
+
+  defp stringify_keys(map) when is_map(map),
+    do: Map.new(map, fn {key, value} -> {to_string(key), stringify_keys(value)} end)
+
+  defp stringify_keys(value), do: value
 end

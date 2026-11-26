@@ -18,6 +18,15 @@ defmodule Tymeslot.Bookings.SlotActivation do
   joining a held slot) the slot's own status decides, read under its row lock:
   a slot still `:awaiting_verification` is confirmed now, and this seat owes
   the first-seat effects.
+
+  A held slot is not always new. One held again when its last confirmed seat
+  left beside held seats (`Tymeslot.Bookings.SeatRelease`) keeps the
+  `email_verified_at` of its first life, and its organiser was told the
+  meeting had been cancelled. The seat bringing it back owes them more than
+  the plain "a spot was booked": an email that the meeting goes ahead after
+  all, which takes the place of the organiser's part of the seat's own
+  confirmation. A slot held from the start has no `email_verified_at`, so
+  its first seat is announced as booked, as any other.
   """
 
   alias Tymeslot.Bookings.SeatEffects
@@ -25,6 +34,7 @@ defmodule Tymeslot.Bookings.SlotActivation do
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingTransitionQueries
+  alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Notifications.Events.Seats
@@ -63,13 +73,30 @@ defmodule Tymeslot.Bookings.SlotActivation do
     changes = [status: :confirmed, email_verified_at: DateTime.truncate(Clock.utc_now(), :second)]
 
     with {:ok, confirmed} <-
-           MeetingTransitionQueries.transition_from_awaiting_verification(slot.id, changes) do
+           MeetingTransitionQueries.transition_from_awaiting_verification(slot.id, changes),
+         :ok <- announce_revival(slot, confirmed, participant, opts) do
       schedule_seat_effects(confirmed, participant, true, opts)
     end
   end
 
   defp activate_locked(slot, participant, opts),
     do: schedule_seat_effects(slot, participant, false, opts)
+
+  # See the module doc. The seat is marked as told to the organiser in this
+  # transaction, with the revival email scheduled, so that its confirmation
+  # job, run now or once the video room exists, sends the organiser nothing
+  # beside it. A seat sending no confirmation (a move, a series' seat) is
+  # told of otherwise, and the revival email still goes out.
+  defp announce_revival(%Meeting{email_verified_at: nil}, _confirmed, _participant, _opts),
+    do: :ok
+
+  defp announce_revival(_held, confirmed, participant, opts) do
+    with {:ok, _scheduled} <- Seats.slot_revived(confirmed, participant) do
+      if Keyword.get(opts, :emails, true),
+        do: ParticipantQueries.mark_organizer_notified(participant),
+        else: :ok
+    end
+  end
 
   @doc """
   Schedules a counting seat's jobs inside the caller's transaction: the

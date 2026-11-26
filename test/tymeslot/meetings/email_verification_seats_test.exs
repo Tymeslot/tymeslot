@@ -98,6 +98,11 @@ defmodule Tymeslot.Meetings.EmailVerificationSeatsTest do
         args: %{"action" => "create", "meeting_id" => slot.id}
       )
 
+      # A slot held from the start was never known to its organiser: its
+      # first seat is a booking, not a meeting coming back.
+      refute_enqueued(worker: EmailWorker, args: %{"action" => "send_seat_slot_revived"})
+      assert %{organizer_notified_at: nil} = reload(seat)
+
       assert_enqueued(
         worker: EmailWorker,
         args: %{"action" => "send_reminder_emails", "meeting_id" => slot.id}

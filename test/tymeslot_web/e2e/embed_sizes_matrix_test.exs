@@ -91,8 +91,6 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         |> visit("/#{profile.username}?theme=#{theme.id}")
         |> wait_for_live()
         |> pick_first("[data-testid='duration-option'][data-duration='#{slug}']")
-        |> assert_has(css("[data-testid='next-step']:not([disabled])"))
-        |> click_next_step()
         |> assert_has(css("[data-testid='length-step']"))
         |> assert_has(css("[data-testid='length-option']", count: 3))
         |> assert_no_horizontal_overflow("#{theme.name} length width=#{width}px")
@@ -113,7 +111,14 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         |> wait_for_live()
         |> assert_has(css("[data-testid='length-step']"))
         |> assert_no_horizontal_overflow(context)
-        |> assert_cta_reachable(context)
+        |> then(fn acc ->
+          # Paper and Folio have no Next: a length is the way on.
+          if theme.journey == :classic do
+            assert_cta_reachable(acc, context)
+          else
+            assert_reachable(acc, "[data-fact='length']", "last length at #{context}", last: true)
+          end
+        end)
     end
   end
 
@@ -242,7 +247,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         |> advance_to_schedule()
         |> pick_first_visible_day()
         |> assert_has(css("[data-testid='time-slot']", minimum: 1))
-        |> assert_no_inner_scroll_region(context)
+        |> assert_no_inner_scroll_region(context, except: wide_paper_times(theme, width))
     end
   end
 
@@ -262,10 +267,21 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         |> visit("/#{profile.username}/#{slug}?theme=#{theme.id}")
         |> wait_for_live()
         |> assert_has(css("[data-testid='session-list']"))
-        |> assert_has(css("[data-testid='schedule-actions']"))
         |> assert_no_horizontal_overflow(context)
         |> assert_calendar_scrolls_with_session_list(context)
-        |> assert_cta_reachable(context)
+        |> then(fn acc ->
+          # Paper and Folio have no Next: picking a time opens the details,
+          # so there is no actions row to reach, and every date must be.
+          if theme.journey == :classic do
+            acc
+            |> assert_has(css("[data-testid='schedule-actions']"))
+            |> assert_cta_reachable(context)
+          else
+            assert_reachable(acc, "[data-testid='session-entry']", "last date at #{context}",
+              last: true
+            )
+          end
+        end)
         |> then(fn acc ->
           if theme.pins_schedule_actions do
             acc
@@ -338,6 +354,12 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
   end
 
   # ── Setup helpers ──────────────────────────────────────────────────────
+
+  # Paper's three columns cap the times at the calendar's height and scroll
+  # them, in an embed as on its own (`paper/modules/iframe.css`); at 480px it
+  # has one column, and its times grow the frame like every other theme's.
+  defp wide_paper_times(%{key: :paper}, 1280), do: ".paper-slots .slot-list__body"
+  defp wide_paper_times(_theme, _width), do: nil
 
   defp create_user_with_max_length_booking_text do
     {profile, slug} = create_user_with_meeting_type()

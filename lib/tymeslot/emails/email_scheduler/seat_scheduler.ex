@@ -96,6 +96,15 @@ defmodule Tymeslot.Emails.EmailScheduler.SeatScheduler do
     do: schedule_seat_email(seat_action(:seat_confirmation), meeting_id, participant_id)
 
   @doc """
+  Schedules the organiser's email that a group slot they were told had been
+  cancelled is going ahead after all: `participant_id` is the seat that
+  brought it back (`Tymeslot.Bookings.SlotActivation`).
+  """
+  @spec schedule_seat_slot_revived_email(term(), term()) :: :ok | {:error, term()}
+  def schedule_seat_slot_revived_email(meeting_id, participant_id),
+    do: schedule_seat_email(seat_action(:seat_slot_revived), meeting_id, participant_id)
+
+  @doc """
   Schedules the verification email for one held seat of a group meeting.
   `send` numbers it, so a resend is not swallowed by the first job.
   """

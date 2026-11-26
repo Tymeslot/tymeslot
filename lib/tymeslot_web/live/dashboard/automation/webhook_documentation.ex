@@ -106,7 +106,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
                 <div class="p-1.5 bg-turquoise-50 rounded-token-lg">
                   <.icon name={event_icon(event.value)} class="w-4 h-4 text-turquoise-600" />
                 </div>
-                <code class="text-token-sm font-black text-tymeslot-900">{event.value}</code>
+                <code class="min-w-0 break-all text-token-sm font-black text-tymeslot-900">
+                  {event.value}
+                </code>
               </div>
               <p class="text-token-xs text-tymeslot-600 font-medium">{event.description}</p>
             </div>

@@ -2,10 +2,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImageUp
   @moduledoc """
   The upload form for one image asset field of a theme's spec: a file input
   bound to the field's upload (declared by `AssetUploads`, named after the
-  field), each entry's progress and errors, and the accepted formats. It
-  sends `upload_asset` on change and on submit, with a hidden `asset_field`
-  input naming the field, so the customisation component saves the file
-  into it (`ThemeCustomizations.attach_asset/4`). The background's image
+  field), each entry's progress and errors, and the accepted formats. The
+  upload starts on selection and is saved into the field
+  (`ThemeCustomizations.attach_asset/4`) once it finishes. The background's image
   picker and the logo and cover panels use it.
   """
   use TymeslotWeb, :html
@@ -27,14 +26,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImageUp
     ~H"""
     <form
       id={@id}
-      phx-submit="upload_asset"
       phx-change="upload_asset"
       phx-target={@myself}
-      data-auto-upload="true"
       class="flex flex-col items-center gap-6"
       novalidate
     >
-      <input type="hidden" name="asset_field" value={@field} />
       <div class="w-full max-w-md">
         <%= if @upload do %>
           <div class="relative group/upload">
@@ -84,9 +80,6 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImageUp
             {dgettext("dashboard_appearance", "Upload not available")}
           </div>
         <% end %>
-        <button type="submit" id={"#{@id}-submit"} class="hidden">
-          {dgettext("dashboard_appearance", "Upload Image")}
-        </button>
       </div>
 
       <p class="text-token-2xs font-black text-tymeslot-400 uppercase tracking-[0.2em]">

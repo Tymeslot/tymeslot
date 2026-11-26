@@ -29,6 +29,7 @@ defmodule Tymeslot.Application do
     Tasks
   }
 
+  alias Tymeslot.Infrastructure.AdminAlerts.AlertTypes
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.ErrorTracking.Alerter, as: ErrorAlerter
   alias Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes
@@ -299,6 +300,9 @@ defmodule Tymeslot.Application do
     # The integration health alert thresholds are read by an hourly job; a
     # value it cannot run on is refused here rather than at every run.
     Alerting.validate_config!()
+
+    # A provider whose alert type clashes with another would be shadowed by it.
+    AlertTypes.validate_providers!()
   end
 
   # The debug calendar's in-memory store. Started on every dev server, not

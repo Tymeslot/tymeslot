@@ -32,7 +32,7 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
   @callback send_seat_reschedule_to_participant(String.t(), appointment_details(), map()) ::
               {:ok, any()} | {:error, any()}
   @callback send_seat_update_to_organizer(
-              :booked | :cancelled | :moved,
+              :booked | :revived | :cancelled | :moved,
               String.t(),
               appointment_details()
             ) ::

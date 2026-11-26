@@ -89,7 +89,7 @@ defmodule TymeslotWeb.Dashboard.IcsImportFlowTest do
       assert IcsImportFlow.plan_error(:no_events) == "This file contains no events to import."
 
       assert IcsImportFlow.plan_error(:too_many_events) ==
-               "This file contains more than 20000 events, too many to read. Export a shorter date range from your calendar app, or subscribe to the calendar by URL instead."
+               "This file contains more than 20,000 events, too many to read. Export a shorter date range from your calendar app, or subscribe to the calendar by URL instead."
 
       assert IcsImportFlow.plan_error(:too_large) == IcsImportFlow.upload_error(:too_large)
     end

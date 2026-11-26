@@ -220,6 +220,10 @@ config :tymeslot, :email_service, Tymeslot.EmailServiceMock
 config :tymeslot, :transcoder, Tymeslot.Media.TranscoderMock
 config :tymeslot, :health_check_module, Tymeslot.Integrations.HealthCheckMock
 
+# Further stubs `TestMocks.setup_subscription_mocks/1` runs, as
+# `{module, function}` pairs called with its opts. None for Core alone.
+config :tymeslot, :test_subscription_mock_hooks, []
+
 # Flag a CalDAV integration on the first rejected sync, so tests about what
 # flagging does need not first fail the sync three times. The threshold itself
 # is tested with its own value.

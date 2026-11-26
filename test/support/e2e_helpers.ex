@@ -141,9 +141,14 @@ defmodule TymeslotWeb.E2EHelpers do
   which is why the document-level check worked for them.
 
   A clip or a scroller on an inner container is respected: an element inside one
-  is meant to be clipped or scrolled, and is skipped. The same declaration on
-  `body` or `html` is the page-level clamp this assertion exists to see through,
-  so the ancestor walk deliberately stops short of both.
+  (`overflow-x` of `hidden`, `clip`, `auto` or `scroll`) is meant to be clipped
+  or scrolled, and is skipped. The same declaration on `body` or `html` is the
+  page-level clamp this assertion exists to see through, so the ancestor walk
+  deliberately stops short of both. The dashboard's shell
+  is looked through the same way: `#dashboard-root` and the main row are
+  `overflow: hidden`, and the content column scrolls vertically, which computes
+  its `overflow-x` to `auto` as well. Counting those as clips would skip every
+  element of every section, so the check could never fail on a dashboard page.
 
   Only the outermost offender in each chain is reported. An overflowing card
   drags every descendant past the edge with it, and naming fifty children buries
@@ -154,7 +159,7 @@ defmodule TymeslotWeb.E2EHelpers do
   """
   @spec assert_no_horizontal_overflow(Wallaby.Session.t(), String.t()) :: Wallaby.Session.t()
   def assert_no_horizontal_overflow(session, context) do
-    culprits = evaluate_script(session, overflow_script())
+    culprits = overflow_culprits(session)
 
     assert culprits == [],
            """
@@ -165,6 +170,14 @@ defmodule TymeslotWeb.E2EHelpers do
 
     session
   end
+
+  @doc """
+  The outermost elements reaching past the viewport's right edge, described
+  one per string, as `assert_no_horizontal_overflow/2` measures them. For a
+  test that collects the overflow of several pages before asserting once.
+  """
+  @spec overflow_culprits(Wallaby.Session.t()) :: [String.t()]
+  def overflow_culprits(session), do: evaluate_script(session, overflow_script())
 
   @doc """
   Runs `script` in the page and returns the value its `return` statement
@@ -185,12 +198,15 @@ defmodule TymeslotWeb.E2EHelpers do
   defp overflow_script do
     """
     const limit = window.innerWidth + #{@overflow_tolerance};
+    const shell = '#dashboard-root, .dashboard-main-row, #dashboard-content-container';
 
     function clipped(el) {
       let parent = el.parentElement;
       while (parent && parent !== document.body && parent !== document.documentElement) {
-        const overflowX = getComputedStyle(parent).overflowX;
-        if (overflowX === 'auto' || overflowX === 'scroll' || overflowX === 'hidden') return true;
+        if (!parent.matches(shell)) {
+          const overflowX = getComputedStyle(parent).overflowX;
+          if (['auto', 'scroll', 'hidden', 'clip'].includes(overflowX)) return true;
+        }
         parent = parent.parentElement;
       }
       return false;

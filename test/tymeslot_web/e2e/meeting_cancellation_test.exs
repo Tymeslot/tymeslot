@@ -1,7 +1,9 @@
 defmodule TymeslotWeb.E2E.MeetingCancellationTest do
   use TymeslotWeb.BrowserCase, async: false
 
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Profiles
+  alias Tymeslot.Repo
 
   @moduletag :e2e
   @moduletag :meetings
@@ -26,5 +28,9 @@ defmodule TymeslotWeb.E2E.MeetingCancellationTest do
 
     # Should show cancellation confirmed page
     assert_has(session, css("h1", text: "Meeting Cancelled"))
+
+    # The page follows the cancellation, so by now the row says so.
+    assert %MeetingSchema{status: :cancelled, cancelled_at: %DateTime{}} =
+             Repo.get!(MeetingSchema, meeting.id)
   end
 end

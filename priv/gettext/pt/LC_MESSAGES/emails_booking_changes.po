@@ -722,3 +722,23 @@ msgstr "Reunião cancelada: %{name} cancelou - %{date}"
 #, elixir-autogen, elixir-format
 msgid "No one else has confirmed a spot at the earlier time, so that meeting has been cancelled."
 msgstr "Ninguém mais tem vaga confirmada no horário anterior, então aquela reunião foi cancelada."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} took a spot on this slot, so the meeting you were told had been cancelled goes ahead after all."
+msgstr "%{name} reservou uma vaga neste horário, então a reunião que tinha sido dada como cancelada vai acontecer, afinal."
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Back on"
+msgstr "Reativada"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting back on: %{name} - %{date}"
+msgstr "Reunião reativada: %{name} - %{date}"
+
+#: lib/tymeslot/emails/templates/seat_update_for_organizer.ex
+#, elixir-autogen, elixir-format
+msgid "Your group meeting is on again"
+msgstr "Sua reunião em grupo está confirmada de novo"

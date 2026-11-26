@@ -197,8 +197,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   end
 
   @doc """
-  Tells the organiser about one seat of a group meeting: booked, cancelled by
-  its participant, or moved to another time. See
+  Tells the organiser about one seat of a group meeting: booked, bringing
+  back a slot they were told had been cancelled, cancelled by its
+  participant, or moved to another time. See
   `Tymeslot.Emails.Templates.SeatUpdateForOrganizer`.
   """
   @spec send_seat_update_to_organizer(

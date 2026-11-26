@@ -100,5 +100,12 @@ if System.get_env("E2E") == "true" do
     Keyword.put(chromedriver, :capabilities, capabilities)
   )
 
+  # Chrome inherits the environment chromedriver is started with, so this
+  # reaches the browser; see the file for why. A FONTCONFIG_FILE already set
+  # wins. Chrome on macOS does not read fontconfig, and is unaffected.
+  if System.get_env("FONTCONFIG_FILE") in [nil, ""] do
+    System.put_env("FONTCONFIG_FILE", Path.expand("support/e2e/fonts.conf", __DIR__))
+  end
+
   {:ok, _apps} = Application.ensure_all_started(:wallaby)
 end
