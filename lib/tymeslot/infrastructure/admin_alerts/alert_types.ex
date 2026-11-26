@@ -127,8 +127,8 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     :ok
   end
 
-  # Read at call time, not with `compile_env`: Core compiles as a dependency
-  # before the deployment's config can name a module of its own.
+  # Read at call time, not with `compile_env`, so that tests can swap the
+  # providers with `with_config`.
   defp providers, do: Application.get_env(:tymeslot, :admin_alert_type_providers, [])
 
   defp provider_for(type) when is_map_key(@registry, type), do: nil
