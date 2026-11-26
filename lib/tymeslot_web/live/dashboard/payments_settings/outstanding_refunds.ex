@@ -23,7 +23,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefunds do
   it back for approval is the exception: declining it refunds nothing, so it
   reads as a cancellation. The card explains each kind it lists in its own
   words, and dates an expired row by its payment, since an expired meeting
-  carries no cancellation date.
+  carries no cancellation date. A paid seat its participant cancelled reads
+  as a cancellation, dated by when the participant left.
 
   A row whose refund is recorded and still pending stays listed, owed until
   it settles: with the pending amount noted beside the row's action while
@@ -208,6 +209,21 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefunds do
       true -> :cancelled
     end
   end
+
+  # A seat paid for but never booked (refused at checkout, its slot full
+  # say) is dated by its payment: the session it was held on may go ahead.
+  defp format_date_cell(%{
+         seat_payment: true,
+         participant_id: nil,
+         paid_at: %DateTime{} = paid_at
+       }),
+       do:
+         dgettext("dashboard_payments", "Not booked, paid %{on_date}", on_date: on_date(paid_at))
+
+  # A seat its participant cancelled is dated by when they left: the session
+  # itself may still be going ahead.
+  defp format_date_cell(%{participant: %{cancelled_at: %DateTime{} = left_at}}),
+    do: dgettext("dashboard_payments", "Left %{on_date}", on_date: on_date(left_at))
 
   # An expired meeting carries no cancellation date, so its row is dated by
   # the payment. A cancelled meeting always carries `cancelled_at`, and an

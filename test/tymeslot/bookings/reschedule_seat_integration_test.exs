@@ -14,7 +14,6 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
 
   import Ecto.Query, only: [from: 2]
   import Mox
-
   import Tymeslot.Factory
   import Tymeslot.SeatMoveTestHelpers
 
@@ -210,6 +209,21 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
     assert Repo.get!(MeetingSchema, old_meeting.id).status == :confirmed
   end
 
+  # The mover booked the target slot as well (another tab): the move is
+  # refused under the slot's lock, before any insert, and says why.
+  test "a new slot the mover already has a seat on reports :already_booked",
+       %{base_params: base_params, old_meeting: old_meeting, mover: mover} do
+    target_params = Map.merge(base_params, %{date: Date.add(Date.utc_today(), 3), time: "10:00"})
+
+    {:ok, _m} =
+      Create.execute(target_params, %{"name" => "Mover", "email" => "MOVER@example.com"})
+
+    assert {:error, :already_booked} = move(mover, new_slot_params())
+
+    assert [%{email: "mover@example.com"}] =
+             ParticipantQueries.list_live_for_meeting(old_meeting.id)
+  end
+
   # The page offers the participant's own slot like any other with a spot
   # free; choosing it is not a move, and must not read as "already booked".
   test "moving a seat to the time it already has changes nothing and says so",
@@ -271,7 +285,7 @@ defmodule Tymeslot.Bookings.RescheduleSeatIntegrationTest do
 
   # A meeting's seat count is governed by its own snapshotted capacity for
   # its whole life, not by whatever `max_participants` the caller happens to
-  # be carrying — see `GroupScheduling.join_meeting/3`. Rescheduling a seat
+  # be carrying — see `SeatWrites.take_seat/5`. Rescheduling a seat
   # out of a big slot into a smaller existing one used to fill the target to
   # the *old* slot's capacity.
   test "rescheduling into a smaller existing slot is capped by that slot's own capacity",

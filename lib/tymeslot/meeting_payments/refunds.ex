@@ -166,27 +166,49 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   `request_refund/4`, whose refusal would abort a transaction the caller
   holds, so `payment` must be current (as under its row lock); its pending
   refunds are read afresh.
+
+  `host_user_id:`, when given, is recorded as who asked, as
+  `request_refund/4` records it.
   """
-  @spec request_remaining_refund(BookingPaymentSchema.t(), refund_source()) ::
+  @spec request_remaining_refund(BookingPaymentSchema.t(), refund_source(), keyword()) ::
           {:ok, RefundSchema.t() | :none} | {:error, refusal()}
-  def request_remaining_refund(%BookingPaymentSchema{} = payment, source)
+  def request_remaining_refund(%BookingPaymentSchema{} = payment, source, opts \\ [])
       when source in @requestable_sources do
+    opts = Keyword.validate!(opts, [:host_user_id])
     remaining = RefundedTotal.refundable_cents(payment, RefundQueries.pending_cents(payment.id))
-    request_remaining(payment, remaining, source, refusal(payment))
+    request_remaining(payment, remaining, source, refusal(payment), opts)
   end
 
-  defp request_remaining(_payment, remaining, _source, _refusal) when remaining <= 0,
+  @doc """
+  Locks the payment `payment_id` taken by `host_user_id`, then records a
+  refund of whatever it has left, asked by that host
+  (`request_remaining_refund/3`), for a caller whose transaction holds no
+  lock on it yet. Sized under the lock, so a refund or dispute that landed
+  since the caller last read the payment is accounted for rather than
+  refused. Another host's payment, or one that does not exist, is
+  `{:error, :not_found}`.
+  """
+  @spec request_remaining_refund_locked(Ecto.UUID.t(), integer(), refund_source()) ::
+          {:ok, RefundSchema.t() | :none} | {:error, refusal()}
+  def request_remaining_refund_locked(payment_id, host_user_id, source)
+      when is_integer(host_user_id) do
+    with {:ok, payment} <- lock(payment_id, host_user_id),
+         do: request_remaining_refund(payment, source, host_user_id: host_user_id)
+  end
+
+  defp request_remaining(_payment, remaining, _source, _refusal, _opts) when remaining <= 0,
     do: {:ok, :none}
 
-  defp request_remaining(payment, remaining, source, :ok),
-    do: request_refund(payment, remaining, source, enqueue_now: true)
+  defp request_remaining(payment, remaining, source, :ok, opts),
+    do: request_refund(payment, remaining, source, [enqueue_now: true] ++ opts)
 
-  defp request_remaining(payment, remaining, source, {:error, :under_dispute}) do
+  defp request_remaining(payment, remaining, source, {:error, :under_dispute}, opts) do
     %RefundSchema{}
     |> RefundSchema.request_changeset(%{
       booking_payment_id: payment.id,
       amount_cents: remaining,
-      source: source
+      source: source,
+      requested_by_user_id: opts[:host_user_id]
     })
     |> Changeset.change(
       status: :failed,
@@ -203,7 +225,7 @@ defmodule Tymeslot.MeetingPayments.Refunds do
     {:ok, :none}
   end
 
-  defp request_remaining(payment, _remaining, source, {:error, reason}) do
+  defp request_remaining(payment, _remaining, source, {:error, reason}, _opts) do
     Logger.warning("Refund cannot be made automatically, left to the host",
       booking_payment_id: payment.id,
       source: source,

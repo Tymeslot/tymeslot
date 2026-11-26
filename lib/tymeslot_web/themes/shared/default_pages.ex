@@ -129,7 +129,7 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
   end
 
   defp body(%{page: :payment_processing} = assigns) do
-    outcome = PaymentReturn.outcome(assigns.loading, assigns.payment, assigns.meeting)
+    outcome = PaymentReturn.page_outcome(assigns)
     assigns = assign(assigns, :status, payment_status(PaymentReturn.progress(outcome)))
 
     ~H"""
@@ -140,6 +140,8 @@ defmodule TymeslotWeb.Themes.Shared.DefaultPages do
       payment={@payment}
       meeting={@meeting}
       rebook_path={@rebook_path}
+      outcome={assigns[:outcome]}
+      seat_hold={assigns[:seat_hold]}
     />
     """
   end

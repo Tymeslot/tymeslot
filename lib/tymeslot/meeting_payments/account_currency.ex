@@ -9,6 +9,7 @@ defmodule Tymeslot.MeetingPayments.AccountCurrency do
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.Currency
+  alias Tymeslot.MeetingPayments.SeatPaymentQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Repo
@@ -112,7 +113,8 @@ defmodule Tymeslot.MeetingPayments.AccountCurrency do
   :no_reset}` when the account had none, `{:ok, :unchanged}` when `currency`
   is already the account's, `{:error, :unsupported_currency}` for a currency
   outside the allowlist, `{:error, :pending_payments_exist}` while the host
-  has meetings awaiting payment (they must be resolved first), or
+  has meetings awaiting payment or a seat checkout open on a group meeting
+  (they must be resolved first), or
   `{:error, reason}` on other failures.
 
   The account row is locked for the whole change, as a checkout locks it to
@@ -149,9 +151,12 @@ defmodule Tymeslot.MeetingPayments.AccountCurrency do
     end
   end
 
+  # A seat checkout can be open on a group meeting other bookers have
+  # already confirmed, so the meeting's status alone does not show it.
   defp check_no_pending_payments(user_id) do
-    if MeetingQueries.count_awaiting_payment_for_organizer(user_id) > 0,
-      do: {:error, :pending_payments_exist},
-      else: :ok
+    if MeetingQueries.count_awaiting_payment_for_organizer(user_id) > 0 or
+         SeatPaymentQueries.pending_seat_payment_for_host?(user_id),
+       do: {:error, :pending_payments_exist},
+       else: :ok
   end
 end

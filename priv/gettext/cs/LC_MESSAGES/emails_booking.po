@@ -756,3 +756,11 @@ msgstr "Registrace je uzavřena"
 #, elixir-autogen, elixir-format
 msgid "The list is also attached as a CSV file for a spreadsheet."
 msgstr "Seznam je přiložen také jako soubor CSV pro tabulkový procesor."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "For %{count} seat"
+msgid_plural "For %{count} seats"
+msgstr[0] "Za %{count} místo"
+msgstr[1] "Za %{count} místa"
+msgstr[2] "Za %{count} míst"

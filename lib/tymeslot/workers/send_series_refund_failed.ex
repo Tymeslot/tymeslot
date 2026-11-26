@@ -25,7 +25,8 @@ defmodule Tymeslot.Workers.SendSeriesRefundFailed do
   alias Tymeslot.Emails.Templates.RefundFailed
   alias Tymeslot.Emails.Templates.RefundFailed.RefundContext
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
-  alias Tymeslot.MeetingPayments
+
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.TransactionalEmailDelivery
@@ -40,7 +41,7 @@ defmodule Tymeslot.Workers.SendSeriesRefundFailed do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"booking_payment_id" => id, "amount_cents" => amount}} = job) do
-    case MeetingPayments.get_payment(id) do
+    case BookingPayments.get_payment(id) do
       nil ->
         {:discard, @payment_gone}
 
@@ -65,7 +66,7 @@ defmodule Tymeslot.Workers.SendSeriesRefundFailed do
 
   defp context(payment, amount_cents) do
     # A series payment is named after its first session.
-    meeting = payment |> MeetingPayments.meetings_for_payment() |> List.first()
+    meeting = payment |> BookingPayments.meetings_for_payment() |> List.first()
 
     %RefundContext{
       host_email: payment.host_email,

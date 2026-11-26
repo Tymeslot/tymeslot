@@ -23,7 +23,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
 
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.ConnectAccounts
+  alias Tymeslot.Profiles
 
   import TymeslotWeb.Dashboard.PaymentsSettings.ConnectCta, only: [connect_cta: 1]
   import TymeslotWeb.Dashboard.PaymentsSettings.CurrencySelector, only: [currency_selector: 1]
@@ -51,6 +53,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
      |> assign(:refund_error, nil)
      |> assign(:refund_form, @blank_refund_form)
      |> assign(:connect_account, nil)
+     |> assign(profile: nil, time_format: "24h")
      |> assign(:checking_status, false)
      |> assign(:payments, [])
      |> assign(:outstanding_refunds, [])
@@ -103,7 +106,13 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
         --%>
         <div :if={not needs_onboarding?(@connect_account)} class="space-y-8">
           <.currency_selector account={@connect_account} myself={@myself} />
-          <.payments_table payments={@payments} account={@connect_account} myself={@myself} />
+          <.payments_table
+            payments={@payments}
+            account={@connect_account}
+            timezone={Profiles.timezone(@profile)}
+            time_format={@time_format}
+            myself={@myself}
+          />
           <.lifetime_stats stats={@stats} account={@connect_account} />
         </div>
 
@@ -207,7 +216,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   end
 
   def handle_event("open_refund_modal", %{"id" => id}, socket) do
-    case MeetingPayments.get_payment_for_host(id, socket.assigns.current_user.id) do
+    case BookingPayments.get_payment_for_host(id, socket.assigns.current_user.id) do
       {:ok, payment} -> open_refund_modal(socket, payment)
       {:error, :not_found} -> {:noreply, socket}
     end
@@ -228,7 +237,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
       # Re-fetch to pick up concurrent changes (e.g. a refund issued from another
       # tab) before parsing the amount, so "full" means the balance left now.
       # The refund itself re-checks ownership and re-validates under the row lock.
-      case MeetingPayments.get_payment_for_host(payment.id, socket.assigns.current_user.id) do
+      case BookingPayments.get_payment_for_host(payment.id, socket.assigns.current_user.id) do
         {:ok, fresh_payment} -> do_submit_refund(socket, fresh_payment, params)
         {:error, :not_found} -> {:noreply, socket}
       end
@@ -441,7 +450,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   # called, so a task that crashed may have left one pending. Telling the host
   # to try again then would invite a second refund on top of it.
   def handle_async({:issue_refund, payment_id}, {:exit, reason}, socket) do
-    case MeetingPayments.get_payment_for_host(payment_id, socket.assigns.current_user.id) do
+    case BookingPayments.get_payment_for_host(payment_id, socket.assigns.current_user.id) do
       {:ok, payment} ->
         if MeetingPayments.refund_pending?(payment),
           do: refund_submitted(socket),
@@ -494,14 +503,14 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
 
     socket
     |> assign(:connect_account, connect_account)
-    |> assign(:payments, MeetingPayments.list_payments_for_host(user.id))
-    |> assign(:outstanding_refunds, MeetingPayments.list_outstanding_refunds_for_host(user.id))
+    |> assign(:payments, BookingPayments.list_payments_for_host(user.id))
+    |> assign(:outstanding_refunds, BookingPayments.list_outstanding_refunds_for_host(user.id))
     |> assign(
       :outstanding_refunds_summary,
-      MeetingPayments.outstanding_refunds_summary_for_host(user.id)
+      BookingPayments.outstanding_refunds_summary_for_host(user.id)
     )
-    |> assign(:stats, MeetingPayments.lifetime_stats_for_host(user.id))
-    |> assign(:pending_payments_count, MeetingPayments.count_pending_payments_for_host(user.id))
+    |> assign(:stats, BookingPayments.lifetime_stats_for_host(user.id))
+    |> assign(:pending_payments_count, BookingPayments.count_pending_payments_for_host(user.id))
   end
 
   defp parse_refund_error_message(:choose_type),

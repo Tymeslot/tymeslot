@@ -210,13 +210,16 @@ defmodule Tymeslot.Meetings.PlannedSessions do
 
   @doc """
   Cancels a planned session the host owns, through the host's own cancel
-  path, which tells everyone booked on it.
+  path, which tells everyone booked on it. Every paid seat is refunded in
+  full (`:refund_seats`, the host's default), as for any group session the
+  host cancels.
   """
   @spec cancel(Meeting.t(), integer()) :: {:ok, Meeting.t()} | {:error, term()}
   def cancel(%Meeting{planned: true, organizer_user_id: user_id} = session, user_id) do
-    # Cancelled with no refund, so none is left pending
-    # (`{:ok, cancelled, :refund_pending}` is never returned).
-    case Cancellation.cancel(session, user_id, :none) do
+    # A group session's seat refunds are recorded and made in the background,
+    # so none is left pending here (`{:ok, cancelled, :refund_pending}` is
+    # never returned).
+    case Cancellation.cancel(session, user_id, :refund_seats) do
       {:ok, %Meeting{} = cancelled} -> {:ok, cancelled}
       {:error, reason} -> {:error, reason}
     end

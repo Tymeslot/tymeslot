@@ -32,6 +32,12 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
   been a meeting: the attendee is owed all of it, so nothing is the host's
   to keep. A booking that went ahead keeps whatever refund its host chose.
 
+  A paid seat of a group session never happened when its seat hold never
+  became a booked seat (refused for a full slot, say), whatever became of
+  the meeting it was held on, which other seats may keep going ahead. A
+  booked seat is owed the rest too once its host refunded it on cancelling
+  the session, including a refund the dispute held back then.
+
   A final outcome also records the dispute as closed on the payment
   (`stripe_dispute_id`, `dispute_closed_at`), whether or not it changes the
   status, so a `charge.dispute.created` for the same dispute that Stripe
@@ -173,6 +179,24 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
   # series never happened when none of its sessions did
   # (`never_happened?/2`). A refund still pending holds its share, so a
   # second close of the dispute records nothing more.
+  #
+  # A paid seat never happened when its hold never became a participant,
+  # whatever became of the meeting it was held on. A booked seat is owed
+  # what came back once its host has refunded it on cancelling its session:
+  # a refund the dispute held back is recorded then (`Meetings.Cancellation`),
+  # and one made before the dispute opened leaves whatever it did not cover.
+  #
+  # A seat is told apart by its immutable `seat_payment` marker rather than
+  # by its hold, which is deleted 30 days after it settles (or on erasure):
+  # a refused seat whose hold is gone is still a seat that never happened.
+  defp maybe_request_refund(%BookingPaymentSchema{seat_payment: true} = payment) do
+    if payment.status in BookingPaymentSchema.refundable_statuses() and
+         (is_nil(payment.participant_id) or
+            RefundQueries.recorded_from?(payment.id, :cancellation)),
+       do: Refunds.request_remaining_refund(payment, :late_payment),
+       else: {:ok, :none}
+  end
+
   defp maybe_request_refund(payment) do
     with true <- payment.status in BookingPaymentSchema.refundable_statuses(),
          [_first | _rest] = meetings <- HeldMeetings.meetings_for(payment),

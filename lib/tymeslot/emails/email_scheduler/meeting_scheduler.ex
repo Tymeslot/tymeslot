@@ -335,10 +335,18 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
 
   @doc """
   Schedules cancellation emails to be sent immediately with high priority.
+
+  `seat_refund:` (`Tymeslot.Meetings.Cancellation.seat_refund/0`) is
+  carried to the job as `"seat_refund"`, with string keys, for the
+  organiser's email of a group session the host cancelled:
+  `%{"choice" => "full", "count" => 2, "totals" => [%{"currency" => "eur",
+  "amount_cents" => 8000}], "outside_window" => %{"count" => 1, "totals" =>
+  [...]}}`, the last for the seats past the refund window.
   """
-  @spec schedule_cancellation_emails(term()) :: :ok | {:error, term()}
-  def schedule_cancellation_emails(meeting_id) do
+  @spec schedule_cancellation_emails(term(), keyword()) :: :ok | {:error, term()}
+  def schedule_cancellation_emails(meeting_id, opts \\ []) do
     %{"action" => "send_cancellation_emails", "meeting_id" => meeting_id}
+    |> Map.merge(seat_refund_arg(Keyword.get(opts, :seat_refund)))
     |> EmailWorker.new(
       queue: :emails,
       # Highest priority for cancellations
@@ -352,6 +360,26 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
     )
     |> Helpers.insert(meeting_id: meeting_id)
     |> Helpers.ok()
+  end
+
+  defp seat_refund_arg(%{choice: choice, outside_window: outside_window} = seat_refund)
+       when choice in [:full, :none] do
+    %{
+      "seat_refund" =>
+        seat_count_arg(seat_refund)
+        |> Map.put("choice", Atom.to_string(choice))
+        |> Map.put("outside_window", seat_count_arg(outside_window))
+    }
+  end
+
+  defp seat_refund_arg(nil), do: %{}
+
+  defp seat_count_arg(%{count: count, totals: totals}) do
+    %{
+      "count" => count,
+      "totals" =>
+        Enum.map(totals, &%{"currency" => &1.currency, "amount_cents" => &1.amount_cents})
+    }
   end
 
   @doc """

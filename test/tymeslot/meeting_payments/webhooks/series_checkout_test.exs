@@ -19,7 +19,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutTest do
 
   alias Ecto.Changeset
   alias Tymeslot.CalendarMock
-  alias Tymeslot.MeetingPayments
+
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.MeetingPayments.Webhooks.PaymentLookup
   alias Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments
@@ -44,7 +45,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutTest do
     expect_checkout()
     assert {:ok, :payment_required, %{series: series}} = book(host, paid_series_type(host), 3)
 
-    %{series: series, payment: MeetingPayments.payment_for_series(series.id)}
+    %{series: series, payment: BookingPayments.payment_for_series(series.id)}
   end
 
   defp statuses,

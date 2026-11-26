@@ -108,6 +108,25 @@ defmodule Tymeslot.Meetings.SeatViewTest do
     end
   end
 
+  describe "for_participant/1" do
+    test "is the seat on whichever meeting it sits", %{seat: seat} do
+      elsewhere = insert(:group_meeting, capacity: 4)
+      moved = insert(:participant, meeting: elsewhere, name: "Cy", email: "cy@example.com")
+
+      assert {:ok, %MeetingSchema{id: meeting_id, attendee_email: "cy@example.com"} = view} =
+               SeatView.for_participant(moved.id)
+
+      assert meeting_id == elsewhere.id
+      assert view.seat.participant_id == moved.id
+      assert view.seat.seats_taken == 1
+      assert {:ok, %{attendee_email: "ada@example.com"}} = SeatView.for_participant(seat.id)
+    end
+
+    test "refuses a participant that does not exist" do
+      assert {:error, :not_found} = SeatView.for_participant(UUID.generate())
+    end
+  end
+
   test "a meeting that is not a seat view has no seat" do
     meeting = build(:meeting)
 

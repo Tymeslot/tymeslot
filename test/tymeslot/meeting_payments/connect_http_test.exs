@@ -19,6 +19,7 @@ defmodule Tymeslot.MeetingPayments.ConnectHttpTest do
   alias Req.Test, as: ReqTest
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.ChargeBackfill
   alias Tymeslot.MeetingPayments.CheckoutSessions
@@ -183,7 +184,7 @@ defmodule Tymeslot.MeetingPayments.ConnectHttpTest do
       charge = StripeFixtures.object("charge", %{"id" => "ch_1"})
       StripeStub.expect(:retrieve_charge, charge)
 
-      assert MeetingPayments.retrieve_charge_receipt_url("ch_1", "acct_1") ==
+      assert BookingPayments.retrieve_charge_receipt_url("ch_1", "acct_1") ==
                {:ok, charge["receipt_url"]}
 
       assert [%{method: :get, path: "/v1/charges/ch_1", headers: headers}] =

@@ -43,7 +43,8 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePayment do
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.MeetingPayments
+
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.Repo
@@ -66,7 +67,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePayment do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"booking_payment_id" => id} = args} = job) do
-    case MeetingPayments.get_payment(id) do
+    case BookingPayments.get_payment(id) do
       %BookingPaymentSchema{} = payment -> payment |> request(job, args) |> result(job, id)
       nil -> {:discard, :not_found}
     end

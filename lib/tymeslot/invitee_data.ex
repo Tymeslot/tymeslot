@@ -35,13 +35,27 @@ defmodule Tymeslot.InviteeData do
 
   Upcoming bookings are refused rather than erased: a confirmed meeting with
   its invitee's address removed could no longer be cancelled, moved or
-  reminded about. Cancel them first, then erase. A booking still held for
-  email confirmation is neither refused nor named: the host has not been
-  told of it. It is released, silently as a disowned hold is
-  (`Tymeslot.Meetings.EmailVerification.release/1`, or `release_seat/1` for a
-  group seat, which voids a slot it alone was holding), and then erased, so
-  a late click on the confirmation link cannot confirm a booking with no one
-  behind it.
+  reminded about. Cancel them first, then erase. An open seat checkout (a
+  seat hold still `held` inside its window,
+  `Tymeslot.Meetings.SeatHolds.overdue_cutoff/1`) is refused the same way,
+  since its payment could still turn it into a seat. A `held` hold past its
+  window (one the sweeper has yet to settle, or keeps failing to), or on a
+  meeting already past or released, does not block: it is kept for the
+  sweeper, with what this person gave on it cleared, and settles into the
+  30-day prune.
+
+  A booking still held for email confirmation is neither refused nor named:
+  the host has not been told of it. It is released, silently as a disowned
+  hold is (`Tymeslot.Meetings.EmailVerification.release/1`, or
+  `release_seat/1` for a group seat, which voids a slot it alone was
+  holding), and then erased, so a late click on the confirmation link
+  cannot confirm a booking with no one behind it.
+
+  Seat holds are deleted rather than anonymised: a settled hold, naming the
+  person as its booker or as one of its guests, holds nothing a host's
+  history needs (a paid booker's seat lives on as a participant), and the
+  retention worker deletes them a month after they settle anyway
+  (`Tymeslot.Meetings.SeatHolds.prune_settled/1`).
 
   A booking series holds its booker's name and email too. An erasure clears
   the series booked under the address, and the purge clears a series with
@@ -57,7 +71,9 @@ defmodule Tymeslot.InviteeData do
   alias Tymeslot.Availability
   alias Tymeslot.Clock
   alias Tymeslot.InviteeData.InviteeDataQueries, as: Queries
+  alias Tymeslot.InviteeData.SeatHoldErasureQueries
   alias Tymeslot.Meetings.EmailVerification
+  alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Repo
 
   @batch_size 500
@@ -70,6 +86,7 @@ defmodule Tymeslot.InviteeData do
           draft_polls: non_neg_integer(),
           invitations: non_neg_integer(),
           booking_payments: non_neg_integer(),
+          seat_holds: non_neg_integer(),
           series: non_neg_integer(),
           deliveries: non_neg_integer()
         }
@@ -139,7 +156,7 @@ defmodule Tymeslot.InviteeData do
     result =
       announce_released(
         Repo.transaction(fn ->
-          case Queries.upcoming_meeting_uids(email, scope, now) do
+          case Queries.upcoming_meeting_uids(email, scope, now, SeatHolds.overdue_cutoff(now)) do
             [] -> {release_holds(email, scope), erase_rows(email, scope, now)}
             uids -> Repo.rollback({:upcoming_meetings, uids})
           end
@@ -205,6 +222,9 @@ defmodule Tymeslot.InviteeData do
       draft_polls: count(Queries.remove_draft_invitee(email, scope)),
       invitations: count(Queries.scrub_invitations(email, meeting_ids, scope, now)),
       booking_payments: count(Queries.scrub_booking_payments({:email, email, scope}, now)),
+      seat_holds:
+        count(SeatHoldErasureQueries.delete_settled_for_email(email, scope)) +
+          count(SeatHoldErasureQueries.scrub_held_for_email(email, scope, now)),
       series: count(Queries.scrub_series_for_email(email, scope, now)),
       deliveries: Queries.delete_deliveries(touched_meetings)
     }

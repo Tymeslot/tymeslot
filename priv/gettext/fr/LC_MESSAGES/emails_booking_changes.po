@@ -742,3 +742,44 @@ msgstr "Réunion rétablie : %{name} - %{date}"
 #, elixir-autogen, elixir-format
 msgid "Your group meeting is on again"
 msgstr "Votre réunion de groupe est de nouveau au programme"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} is being refunded to %{count} participant. They get an email once the refund is issued."
+msgid_plural "%{amount} is being refunded to %{count} participants. Each gets an email once their refund is issued."
+msgstr[0] "%{amount} est en cours de remboursement pour %{count} participant. Celui-ci recevra un e-mail dès que le remboursement aura été effectué."
+msgstr[1] "%{amount} est en cours de remboursement pour %{count} participants. Chacun recevra un e-mail dès que son remboursement aura été effectué."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "REFUNDS ON THEIR WAY:"
+msgstr "REMBOURSEMENTS EN COURS :"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "REFUNDS OUTSTANDING:"
+msgstr "REMBOURSEMENTS EN ATTENTE :"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Refunds on their way"
+msgstr "Remboursements en cours"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Refunds outstanding"
+msgstr "Remboursements en attente"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "You still hold %{amount} from %{count} participant. Refund it under Payments in your dashboard if you need to."
+msgid_plural "You still hold %{amount} from %{count} participants. Refund them under Payments in your dashboard if you need to."
+msgstr[0] "Vous détenez encore %{amount} de la part de %{count} participant. Si nécessaire, remboursez-le dans la section Paiements de votre tableau de bord."
+msgstr[1] "Vous détenez encore %{amount} de la part de %{count} participants. Si nécessaire, remboursez-les dans la section Paiements de votre tableau de bord."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} from %{count} participant can't be refunded automatically: the payment is older than the 60-day refund window. Refund it from your Stripe dashboard."
+msgid_plural "%{amount} from %{count} participants can't be refunded automatically: their payments are older than the 60-day refund window. Refund them from your Stripe dashboard."
+msgstr[0] "Le montant de %{amount} versé par %{count} participant ne peut pas être remboursé automatiquement, car le paiement date de plus de 60 jours et dépasse le délai de remboursement. Remboursez-le depuis votre tableau de bord Stripe."
+msgstr[1] "Le montant de %{amount} versé par %{count} participants ne peut pas être remboursé automatiquement, car leurs paiements datent de plus de 60 jours et dépassent le délai de remboursement. Remboursez-les depuis votre tableau de bord Stripe."

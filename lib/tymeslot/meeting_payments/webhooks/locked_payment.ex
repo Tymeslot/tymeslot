@@ -13,13 +13,19 @@ defmodule Tymeslot.MeetingPayments.Webhooks.LockedPayment do
   then is the change decided, so concurrent handlers of one payment run one
   after the other and each sees what the previous one committed.
 
-  Lock order: the organiser's schedule lock first (taken only by a late
-  completion recovering an expired booking, through
-  `Scheduling.reinstate_with_conflict_check/2`), then the payment row, then
-  the meeting row, as in every other writer of both
+  Lock order. A booking payment (one meeting): the organiser's schedule
+  lock first (taken only by a late completion recovering an expired
+  booking, through `Scheduling.reinstate_with_conflict_check/2`), then the
+  payment row, then the meeting row, as in every other writer of both
   (`ConnectAccountRetirement.disconnect/1`, `FailAndExpire`). A paid
   series' payment is followed by its series row, then its meetings in
-  series order (`HeldMeetings.lock_series/1`).
+  series order (`HeldMeetings.lock_series/1`). A group seat's payment comes
+  first instead: the payment row, then the organiser's schedule lock, the
+  hold's meeting row and the hold (`SeatCheckoutCompleted`; `FailAndExpire`
+  and `SeatRelease.release_unpaid_hold/1` take the same order without the
+  schedule lock). The two orders belong to different payments, and no path
+  locks a seat's payment row while it holds the schedule lock, so they
+  cannot wait on each other.
 
   This lock is the one concurrency mechanism for a webhook's status change;
   there is deliberately no compare-and-set alternative beside it. The writes

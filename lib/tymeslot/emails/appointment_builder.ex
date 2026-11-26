@@ -12,7 +12,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Shared.BookingRequestLocation
   alias Tymeslot.Emails.Shared.Formatting
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.HostManaged
   alias Tymeslot.Meetings.MeetingSchema
@@ -46,6 +46,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     meeting
     |> Recipient.as_seen_by(recipient)
     |> build(reminder_interval)
+    |> with_seat_payment(recipient)
   end
 
   @doc """
@@ -93,7 +94,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   left or moved (name, email, phone, company, message, answers), but never
   carries that participant's seat links: the organiser's way to act on the
   meeting is their dashboard, and the seat links are the participant's
-  credentials. `:seats_taken` and `:capacity` say how full the slot is now.
+  credentials. `:seats_taken` and `:capacity` say how full the slot is now: people
+  booked, not the seats held for bookers still paying.
   """
   @spec for_organizer_of_seat(MeetingSchema.t(), Recipient.t()) ::
           Tymeslot.Emails.EmailService.appointment_details()
@@ -216,6 +218,15 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     end)
   end
 
+  # A group meeting's payments belong to its seats, so `build/2` finds none
+  # for the meeting: a participant's details carry their own seat's payment
+  # (nil for a free seat), and the organiser's seat email, built from the
+  # same recipient, carries it too.
+  defp with_seat_payment(details, %Recipient{kind: :participant, participant_id: id}),
+    do: Map.put(details, :booking_payment, BookingPayments.payment_for_participant(id))
+
+  defp with_seat_payment(details, _recipient), do: details
+
   # The organiser's chosen clock, resolved once per payload rather than per
   # template. Deliberately namespaced away from the plain `:time_format` key the
   # hero and text bodies read, so an attendee-addressed branch cannot pick it up
@@ -234,9 +245,9 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   # recorded per session). Once none goes ahead, what is left is owed back
   # as for any released booking.
   defp booking_payment_for(%{id: meeting_id}) when is_binary(meeting_id) do
-    case MeetingPayments.payment_for_meeting(meeting_id) do
+    case BookingPayments.payment_for_meeting(meeting_id) do
       %{series_id: series_id} = payment when is_binary(series_id) ->
-        if MeetingPayments.series_released?(payment), do: payment
+        if BookingPayments.series_released?(payment), do: payment
 
       payment ->
         payment

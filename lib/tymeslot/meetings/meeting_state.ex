@@ -343,16 +343,6 @@ defmodule Tymeslot.Meetings.MeetingState do
   @spec released_status?(status() | nil) :: boolean()
   def released_status?(status), do: status in @released_statuses
 
-  @doc """
-  Query-side counterpart of `released_status?/1`, for a query in which the
-  meeting is not the first binding: keeps only rows whose meeting, bound as
-  `binding` (`join: m in assoc(b, :meeting), as: :meeting`), was released.
-  """
-  @spec where_released(Ecto.Queryable.t(), atom()) :: Ecto.Query.t()
-  def where_released(query, binding) when is_atom(binding) do
-    where(query, [{^binding, m}], m.status in ^@released_statuses)
-  end
-
   @doc "Query-side counterpart of `released_status?/1`: keeps only meetings not released."
   @spec where_not_released(Ecto.Queryable.t()) :: Ecto.Query.t()
   def where_not_released(query) do

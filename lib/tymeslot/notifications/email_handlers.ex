@@ -11,6 +11,7 @@ defmodule Tymeslot.Notifications.EmailHandlers do
   alias Tymeslot.Emails.EmailActions
   alias Tymeslot.Notifications.Email.AuthEmails
   alias Tymeslot.Notifications.Email.BookingVerificationEmails
+  alias Tymeslot.Notifications.Email.CancellationEmails
   alias Tymeslot.Notifications.Email.EndChangeEmails
   alias Tymeslot.Notifications.Email.GroupMeetingEmails
   alias Tymeslot.Notifications.Email.GuestEmails
@@ -29,6 +30,7 @@ defmodule Tymeslot.Notifications.EmailHandlers do
   @declaring_handlers [
     AuthEmails,
     BookingVerificationEmails,
+    CancellationEmails,
     EndChangeEmails,
     GroupMeetingEmails,
     GuestEmails,

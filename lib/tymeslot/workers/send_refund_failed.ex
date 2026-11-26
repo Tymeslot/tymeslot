@@ -27,6 +27,7 @@ defmodule Tymeslot.Workers.SendRefundFailed do
   alias Tymeslot.Emails.Templates.RefundFailed.RefundContext
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.Workers.DeliveryClaims
@@ -51,7 +52,7 @@ defmodule Tymeslot.Workers.SendRefundFailed do
   def perform(%Oban.Job{args: %{"refund_id" => id}} = job) do
     with %RefundSchema{} = refund <- MeetingPayments.get_refund(id),
          %BookingPaymentSchema{} = payment <-
-           MeetingPayments.get_payment(refund.booking_payment_id) do
+           BookingPayments.get_payment(refund.booking_payment_id) do
       send_to_host(job, refund, payment)
     else
       nil -> {:discard, @refund_gone}
@@ -88,7 +89,7 @@ defmodule Tymeslot.Workers.SendRefundFailed do
 
   defp context(refund, payment) do
     # A series payment is named after its first session.
-    meeting = payment |> MeetingPayments.meetings_for_payment() |> List.first()
+    meeting = payment |> BookingPayments.meetings_for_payment() |> List.first()
 
     %RefundContext{
       host_email: payment.host_email,

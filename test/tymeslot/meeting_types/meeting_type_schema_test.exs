@@ -107,7 +107,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
       assert "must be less than or equal to 999" in errors_on(too_high).max_participants
     end
 
-    test "group bookings cannot require payment" do
+    test "a group type may require payment" do
       user = insert(:user)
 
       changeset =
@@ -119,13 +119,15 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
             user_id: user.id,
             max_participants: 10,
             payment_required: true,
-            price_cents: 5000
+            price_cents: 5000,
+            locations: [%{kind: :custom, label: "Main hall"}]
           },
           host_charges_enabled: true,
           price_settable: true
         )
 
-      assert "group bookings cannot require payment" in errors_on(changeset).max_participants
+      assert changeset.valid?
+      assert Changeset.get_field(changeset, :payment_required)
     end
 
     test "a solo type may still require payment" do

@@ -18,7 +18,8 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesRefundTotalsTest do
 
   alias Ecto.Changeset
   alias Tymeslot.CalendarMock
-  alias Tymeslot.MeetingPayments
+
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.PaidSeriesTestHelpers, as: Paid
@@ -48,7 +49,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesRefundTotalsTest do
     assert :ok = CheckoutSessionCompleted.handle(event)
 
     %{
-      payment: MeetingPayments.payment_for_series(series.id),
+      payment: BookingPayments.payment_for_series(series.id),
       view: meetings_dashboard(conn, host.user)
     }
   end

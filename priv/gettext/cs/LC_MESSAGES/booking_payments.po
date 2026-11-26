@@ -141,3 +141,27 @@ msgid_plural "Thank you, your %{count} sessions are confirmed, the first on %{on
 msgstr[0] "Děkujeme, váš %{count} termín je potvrzen, první %{on_date}."
 msgstr[1] "Děkujeme, vaše %{count} termíny jsou potvrzeny, první %{on_date}."
 msgstr[2] "Děkujeme, vašich %{count} termínů je potvrzeno, první %{on_date}."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "The payment wasn't completed in time, so the seat held for you was released. You can return and book again."
+msgid_plural "The payment wasn't completed in time, so the seats held for you were released. You can return and book again."
+msgstr[0] "Platba nebyla včas dokončena, místo držené pro vás proto bylo uvolněno. Můžete se vrátit a rezervovat znovu."
+msgstr[1] "Platba nebyla včas dokončena, místa držená pro vás proto byla uvolněna. Můžete se vrátit a rezervovat znovu."
+msgstr[2] "Platba nebyla včas dokončena, místa držená pro vás proto byla uvolněna. Můžete se vrátit a rezervovat znovu."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Your payment arrived after the seat held for you was released, and the session had no room left. Your payment is being refunded."
+msgid_plural "Your payment arrived after the seats held for you were released, and the session had no room left. Your payment is being refunded."
+msgstr[0] "Vaše platba dorazila až po uvolnění místa, které pro vás bylo drženo, a setkání už bylo plně obsazené. Platba se vám vrací."
+msgstr[1] "Vaše platba dorazila až po uvolnění míst, která pro vás byla držena, a setkání už bylo plně obsazené. Platba se vám vrací."
+msgstr[2] "Vaše platba dorazila až po uvolnění míst, která pro vás byla držena, a setkání už bylo plně obsazené. Platba se vám vrací."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Your seat was released"
+msgid_plural "Your seats were released"
+msgstr[0] "Vaše místo bylo uvolněno"
+msgstr[1] "Vaše místa byla uvolněna"
+msgstr[2] "Vaše místa byla uvolněna"

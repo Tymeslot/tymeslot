@@ -130,6 +130,7 @@ msgstr ""
 msgid "Disconnected"
 msgstr ""
 
+#: lib/tymeslot_web/components/dashboard/meetings/participant_payment_pill.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Disputed"
@@ -262,6 +263,7 @@ msgstr ""
 msgid "Refund type"
 msgstr ""
 
+#: lib/tymeslot_web/components/dashboard/meetings/participant_payment_pill.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/lifetime_stats.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
@@ -590,4 +592,26 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "Your Stripe account is connected, but Stripe still needs some details before it can take payments. Finish setup in Stripe, then choose Check again."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} seat"
+msgid_plural "%{count} seats"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
+#, elixir-autogen, elixir-format
+msgid "%{type} · %{date}"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Left %{on_date}"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Not booked, paid %{on_date}"
 msgstr ""

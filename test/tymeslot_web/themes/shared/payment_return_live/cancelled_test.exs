@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.CancelledTest do
   alias Ecto.UUID
   alias Tymeslot.BookingTestHelpers
   alias Tymeslot.Invitations
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.MeetingPayments.Webhooks.FailAndExpire
   alias Tymeslot.Profiles
   alias Tymeslot.SignedToken
@@ -194,7 +194,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.CancelledTest do
 
       query = URI.decode_query(URI.parse(path).query)
       assert query["locale"] == "de"
-      assert MeetingPayments.returned_from_checkout?(meeting.id, query["return_token"])
+      assert Checkout.returned_from_checkout?(meeting.id, query["return_token"])
     end
 
     # Anyone else holding the meeting id (a shared screen, a log line, a

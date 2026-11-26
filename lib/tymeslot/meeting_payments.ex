@@ -2,11 +2,14 @@ defmodule Tymeslot.MeetingPayments do
   @moduledoc """
   Main entry point for meeting-payments operations.
 
-  Provides a high-level interface covering Stripe Connect onboarding,
-  booking payments, refunds, currency management, and data retention.
-  All external callers (web, workers, email templates, cross-domain
-  modules, SaaS) must interact with this module — never with submodules
-  directly.
+  Covers the Stripe Connect account's lifecycle and status, refunds, and
+  the host's currency. Two public siblings carry the rest of the domain:
+  `Tymeslot.MeetingPayments.Checkout`, for taking a payment (opening,
+  abandoning and reading the outcome of a checkout, and releasing a booking
+  held while it was open), and `Tymeslot.MeetingPayments.BookingPayments`,
+  for reading payment records. External callers (web, workers, email
+  templates, cross-domain modules) use this module or those two; every
+  other submodule is internal.
 
   ## Public struct types
 
@@ -33,37 +36,23 @@ defmodule Tymeslot.MeetingPayments do
   alias Tymeslot.Features
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Stripe
-  alias Tymeslot.Integrations.Stripe.Charges
   alias Tymeslot.MeetingPayments.AccountCurrency
   alias Tymeslot.MeetingPayments.ApplicationFee
-  alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
-  alias Tymeslot.MeetingPayments.CheckoutOutcome
-  alias Tymeslot.MeetingPayments.CheckoutSessions
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccountRetirement
   alias Tymeslot.MeetingPayments.ConnectAccounts
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.Currency
-  alias Tymeslot.MeetingPayments.HeldMeetings
   alias Tymeslot.MeetingPayments.RefundedTotal
   alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.MeetingPayments.RefundSchema
+  alias Tymeslot.MeetingPayments.SeatPaymentQueries
   alias Tymeslot.MeetingPayments.Workers.ResyncConnectAccount
-  alias Tymeslot.Meetings.MeetingSchema
-  alias Tymeslot.Meetings.MeetingState
 
   @type account :: ConnectAccountSchema.t()
   @type booking_payment :: BookingPaymentSchema.t()
-
-  @typedoc """
-  How many refunds a host still owes, and how much of each currency.
-  """
-  @type outstanding_refunds_summary :: %{
-          count: non_neg_integer(),
-          totals: [%{currency: String.t(), amount_cents: non_neg_integer()}]
-        }
 
   @typedoc """
   What a disconnect walked away from: the pending bookings it cancelled, and
@@ -124,35 +113,6 @@ defmodule Tymeslot.MeetingPayments do
   @spec cancel_pending_checkouts(user :: %{id: integer()}) ::
           {:ok, non_neg_integer()} | {:error, term()}
   defdelegate cancel_pending_checkouts(user), to: ConnectAccountRetirement
-
-  # ---------------------------------------------------------------------------
-  # Bookings held for payment
-  # ---------------------------------------------------------------------------
-
-  @doc """
-  The PubSub topic carrying a meeting's payment status changes. Subscribers
-  receive the bare atoms `:paid` and `:expired`.
-  """
-  @spec payment_topic(String.t()) :: String.t()
-  defdelegate payment_topic(meeting_id), to: HeldMeetings, as: :topic
-
-  @doc """
-  Releases a booking held for payment, inside the caller's transaction and
-  after its payment has been locked or claimed. See
-  `Tymeslot.MeetingPayments.HeldMeetings.expire/1`.
-  """
-  @spec expire_held_meeting(String.t() | nil) ::
-          {:ok, :expired, MeetingSchema.t()}
-          | {:ok, :unchanged}
-          | {:error, Ecto.Changeset.t()}
-  defdelegate expire_held_meeting(meeting_id), to: HeldMeetings, as: :expire
-
-  @doc """
-  After the transaction that released a held booking has committed, offers
-  its slot again and tells the waiting attendee it expired.
-  """
-  @spec announce_expired(MeetingSchema.t()) :: :ok
-  defdelegate announce_expired(meeting), to: HeldMeetings
 
   @doc """
   Fetches a Connect account by its row ID, or `nil` if not found.
@@ -269,144 +229,12 @@ defmodule Tymeslot.MeetingPayments do
   end
 
   # ---------------------------------------------------------------------------
-  # Booking payments
+  # Refunds
   # ---------------------------------------------------------------------------
 
-  @doc """
-  Lists recent booking payments for a host, newest first, leaving out
-  checkouts that never captured anything (`BookingPaymentQueries.for_host/2`).
-  """
-  @spec list_payments_for_host(integer(), keyword()) :: [booking_payment()]
-  def list_payments_for_host(host_user_id, opts \\ []),
-    do: BookingPaymentQueries.for_host(host_user_id, opts)
-
-  @doc """
-  Lists the host's cancelled bookings that still hold the attendee's money,
-  and expired ones paid after their slot was taken. Oldest first, by when
-  the booking was cancelled, or by when it was paid for one that never was
-  (an expired booking), with ties broken by payment id.
-
-  Not bounded by `list_payments_for_host/2`'s recent-payments window, so an
-  older unrefunded cancellation stays visible instead of scrolling out of
-  sight.
-  """
-  @spec list_outstanding_refunds_for_host(integer(), keyword()) :: [booking_payment()]
-  def list_outstanding_refunds_for_host(host_user_id, opts \\ []),
-    do: BookingPaymentQueries.outstanding_refunds_for_host(host_user_id, opts)
-
-  @doc """
-  Summarises the host's outstanding refunds: how many there are, and how much
-  is owed in each currency.
-
-  Unbounded, unlike `list_outstanding_refunds_for_host/2`, so a caller can say
-  "showing 50 of 63" instead of truncating in silence, and so the disconnect
-  confirmation can name what the host is about to walk away from.
-  """
-  @spec outstanding_refunds_summary_for_host(integer()) :: outstanding_refunds_summary()
-  def outstanding_refunds_summary_for_host(host_user_id),
-    do: BookingPaymentQueries.outstanding_refunds_summary_for_host(host_user_id)
-
-  @doc """
-  Returns the total count of pending booking payments for a host.
-
-  Unlike `list_payments_for_host/2`, this is not bounded by any pagination
-  limit and always reflects the true pending count across all rows.
-  """
-  @spec count_pending_payments_for_host(integer()) :: non_neg_integer()
-  def count_pending_payments_for_host(host_user_id),
-    do: BookingPaymentQueries.count_pending_for_host(host_user_id)
-
-  @doc """
-  Returns lifetime payment totals for a host, one entry per currency.
-  """
-  @spec lifetime_stats_for_host(integer()) :: [
-          %{
-            currency: String.t(),
-            received: integer(),
-            refunded: integer(),
-            platform_fee: integer()
-          }
-        ]
-  def lifetime_stats_for_host(host_user_id),
-    do: BookingPaymentQueries.lifetime_stats(host_user_id)
-
-  @doc """
-  Fetches a booking payment by ID, or `nil` if not found.
-
-  Unscoped: for workers and system rules only. A lookup driven by a signed-in
-  user must use `get_payment_for_host/2`.
-  """
-  @spec get_payment(Ecto.UUID.t()) :: booking_payment() | nil
-  def get_payment(id), do: BookingPaymentQueries.get(id)
-
-  @doc "Fetches a recorded refund by id, or `nil`. Unscoped, as `get_payment/1` is."
+  @doc "Fetches a recorded refund by id, or `nil`. Unscoped, as `BookingPayments.get_payment/1` is."
   @spec get_refund(term()) :: RefundSchema.t() | nil
   def get_refund(id), do: RefundQueries.get(id)
-
-  @doc """
-  Fetches a booking payment by ID only if `host_user_id` took it.
-
-  Another host's payment, an unknown id and a malformed id all return
-  `{:error, :not_found}`, so the answer discloses nothing about payments the
-  caller does not own.
-  """
-  @spec get_payment_for_host(term(), integer()) ::
-          {:ok, booking_payment()} | {:error, :not_found}
-  def get_payment_for_host(id, host_user_id) do
-    case BookingPaymentQueries.get_for_host(id, host_user_id) do
-      nil -> {:error, :not_found}
-      payment -> {:ok, payment}
-    end
-  end
-
-  @doc """
-  Fetches the booking payment that paid for a meeting, or `nil`: the
-  meeting's own, or, for a session of a paid series, the series' one
-  payment (with its `series` preloaded), which pays for every session.
-  Every lookup of a meeting's payment goes through here (or
-  `payment_for_meeting/2`), so none forgets the series.
-
-  Unscoped: for system rules only. A lookup on behalf of a signed-in user must
-  use `payment_for_meeting/2`.
-  """
-  @spec payment_for_meeting(term()) :: booking_payment() | nil
-  def payment_for_meeting(meeting_id), do: BookingPaymentQueries.for_meeting(meeting_id)
-
-  @doc """
-  The meetings a booking payment paid for: its meeting, or every session of
-  its series in series order; `[]` once they are gone. See
-  `HeldMeetings.meetings_for/1`.
-  """
-  @spec meetings_for_payment(booking_payment()) :: [MeetingSchema.t()]
-  defdelegate meetings_for_payment(payment), to: HeldMeetings, as: :meetings_for
-
-  @doc """
-  Whether none of the meetings a booking payment paid for goes ahead any
-  more (each cancelled, expired or otherwise released), so whatever of it
-  remains is owed back. The rule the outstanding-refunds list applies.
-  """
-  @spec series_released?(booking_payment()) :: boolean()
-  def series_released?(payment) do
-    case HeldMeetings.meetings_for(payment) do
-      [] -> false
-      meetings -> Enum.all?(meetings, &MeetingState.released_status?(&1.status))
-    end
-  end
-
-  @doc "Fetches the one booking payment of a paid series, or `nil`."
-  @spec payment_for_series(term()) :: booking_payment() | nil
-  def payment_for_series(series_id), do: BookingPaymentQueries.by_series_id(series_id)
-
-  @doc """
-  Fetches the booking payment for a meeting only if `host_user_id` took it,
-  or `nil`.
-
-  Someone else who can see the meeting (its attendee, for instance) gets `nil`,
-  exactly as for an unpaid meeting: the payment is the host's business.
-  """
-  @spec payment_for_meeting(term(), integer()) :: booking_payment() | nil
-  def payment_for_meeting(meeting_id, host_user_id),
-    do: BookingPaymentQueries.for_meeting_for_host(meeting_id, host_user_id)
 
   @doc """
   What was refunded at Stripe, in cents, without what a lost dispute took
@@ -489,6 +317,17 @@ defmodule Tymeslot.MeetingPayments do
           {:ok, RefundSchema.t()} | {:error, Refunds.refusal()}
   defdelegate request_refund(payment, amount_cents, source, opts \\ []), to: Refunds
 
+  @doc """
+  Locks a payment and records a refund of whatever it has left, held back
+  until its dispute closes when it is disputed; see
+  `Refunds.request_remaining_refund_locked/3`.
+  """
+  @spec request_remaining_refund(Ecto.UUID.t(), integer(), Refunds.refund_source()) ::
+          {:ok, RefundSchema.t() | :none} | {:error, Refunds.refusal()}
+  defdelegate request_remaining_refund(payment_id, host_user_id, source),
+    to: Refunds,
+    as: :request_remaining_refund_locked
+
   @doc "Makes one attempt at a recorded refund; see `Refunds.execute/2`."
   @spec execute_refund(RefundSchema.t(), keyword()) :: Refunds.attempt_result()
   defdelegate execute_refund(refund, opts \\ []), to: Refunds, as: :execute
@@ -498,74 +337,22 @@ defmodule Tymeslot.MeetingPayments do
           Refunds.attempt_result()
   defdelegate refund_now(payment, amount_cents, source, opts \\ []), to: Refunds
 
-  # ---------------------------------------------------------------------------
-  # Checkout
-  # ---------------------------------------------------------------------------
-
   @doc """
-  Creates a Stripe Checkout Session for an `awaiting_payment` meeting.
-
-  Returns the Stripe-hosted checkout URL and the persisted `booking_payment` row.
+  Moves the payment of the seat `old_participant_id` to the seat it was
+  moved to (`new_participant` on `new_meeting`), keeping its status,
+  amount and refunds: a moved seat keeps its payment, and no price
+  difference is charged or refunded. A free seat has no payment, and
+  nothing changes. Inside the move's transaction, under its meeting locks,
+  so the payment row is locked after them (see
+  `SeatPaymentQueries.move_to_participant/3` for why that order is safe).
   """
-  @spec create_checkout_session(MeetingSchema.t()) ::
-          {:ok, CheckoutSessions.create_result()} | {:error, term()}
-  defdelegate create_checkout_session(meeting),
-    to: CheckoutSessions,
-    as: :create_session_for_booking
+  @spec move_seat_payment(binary(), %{id: binary()}, %{id: binary()}) :: :ok
+  def move_seat_payment(old_participant_id, new_participant, new_meeting) do
+    _moved =
+      SeatPaymentQueries.move_to_participant(old_participant_id, new_participant, new_meeting)
 
-  @doc """
-  Opens one Stripe Checkout for every session of a paid series, held
-  `awaiting_payment`, at the series' unit price times its sessions. See
-  `CheckoutSessions.create_session_for_series/1`.
-  """
-  @spec create_checkout_session_for_series(Tymeslot.BookingSeries.SeriesSchema.t()) ::
-          {:ok, CheckoutSessions.create_result()} | {:error, term()}
-  defdelegate create_checkout_session_for_series(series),
-    to: CheckoutSessions,
-    as: :create_session_for_series
-
-  @doc """
-  Expires every session of a paid series still awaiting payment, inside
-  the caller's transaction or its own. See `HeldMeetings.expire_series/1`.
-  """
-  @spec expire_held_series(Tymeslot.BookingSeries.SeriesSchema.t() | binary() | nil) ::
-          {:ok, :expired, MeetingSchema.t()}
-          | {:ok, :unchanged, String.t() | nil}
-          | {:error, term()}
-  defdelegate expire_held_series(series), to: HeldMeetings, as: :expire_series
-
-  @doc """
-  Whether a checkout-cancelled page's `return_token` proves the visitor came
-  back from the checkout of the meeting `meeting_id`. See
-  `CheckoutSessions.returned_from_checkout?/2`.
-  """
-  @spec returned_from_checkout?(String.t(), String.t() | nil) :: boolean()
-  defdelegate returned_from_checkout?(meeting_id, return_token), to: CheckoutSessions
-
-  @doc """
-  Expires the open Stripe Checkout of a booking its guest has just left, so
-  its hold ends now rather than at the checkout's timeout. See
-  `CheckoutSessions.abandon_checkout/1`.
-  """
-  @spec abandon_checkout(String.t()) :: :ok | {:error, term()}
-  defdelegate abandon_checkout(meeting_id), to: CheckoutSessions
-
-  @doc """
-  Schedules the end of the open Stripe Checkout of a booking being
-  cancelled while it awaits payment, inside the cancelling transaction. See
-  `CheckoutSessions.schedule_close/1`.
-  """
-  @spec schedule_checkout_close(MeetingSchema.t()) :: :ok | {:error, term()}
-  defdelegate schedule_checkout_close(meeting), to: CheckoutSessions, as: :schedule_close
-
-  @doc """
-  What an attendee returning from Stripe Checkout should be told about their
-  booking: still `:processing`, `:failed`, `:awaiting_approval`, `:declined`,
-  `:expired`, `:confirmed` or `:cancelled`. See `CheckoutOutcome` for the rules.
-  """
-  @spec checkout_outcome(booking_payment() | nil, MeetingSchema.t() | nil) ::
-          CheckoutOutcome.t()
-  defdelegate checkout_outcome(payment, meeting), to: CheckoutOutcome, as: :classify
+    :ok
+  end
 
   # ---------------------------------------------------------------------------
   # Currency
@@ -621,24 +408,4 @@ defmodule Tymeslot.MeetingPayments do
           | {:error, :unsupported_currency | :pending_payments_exist}
           | {:error, term()}
   defdelegate change_default_currency(account, currency), to: AccountCurrency
-
-  # ---------------------------------------------------------------------------
-  # Stripe receipt URL
-  # ---------------------------------------------------------------------------
-
-  @doc """
-  Fetches the Stripe-hosted receipt URL for a charge via the Connect API.
-
-  Returns `{:ok, url}` when a URL is present, `{:ok, nil}` when the charge
-  has no receipt URL, or `{:error, reason}` when the Stripe call fails.
-  """
-  @spec retrieve_charge_receipt_url(charge_id :: String.t(), account_id :: String.t()) ::
-          {:ok, String.t() | nil} | {:error, term()}
-  def retrieve_charge_receipt_url(charge_id, account_id) do
-    case Charges.retrieve(charge_id, connect_account: account_id) do
-      {:ok, %{"receipt_url" => url}} when is_binary(url) and url != "" -> {:ok, url}
-      {:ok, _other} -> {:ok, nil}
-      {:error, reason} -> {:error, reason}
-    end
-  end
 end

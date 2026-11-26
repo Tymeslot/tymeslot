@@ -41,6 +41,11 @@ defmodule Tymeslot.Announcements.Catalog do
   @spanish_published_at ~U[2026-11-02 00:00:00Z]
   @spanish_expires_at ~U[2026-12-02 00:00:00Z]
 
+  # set at release
+  @paid_group_sessions_published_at ~U[2026-11-18 00:00:00Z]
+  # set at release
+  @paid_group_sessions_expires_at ~U[2026-12-18 00:00:00Z]
+
   @recurring_bookings_published_at ~U[2026-11-17 00:00:00Z]
   @recurring_bookings_expires_at ~U[2026-12-17 00:00:00Z]
 
@@ -52,6 +57,7 @@ defmodule Tymeslot.Announcements.Catalog do
     # One builder per announcement keeps this ordered list trivial and each
     # entry's translatable copy readable in isolation.
     [
+      paid_group_sessions(),
       recurring_bookings(),
       calendar_redesign(),
       spanish(),
@@ -62,6 +68,25 @@ defmodule Tymeslot.Announcements.Catalog do
       video_providers(),
       time_off()
     ]
+  end
+
+  defp paid_group_sessions do
+    %Announcement{
+      key: "paid_group_sessions",
+      title: dgettext("onboarding", "Charge for your group sessions"),
+      body:
+        dgettext(
+          "onboarding",
+          "A group meeting type can now take payment. Set a price and each person pays for " <>
+            "their own spot when they book, including any guests they bring. Their spot is " <>
+            "held while they pay, and if you cancel the session, everyone still booked can " <>
+            "be refunded in full."
+        ),
+      cta_label: dgettext("onboarding", "Read the docs"),
+      cta_docs_slug: "payments",
+      published_at: @paid_group_sessions_published_at,
+      expires_at: @paid_group_sessions_expires_at
+    }
   end
 
   defp recurring_bookings do

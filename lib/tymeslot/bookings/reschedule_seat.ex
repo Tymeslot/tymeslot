@@ -54,14 +54,11 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
 
   require Logger
 
-  alias Ecto.UUID
   alias Tymeslot.Auth
   alias Tymeslot.Availability.Schedules
-  alias Tymeslot.Bookings.BuildParams
   alias Tymeslot.Bookings.CalendarCheck
   alias Tymeslot.Bookings.CalendarJobs
   alias Tymeslot.Bookings.Cancel
-  alias Tymeslot.Bookings.MeetingAttributes
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Bookings.SeatEffects
   alias Tymeslot.Bookings.SeatRelease
@@ -69,6 +66,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   alias Tymeslot.Bookings.Validation
   alias Tymeslot.BookingSeries
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.GroupScheduling
@@ -78,6 +76,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.PlannedSessions
+  alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Meetings.SeatLookup
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.FixedDates
@@ -314,7 +313,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   end
 
   # The live target meeting's own snapshotted capacity governs when the move
-  # joins an existing slot (`GroupScheduling.join_meeting/3` reads it
+  # joins an existing slot (`SeatWrites.take_seat/5` reads it
   # directly); the type's `max_participants` only seeds the capacity of a
   # brand-new slot, where the current limit is authoritative rather than the
   # old meeting's capacity.
@@ -322,7 +321,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     %{max_participants: max_participants} = meeting_type
 
     old_meeting
-    |> new_slot_attrs(new_times, participant)
+    |> SeatEffects.rebuilt_slot_attrs(new_times, participant)
     |> GroupScheduling.book_seat(seat_request(participant, guest_emails, max_participants),
       also_lock: old_meeting.id,
       exclude_from_conflicts: fn ->
@@ -341,20 +340,26 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   # meeting is left out of the conflict check only when `vacate_old_seat/2`
   # does cancel it: beside a held seat it is held again, still on its time.
   # A planned session is never vacated: it stays when its last participant
-  # moves away (`SeatRelease.cancel_if_emptied/1`).
+  # moves away (`SeatRelease.cancel_if_emptied/1`), as does a meeting with
+  # a seat held for a booker still paying.
   defp last_live_seat?(%{planned: true}, _participant), do: false
 
   defp last_live_seat?(old_meeting, participant) do
     ParticipantQueries.count_live_held_for_meeting(old_meeting.id) == 1 and
+      SeatHolds.seats_held(old_meeting.id) == 0 and
       match?({:ok, %{cancelled_at: nil}}, ParticipantQueries.get(participant.id))
   end
 
-  # Runs inside the seat transaction: vacates the old seat and brings a held
-  # target slot to life. The outcome reaches `after_commit/3` as the
-  # booking's `:on_booked_result`.
+  # Runs inside the seat transaction: vacates the old seat, brings a held
+  # target slot to life, and moves the seat's payment, if it has one, to the
+  # new seat (no price difference is charged or refunded). The outcome
+  # reaches `after_commit/3` as the booking's `:on_booked_result`.
   defp settle_move(booking, old_meeting, participant) do
     with {:ok, vacated} <- vacate_old_seat(old_meeting, participant),
          {:ok, slot} <- activate_if_held(booking) do
+      :ok =
+        MeetingPayments.move_seat_payment(participant.id, booking.participant, booking.meeting)
+
       {:ok, %{vacated: vacated, slot: slot}}
     end
   end
@@ -424,6 +429,11 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   defp handle_move({:error, :booking_limit_reached}, _old_meeting, _participant),
     do: {:error, :booking_limit_reached}
 
+  # The mover already holds a live seat (or a hold) at the target slot, found
+  # under the lock before the insert; the index catches the rest below.
+  defp handle_move({:error, :already_booked}, old_meeting, participant),
+    do: log_and_bounce(old_meeting, participant, :already_booked, :already_booked)
+
   defp handle_move({:error, %Ecto.Changeset{} = changeset}, old_meeting, participant) do
     cond do
       # The first-booker race exhausted book_seat/3's retry: the target slot
@@ -455,41 +465,6 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
     )
 
     {:error, error}
-  end
-
-  # Builds the meeting-creation attrs `book_seat/3` passes to `Scheduling`
-  # when no live group meeting exists at the target slot yet, routed through
-  # the same `MeetingAttributes.build/1` builder `CreateGroup` uses
-  # rather than a second hand-built map — so a slot created by a seat move
-  # carries the same video integration, description, location, locale,
-  # attachments and reminder configuration a fresh booking would give it.
-  # `old_meeting.title` (already just the type's name — group meetings are
-  # never titled after a single booker) replaces the booker-addressed title
-  # the builder produces, exactly as `SeatEffects.slot_attrs/2` does for
-  # `CreateGroup`.
-  defp new_slot_attrs(old_meeting, new_times, participant) do
-    %BuildParams{
-      meeting_uid: UUID.generate(),
-      form_data: %{
-        "name" => participant.name,
-        "email" => participant.email,
-        "message" => participant.message
-      },
-      start_datetime: new_times.start_time,
-      end_datetime: new_times.end_time,
-      duration_minutes: new_times.duration_minutes,
-      user_timezone: participant.timezone,
-      organizer_user_id: old_meeting.organizer_user_id,
-      meeting_type_id: old_meeting.meeting_type_id,
-      attendee_locale: participant.locale,
-      # The questions the participant's answers belong to: the slot they
-      # leave, as the booking keeps them, so a slot this move creates shows
-      # them and the participant's copy of them names the same questions.
-      custom_fields_snapshot: old_meeting.custom_fields_snapshot,
-      custom_field_answers: participant.custom_field_answers
-    }
-    |> MeetingAttributes.build()
-    |> SeatEffects.slot_attrs(old_meeting.title)
   end
 
   # Matches Section B's seat_request() contract:

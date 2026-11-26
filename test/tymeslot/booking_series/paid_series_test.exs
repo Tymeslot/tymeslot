@@ -23,8 +23,10 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
   alias Tymeslot.BookingSeries.Occurrence
   alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.CalendarMock
-  alias Tymeslot.MeetingPayments
+
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired
@@ -74,7 +76,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
              book(host, type, 3)
 
     assert url =~ session_id()
-    {series, MeetingPayments.payment_for_series(series.id)}
+    {series, BookingPayments.payment_for_series(series.id)}
   end
 
   defp total, do: 3 * price_cents()
@@ -149,7 +151,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
 
     {series, payment} = book_three(host, type)
     [first | _rest] = meetings()
-    :ok = Phoenix.PubSub.subscribe(Tymeslot.PubSub, MeetingPayments.payment_topic(first.id))
+    :ok = Phoenix.PubSub.subscribe(Tymeslot.PubSub, Checkout.payment_topic(first.id))
 
     pay(series)
 
@@ -182,7 +184,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
   test "an expired checkout releases every occurrence", %{host: host, type: type} do
     {series, payment} = book_three(host, type)
     [first | _rest] = meetings()
-    :ok = Phoenix.PubSub.subscribe(Tymeslot.PubSub, MeetingPayments.payment_topic(first.id))
+    :ok = Phoenix.PubSub.subscribe(Tymeslot.PubSub, Checkout.payment_topic(first.id))
 
     lapse(series)
 
@@ -261,7 +263,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
       payment: payment
     } do
       [_first, second, _third] = meetings()
-      held = MeetingPayments.payment_for_meeting(second.id, host.user.id)
+      held = BookingPayments.payment_for_meeting(second.id, host.user.id)
       assert held.id == payment.id
 
       assert {:ok, {:refund, 5_000}} = Meetings.resolve_cancellation_refund(held, %{})
@@ -298,7 +300,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesTest do
       |> Repo.update!()
 
       [first | _rest] = meetings()
-      held = MeetingPayments.payment_for_meeting(first.id, host.user.id)
+      held = BookingPayments.payment_for_meeting(first.id, host.user.id)
 
       assert {:ok, {:refund, 3_000}} = Meetings.resolve_cancellation_refund(held, %{})
     end

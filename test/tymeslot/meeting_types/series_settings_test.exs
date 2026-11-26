@@ -261,6 +261,62 @@ defmodule Tymeslot.MeetingTypes.SeriesSettingsTest do
     assert errors(allowed, :series_mode) == []
   end
 
+  test "a paid group type cannot offer a series" do
+    assert SeriesSettings.conflicts(%{
+             series_mode: :flexible,
+             payment_required: true,
+             max_participants: 5
+           }) == [{:payment_required, "Paid group meeting types cannot be booked as a series."}]
+  end
+
+  test "a paid one-to-one type and a free group type can" do
+    assert SeriesSettings.conflicts(%{
+             series_mode: :flexible,
+             payment_required: true,
+             max_participants: 1
+           }) == []
+
+    assert SeriesSettings.conflicts(%{
+             series_mode: :flexible,
+             payment_required: false,
+             max_participants: 5
+           }) == []
+  end
+
+  test "making a group series paid is refused on the payment field" do
+    cs =
+      changeset(
+        %{payment_required: true, price_cents: 5000},
+        stored_series(%{series_mode: :recurring, series_frequency: :weekly, max_participants: 5})
+      )
+
+    assert {"Paid group meeting types cannot be booked as a series.", []} in errors(
+             cs,
+             :payment_required
+           )
+
+    assert errors(cs, :series_mode) == []
+  end
+
+  test "making a paid series a group is refused on the payment field" do
+    cs =
+      changeset(
+        %{max_participants: 5},
+        stored_series(%{
+          series_mode: :recurring,
+          series_frequency: :weekly,
+          payment_required: true,
+          price_cents: 5000,
+          max_participants: 1
+        })
+      )
+
+    assert {"Paid group meeting types cannot be booked as a series.", []} in errors(
+             cs,
+             :payment_required
+           )
+  end
+
   describe "email confirmation" do
     @verification_message "Meeting types that ask invitees to confirm their email cannot be booked as a series."
 
@@ -305,6 +361,16 @@ defmodule Tymeslot.MeetingTypes.SeriesSettingsTest do
 
       assert SeriesSettings.offer(type) == %{offered?: false, single_allowed?: true}
     end
+  end
+
+  test "a paid group type saved with a series is not offered it, and books single sessions" do
+    paid_group =
+      stored_series(%{series_required: true, payment_required: true, max_participants: 5})
+
+    paid_one_to_one = stored_series(%{payment_required: true, max_participants: 1})
+
+    assert SeriesSettings.offer(paid_group) == %{offered?: false, single_allowed?: true}
+    assert SeriesSettings.offered?(paid_one_to_one)
   end
 
   test "turning the series off clears its settings" do

@@ -32,6 +32,7 @@ defmodule Tymeslot.Meetings.EmailVerificationSeatsTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.SeatBroadcast
+  alias Tymeslot.Meetings.SeatHoldSchema
   alias Tymeslot.Meetings.Workers.EmailVerificationExpiryWorker
   alias Tymeslot.Meetings.Workers.EmailVerificationSweepWorker
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
@@ -384,6 +385,21 @@ defmodule Tymeslot.Meetings.EmailVerificationSeatsTest do
       assert reload(slot).status == :awaiting_verification
       assert reload(second).cancelled_at == nil
       assert_receive {:seat_update, _type_id}
+    end
+
+    test "an expired seat beside an open seat hold leaves the slot awaiting payment", ctx do
+      slot = slot(ctx, :awaiting_verification)
+      seat = held_seat(slot, "first@example.com")
+      hold = insert(:seat_hold, meeting: slot, email: "payer@example.com")
+
+      assert {:ok, _expired} = EmailVerification.expire_seat(seat)
+
+      assert %{status: :awaiting_payment, verification_deadline_at: nil, cancelled_at: nil} =
+               reload(slot)
+
+      assert Repo.get!(SeatHoldSchema, hold.id).status == :held
+      assert_receive {:seat_update, _type_id}
+      assert_nothing_started()
     end
 
     test "a held slot past its own deadline outlives it while a seat's hold runs", ctx do

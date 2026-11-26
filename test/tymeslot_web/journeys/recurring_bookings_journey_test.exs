@@ -31,7 +31,8 @@ defmodule TymeslotWeb.Journeys.RecurringBookingsJourneyTest do
   alias Plug.Test
   alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.MeetingPayments
+
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
@@ -311,7 +312,7 @@ defmodule TymeslotWeb.Journeys.RecurringBookingsJourneyTest do
     assert statuses(user) == [:confirmed, :cancelled, :confirmed, :confirmed, :confirmed]
 
     assert %{status: :partially_refunded, refunded_amount_cents: refunded} =
-             MeetingPayments.payment_for_series(series_id)
+             BookingPayments.payment_for_series(series_id)
 
     assert refunded == Paid.price_cents()
   end

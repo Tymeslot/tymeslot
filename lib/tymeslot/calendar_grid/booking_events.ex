@@ -115,8 +115,9 @@ defmodule Tymeslot.CalendarGrid.BookingEvents do
     if HostManaged.managed?(meeting), do: nil, else: presence(meeting.attendee_email)
   end
 
-  # Counted like the meetings list and the booking page count them: a
-  # booker's guests hold seats too.
+  # The people booked: a booker's guests hold seats too, but a seat still
+  # held for a booker paying is nobody yet (`Seats.seats_taken/1`). A slot
+  # holding only such seats is hidden from the organiser altogether.
   defp seats_taken(meeting) do
     if Meetings.group?(meeting), do: Seats.seats_taken(meeting.id), else: 0
   end

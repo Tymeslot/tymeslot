@@ -27,7 +27,8 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
   alias Tymeslot.BookingSeries
   alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.CalendarMock
-  alias Tymeslot.MeetingPayments
+
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.MeetingPayments.Workers.ExecuteRefund
   alias Tymeslot.Meetings
@@ -224,7 +225,7 @@ defmodule TymeslotWeb.Dashboard.BookingsSeriesTest do
       %{
         host: host,
         series: series,
-        payment: MeetingPayments.payment_for_series(series.id),
+        payment: BookingPayments.payment_for_series(series.id),
         view: meetings_dashboard(conn, host.user)
       }
     end

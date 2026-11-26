@@ -153,14 +153,20 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SeriesHandlers d
   defp put_count(series, _field, _count), do: series
 
   # What `SeriesSettings.conflicts/1` reads, from the form's current state.
+  # The form's socket calls the group toggle `group_bookings_enabled`, the
+  # series section's assigns `group`; either one says whether the type will
+  # hold more than one participant.
   defp settings(assigns) do
     type = assigns.type || %{}
+    group? = Map.get(assigns, :group_bookings_enabled, Map.get(assigns, :group)) == true
 
     %{
       one_off: Map.get(type, :one_off) == true,
       invitation_only: Map.get(type, :invitation_only) == true,
       fixed_dates: Map.get(assigns, :fixed_dates) == true,
-      requires_email_verification: Map.get(assigns, :requires_email_verification) == true
+      requires_email_verification: Map.get(assigns, :requires_email_verification) == true,
+      payment_required: Map.get(assigns, :payment_required) == true,
+      max_participants: if(group?, do: 2, else: 1)
     }
   end
 

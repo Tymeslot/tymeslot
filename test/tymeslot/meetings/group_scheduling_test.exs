@@ -300,6 +300,18 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
   end
 
   describe "book_seat/2 — status is forced to confirmed" do
+    # Only a seat hold (`:hold`) creates a slot awaiting payment; a caller's
+    # status never does.
+    test "a booked first seat confirms the slot whatever status the attrs carry", ctx do
+      attrs = %{
+        meeting_attrs(ctx.user, ctx.meeting_type, ctx.start_time)
+        | status: :awaiting_payment
+      }
+
+      assert {:ok, %{meeting: %MeetingSchema{status: :confirmed}, created_meeting?: true}} =
+               GroupScheduling.book_seat(attrs, seat_request("one@example.com"))
+    end
+
     test "a group meeting is created confirmed even if attrs omit status, preserving the single-row invariant",
          ctx do
       attrs_without_status =
@@ -333,13 +345,12 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
 
       assert {:ok, _first} = GroupScheduling.book_seat(attrs, seat_request("twice@example.com"))
 
-      assert {:error, %Ecto.Changeset{} = changeset} =
+      assert {:error, :already_booked} =
                GroupScheduling.book_seat(
                  Map.delete(attrs, :status),
                  seat_request("twice@example.com")
                )
 
-      assert {"already has a spot at this time", _opts} = changeset.errors[:meeting_id]
       assert length(ParticipantQueries.list_live_for_meeting(hd(Repo.all(MeetingSchema)).id)) == 1
     end
 
@@ -348,7 +359,7 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
 
       assert {:ok, _first} = GroupScheduling.book_seat(attrs, seat_request("Mixed@Example.com"))
 
-      assert {:error, %Ecto.Changeset{}} =
+      assert {:error, :already_booked} =
                GroupScheduling.book_seat(
                  Map.delete(attrs, :status),
                  seat_request("mixed@example.com")

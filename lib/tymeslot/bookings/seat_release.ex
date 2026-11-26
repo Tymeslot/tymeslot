@@ -25,6 +25,11 @@ defmodule Tymeslot.Bookings.SeatRelease do
   `cancel_if_emptied/1`, so that a move off a meeting's last seat commits
   with that meeting cancelled or not at all.
 
+  A paid seat hold (`Tymeslot.Meetings.SeatHolds`) that lapses or fails
+  asks the same question through `release_hold/2`, which settles the
+  meeting with `settle_after_hold/1`: a slot only holds created goes away
+  as an unpaid booking does, by expiring.
+
   ## Held seats outlive the last counting one
 
   A seat awaiting its booker's email verification is not live in the sense
@@ -68,11 +73,13 @@ defmodule Tymeslot.Bookings.SeatRelease do
   alias Ecto.UUID
   alias Tymeslot.Availability
   alias Tymeslot.Bookings.Cancel
+  alias Tymeslot.Bookings.SeatEffects
   alias Tymeslot.Bookings.Workers.RescheduleRequestExpiryWorker
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Jobs
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.GroupMeetingQueries
@@ -80,13 +87,34 @@ defmodule Tymeslot.Bookings.SeatRelease do
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingTransitionQueries
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Meetings.SeatHolds
+  alias Tymeslot.Meetings.SeatHoldSchema
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Repo
   alias Tymeslot.Workers.VideoRoomWorker
   alias Tymeslot.Workers.VideoSyncWorker
 
+  @type settlement ::
+          {:ok, :kept}
+          | {:ok, :expired, Meeting.t()}
+          | {:ok, :cancelled, Meeting.t()}
+          | {:ok, :held, Meeting.t()}
+
+  @typedoc """
+  A released hold, for `announce_released/1` once its transaction commits:
+  the meeting as locked before the release, whether this release freed the
+  hold (`false` when it was no longer held), and how the meeting settled.
+  """
+  @type hold_release :: %{
+          hold_id: binary(),
+          meeting: Meeting.t() | nil,
+          released?: boolean(),
+          settled: settlement()
+        }
+
   @doc """
-  Cancels `meeting` when no live participant remains on it.
+  Cancels `meeting` when no live participant remains on it and no seat is
+  held for a booker paying for one (`Tymeslot.Meetings.SeatHolds`).
 
   Returns `{:ok, :meeting_cancelled}` when it cancelled the meeting (having
   run the cancellation side effects), `{:ok, :returned_to_held}` when held
@@ -193,6 +221,12 @@ defmodule Tymeslot.Bookings.SeatRelease do
       ParticipantQueries.count_live_for_meeting(meeting.id) > 0 ->
         {:ok, :seats_remain}
 
+      # A booker mid-checkout holds a seat as a participant does: the
+      # meeting stays for them, and settles once the hold converts or is
+      # released (`settle_after_hold/1`).
+      SeatHolds.seats_held(meeting.id) > 0 ->
+        {:ok, :seats_remain}
+
       true ->
         vacate(locked, ParticipantQueries.latest_held_deadline(meeting.id))
     end
@@ -241,6 +275,139 @@ defmodule Tymeslot.Bookings.SeatRelease do
       {:ok, cancelled} -> {:ok, {:cancelled, cancelled}}
       {:error, _changeset} = error -> error
     end
+  end
+
+  @doc """
+  Settles the group meeting `meeting_id` once a seat hold on it has been
+  converted or released, inside the caller's transaction and under the
+  meeting's row lock:
+
+    * seats still held or a live participant, or a session the host
+      planned: `{:ok, :kept}`;
+    * nobody left on a meeting still awaiting payment (a slot only holds
+      ever took): expired as an unpaid booking is, `{:ok, :expired, meeting}`,
+      for `announce_released/1` after commit;
+    * nobody left on a confirmed meeting: cancelled as `cancel_if_emptied/1`
+      cancels it, `{:ok, :cancelled, meeting}`, for
+      `Cancel.finalise_cancellation/1` after commit, or, when seats awaiting
+      email verification remain, held for verification again,
+      `{:ok, :held, meeting}` (the meeting as it was), for
+      `finish_return_to_held/1` after commit.
+
+  A caller that releases the hold in the same transaction locks the meeting
+  first (`release_hold/2` does).
+  """
+  @spec settle_after_hold(binary()) :: settlement() | {:error, Ecto.Changeset.t()}
+  def settle_after_hold(meeting_id) when is_binary(meeting_id) do
+    meeting_id
+    |> GroupMeetingQueries.lock_for_update()
+    |> settle_locked()
+  end
+
+  defp settle_locked(nil), do: {:ok, :kept}
+  defp settle_locked(%Meeting{planned: true}), do: {:ok, :kept}
+
+  defp settle_locked(%Meeting{} = meeting) do
+    cond do
+      SeatHolds.seats_held(meeting.id) > 0 -> {:ok, :kept}
+      ParticipantQueries.count_live_for_meeting(meeting.id) > 0 -> {:ok, :kept}
+      meeting.status == :awaiting_payment -> expire_held(meeting)
+      meeting.status == :confirmed -> cancel_emptied(meeting)
+      true -> {:ok, :kept}
+    end
+  end
+
+  defp expire_held(meeting) do
+    case Checkout.expire_held_meeting(meeting.id) do
+      {:ok, :expired, expired} -> {:ok, :expired, expired}
+      {:ok, :unchanged} -> {:ok, :kept}
+      {:error, _changeset} = error -> error
+    end
+  end
+
+  defp cancel_emptied(meeting) do
+    case vacate(meeting, ParticipantQueries.latest_held_deadline(meeting.id)) do
+      {:ok, {:cancelled, cancelled}} -> {:ok, :cancelled, cancelled}
+      {:ok, {:held, confirmed}} -> {:ok, :held, confirmed}
+      {:error, _changeset} = error -> error
+    end
+  end
+
+  @doc """
+  Releases `hold` for `reason` and settles its meeting
+  (`settle_after_hold/1`), inside the caller's transaction. Locks the
+  meeting before the hold, after any payment row the caller holds. A hold
+  no longer held keeps its first outcome; its meeting is settled all the
+  same. Pass the result to `announce_released/1` once committed.
+  """
+  @spec release_hold(SeatHoldSchema.t(), SeatHoldSchema.release_reason()) ::
+          {:ok, hold_release()} | {:error, Ecto.Changeset.t()}
+  def release_hold(%SeatHoldSchema{} = hold, reason) do
+    meeting = GroupMeetingQueries.lock_for_update(hold.meeting_id)
+    {:ok, released} = SeatHolds.release(hold, reason)
+
+    case settle_after_hold(hold.meeting_id) do
+      {:error, _changeset} = error ->
+        error
+
+      settled ->
+        {:ok,
+         %{
+           hold_id: hold.id,
+           meeting: meeting,
+           released?: released != :unchanged,
+           settled: settled
+         }}
+    end
+  end
+
+  @doc """
+  Releases a hold whose payment never completed (its checkout could not be
+  opened, or its outcome never arrived), as one transaction: its pending
+  payment failed first (`Checkout.fail_seat_payment/1`), then the hold
+  released as `:failed` (`release_hold/2`), and announced once committed.
+  """
+  @spec release_unpaid_hold(SeatHoldSchema.t()) :: {:ok, hold_release()} | {:error, term()}
+  def release_unpaid_hold(%SeatHoldSchema{} = hold) do
+    result =
+      Repo.transaction(fn ->
+        with {:ok, _payment} <- Checkout.fail_seat_payment(hold.id),
+             {:ok, released} <- release_hold(hold, :failed) do
+          released
+        else
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+
+    with {:ok, released} <- result do
+      :ok = announce_released(released)
+      result
+    end
+  end
+
+  @doc """
+  Announces a released hold (`release_hold/2`) once its transaction has
+  committed: the meeting it settled expired or cancelled with the usual
+  effects, the slot's seats offered again, and, when this release freed the
+  hold, the booker's payment page told the hold is gone. A hold no longer
+  held was announced by whoever settled it first (a conversion, or an
+  earlier release), so nothing goes to its topic a second time.
+  """
+  @spec announce_released(hold_release()) :: :ok
+  def announce_released(%{hold_id: hold_id, meeting: meeting, settled: settled} = release) do
+    case settled do
+      # A hold-created meeting that expires had no booker but the hold's,
+      # who hears on the hold's topic below; the slot is offered again by
+      # `broadcast_and_invalidate/1`.
+      {:ok, :expired, _expired} -> :ok
+      {:ok, :cancelled, cancelled} -> Cancel.finalise_cancellation(cancelled)
+      {:ok, :held, confirmed} -> finish_return_to_held(confirmed)
+      {:ok, :kept} -> :ok
+    end
+
+    if meeting, do: SeatEffects.broadcast_and_invalidate(meeting)
+    if release.released?, do: SeatHolds.broadcast(hold_id, :expired)
+    :ok
   end
 
   # A held slot carries no room and no calendar event; a fresh

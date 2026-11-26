@@ -41,6 +41,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Availability.Offer
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Themes.Catalog
   alias TymeslotWeb.Components.PaymentHelpers
@@ -229,11 +230,20 @@ defmodule TymeslotWeb.Themes.Shared.BookingText do
   writes amounts ("€45.00", "45,00 €"), or `nil` for a free type, for a paid
   one without a price, and when the currency is unknown. A demo persona's
   meeting type is a plain map without the fields, and is `nil` too.
+
+  A group type charges each seat (`MeetingTypes.group_type?/1`), so its price
+  reads "€20.00 per person" wherever it is listed; only the submit shows
+  what a booking with guests costs in all (`SubmitPrice.label/5`).
   """
   @spec price_label(map() | nil, String.t() | nil, String.t()) :: String.t() | nil
-  def price_label(%{payment_required: true, price_cents: cents}, currency, locale)
-      when is_integer(cents) and cents > 0 and is_binary(currency),
-      do: PaymentHelpers.format_amount(cents, currency, locale)
+  def price_label(%{payment_required: true, price_cents: cents} = meeting_type, currency, locale)
+      when is_integer(cents) and cents > 0 and is_binary(currency) do
+    formatted = PaymentHelpers.format_amount(cents, currency, locale)
+
+    if MeetingTypes.group_type?(meeting_type),
+      do: dgettext("booking", "%{price} per person", price: formatted),
+      else: formatted
+  end
 
   def price_label(_meeting_type, _currency, _locale), do: nil
 

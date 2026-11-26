@@ -20,9 +20,12 @@ defmodule Tymeslot.Bookings.SeatEffects do
   that then rolls back.
   """
 
+  alias Ecto.UUID
   alias Tymeslot.Availability
   alias Tymeslot.Bookings.Activation
+  alias Tymeslot.Bookings.BuildParams
   alias Tymeslot.Bookings.CalendarJobs
+  alias Tymeslot.Bookings.MeetingAttributes
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.Notifications.Orchestrator
@@ -62,6 +65,44 @@ defmodule Tymeslot.Bookings.SeatEffects do
     meeting_attrs
     |> Map.drop(@booker_scoped_attrs)
     |> Map.merge(%{title: title, summary: title})
+  end
+
+  @doc """
+  The attrs of a new slot for `booker` (a participant moving their seat, or
+  a paid seat hold whose meeting lapsed before its payment landed) at
+  `times` (`:start_time`, `:end_time`, `:duration_minutes`), when no live
+  group meeting holds that slot any more: built from `old_meeting`, the
+  meeting the booker leaves, through the same `MeetingAttributes.build/1` a
+  fresh booking uses, so the slot carries the same video integration,
+  description, location, locale, attachments and reminder configuration a
+  fresh booking would give it. `old_meeting.title` (already just the type's
+  name, as a group meeting is never titled after a single booker) names it,
+  as `slot_attrs/2` does.
+  """
+  @spec rebuilt_slot_attrs(map(), map(), map()) :: map()
+  def rebuilt_slot_attrs(old_meeting, times, booker) do
+    %BuildParams{
+      meeting_uid: UUID.generate(),
+      form_data: %{
+        "name" => booker.name,
+        "email" => booker.email,
+        "message" => booker.message
+      },
+      start_datetime: times.start_time,
+      end_datetime: times.end_time,
+      duration_minutes: times.duration_minutes,
+      user_timezone: booker.timezone,
+      organizer_user_id: old_meeting.organizer_user_id,
+      meeting_type_id: old_meeting.meeting_type_id,
+      attendee_locale: booker.locale,
+      # The questions the booker's answers belong to: the slot they leave,
+      # as the booking keeps them, so the new slot shows them and the
+      # booker's copy of them names the same questions.
+      custom_fields_snapshot: old_meeting.custom_fields_snapshot,
+      custom_field_answers: booker.custom_field_answers
+    }
+    |> MeetingAttributes.build()
+    |> slot_attrs(old_meeting.title)
   end
 
   @doc "The calendar-job action a booked/moved seat implies."

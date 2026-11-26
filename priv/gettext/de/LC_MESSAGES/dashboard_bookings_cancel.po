@@ -1,0 +1,283 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} participant paid for this session (%{amount} still held)."
+msgid_plural "%{count} participants paid for this session (%{amount} still held)."
+msgstr[0] "%{count} Teilnehmer hat für diesen Termin bezahlt (%{amount} liegen noch bei Ihnen)."
+msgstr[1] "%{count} Teilnehmer haben für diesen Termin bezahlt (%{amount} liegen noch bei Ihnen)."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "A refund of %{amount} is already being processed."
+msgstr "Eine Rückerstattung von %{amount} wird bereits bearbeitet."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to cancel the meeting with %{name} scheduled for %{when}?"
+msgstr "Möchten Sie den Termin mit %{name} am %{when} wirklich absagen?"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to cancel this group meeting with %{count} participant scheduled for %{when}?"
+msgid_plural "Are you sure you want to cancel this group meeting with %{count} participants scheduled for %{when}?"
+msgstr[0] "Möchten Sie diesen Gruppentermin mit %{count} teilnehmenden Person am %{when} wirklich absagen?"
+msgstr[1] "Möchten Sie diesen Gruppentermin mit %{count} Teilnehmenden am %{when} wirklich absagen?"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to cancel “%{title}” scheduled for %{when}? Every guest is told."
+msgstr "Möchten Sie „%{title}“ am %{when} wirklich absagen? Alle Gäste werden benachrichtigt."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel Meeting"
+msgstr "Termin absagen"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel meeting"
+msgstr "Termin absagen"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel without refund."
+msgstr "Ohne Rückerstattung absagen."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled without a refund: the booking was not paid."
+msgstr "Ohne Rückerstattung abgesagt, da die Buchung nicht bezahlt wurde."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled without a refund: the payment is older than the 60-day refund window. You can refund it from Stripe."
+msgstr "Ohne Rückerstattung abgesagt, da die Zahlung außerhalb der Erstattungsfrist von 60 Tagen liegt. Sie können sie in Stripe erstatten."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled without a refund: the payment is under dispute. Settle the dispute in Stripe first."
+msgstr "Ohne Rückerstattung abgesagt, da die Zahlung angefochten wird. Klären Sie die Anfechtung zuerst in Stripe."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled without a refund: the payment's refundable balance changed meanwhile. Check it on the payments page."
+msgstr "Ohne Rückerstattung abgesagt, da sich der erstattungsfähige Betrag der Zahlung inzwischen geändert hat. Prüfen Sie ihn auf der Seite „Zahlungen“."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling won't refund %{count} participant (%{amount}): their payment is older than the 60-day refund window. You can refund it from Stripe."
+msgid_plural "Cancelling won't refund %{count} participants (%{amount}): their payments are older than the 60-day refund window. You can refund them from Stripe."
+msgstr[0] "Die Absage erstattet %{count} Teilnehmer (%{amount}) nichts, da die Zahlung außerhalb der Erstattungsfrist von 60 Tagen liegt. Sie können sie in Stripe erstatten."
+msgstr[1] "Die Absage erstattet %{count} Teilnehmern (%{amount}) nichts, da ihre Zahlungen außerhalb der Erstattungsfrist von 60 Tagen liegen. Sie können sie in Stripe erstatten."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling won't refund the attendee: the booking was not paid."
+msgstr "Die Absage erstattet dem Teilnehmer nichts, da die Buchung nicht bezahlt wurde."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling won't refund the attendee: the payment is older than the 60-day refund window. You can refund it from Stripe."
+msgstr "Die Absage erstattet dem Teilnehmer nichts, da die Zahlung außerhalb der Erstattungsfrist von 60 Tagen liegt. Sie können sie in Stripe erstatten."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling won't refund the attendee: the payment is under dispute. Settle the dispute in Stripe first."
+msgstr "Die Absage erstattet dem Teilnehmer nichts, da die Zahlung angefochten wird. Klären Sie die Anfechtung zuerst in Stripe."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling..."
+msgstr "Wird abgesagt…"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm cancellation"
+msgstr "Absage bestätigen"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Don't refund anyone."
+msgstr "Niemandem etwas erstatten."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Each participant gets back what they paid, and an email once their refund is issued."
+msgstr "Jeder Teilnehmer erhält den gezahlten Betrag zurück und eine E-Mail, sobald die Rückerstattung veranlasst ist."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Each participant's payment stays with you until you refund it from Payments."
+msgstr "Die Zahlung jedes Teilnehmers bleibt bei Ihnen, bis Sie sie unter „Zahlungen“ erstatten."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a valid partial refund amount."
+msgstr "Bitte geben Sie einen gültigen Teilrückerstattungsbetrag ein."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Failed to cancel meeting. Please try again."
+msgstr "Termin konnte nicht abgesagt werden. Bitte versuchen Sie es erneut."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Full refund."
+msgstr "Vollständige Rückerstattung."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "I understand the attendee will not receive a refund."
+msgstr "Mir ist bewusst, dass der Teilnehmer keine Rückerstattung erhält."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "I understand the participants get nothing back unless I refund them later from Payments."
+msgstr "Mir ist bewusst, dass die Teilnehmer nichts zurückbekommen, es sei denn, ich erstatte ihnen ihr Geld später unter „Zahlungen“."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Keep Meeting"
+msgstr "Termin beibehalten"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting cancelled and refund issued."
+msgstr "Termin abgesagt und Rückerstattung veranlasst."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting cancelled successfully"
+msgstr "Termin erfolgreich abgesagt"
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting cancelled, but Stripe declined the refund. Check the payment in your Stripe dashboard."
+msgstr "Termin abgesagt, aber Stripe hat die Rückerstattung abgelehnt. Prüfen Sie die Zahlung in Ihrem Stripe-Dashboard."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting cancelled. The refund is being processed and the attendee will be emailed when it goes through."
+msgstr "Termin abgesagt. Die Rückerstattung wird bearbeitet; sobald sie erfolgt ist, erhält der Teilnehmer eine E-Mail."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "No refund can be made: the booking was not paid."
+msgstr "Eine Rückerstattung ist nicht möglich, da die Buchung nicht bezahlt wurde."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "No refund can be made: the payment is older than the 60-day refund window. You can refund it from Stripe."
+msgstr "Eine Rückerstattung ist nicht möglich, da die Zahlung außerhalb der Erstattungsfrist von 60 Tagen liegt. Sie können sie in Stripe erstatten."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "No refund can be made: the payment is under dispute. Settle the dispute in Stripe first."
+msgstr "Eine Rückerstattung ist nicht möglich, da die Zahlung angefochten wird. Klären Sie die Anfechtung zuerst in Stripe."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Partial amount"
+msgstr "Teilbetrag"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Partial refund."
+msgstr "Teilweise Rückerstattung."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Refund amount exceeds the remaining refundable balance."
+msgstr "Der Rückerstattungsbetrag übersteigt den verbleibenden erstattungsfähigen Betrag."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Refund everyone in full."
+msgstr "Allen den vollen Betrag erstatten."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Refund only part of the booking amount."
+msgstr "Nur einen Teil des Buchungsbetrags erstatten."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Refund this session."
+msgstr "Diesen Termin erstatten."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Refunds one session's share of the series payment (%{amount})."
+msgstr "Erstattet den Anteil eines Termins an der Zahlung für die Serie (%{amount})."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Refunds the remaining balance (%{amount})."
+msgstr "Erstattet den Restbetrag (%{amount})."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Session cancelled. Refunds are on their way."
+msgstr "Termin abgesagt. Die Rückerstattungen sind unterwegs."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The attendee keeps no money. Use only if the attendee already agreed."
+msgstr "Der Teilnehmer erhält kein Geld zurück. Nur verwenden, wenn der Teilnehmer bereits zugestimmt hat."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This action cannot be undone. Every participant will be notified of the cancellation."
+msgstr "Diese Aktion kann nicht rückgängig gemacht werden. Alle Teilnehmenden werden über die Absage benachrichtigt."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This action cannot be undone. The attendee will be notified of the cancellation."
+msgstr "Diese Aktion kann nicht rückgängig gemacht werden. Der Teilnehmer wird über die Absage benachrichtigt."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "This booking was already cancelled, so no refund was issued."
+msgstr "Diese Buchung wurde bereits storniert, daher wurde keine Rückerstattung ausgelöst."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "This booking was already cancelled."
+msgstr "Diese Buchung wurde bereits storniert."
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This booking was paid. Choose how to handle the refund - the attendee always receives the full amount you refund."
+msgstr "Diese Buchung wurde bezahlt. Wählen Sie, wie mit der Rückerstattung verfahren werden soll - der Teilnehmer erhält stets den vollen Betrag, den Sie erstatten."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Tick the acknowledgement to cancel without refunding the attendee."
+msgstr "Aktivieren Sie das Kontrollkästchen, um ohne Rückerstattung an den Teilnehmer abzusagen."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Tick the acknowledgement to cancel without refunding the participants."
+msgstr "Aktivieren Sie das Kontrollkästchen, um ohne Rückerstattung an die Teilnehmer abzusagen."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "The payments for this meeting changed while this was open. Check them and choose again."
+msgstr "Die Zahlungen für diesen Termin haben sich geändert, während dieses Fenster geöffnet war. Prüfen Sie sie und wählen Sie erneut."
+
+#: lib/tymeslot_web/live/dashboard/bookings_management/cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Session cancelled. No payment could be refunded automatically: they are older than the 60-day refund window. You can refund them from Stripe."
+msgstr "Termin abgesagt. Keine Zahlung konnte automatisch erstattet werden, da sie außerhalb der Erstattungsfrist von 60 Tagen liegen. Sie können sie in Stripe erstatten."

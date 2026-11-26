@@ -43,6 +43,7 @@ defmodule Tymeslot.Emails.EmailActions do
   alias Tymeslot.Notifications.Email.BookingApprovalEmails
   alias Tymeslot.Notifications.Email.BookingVerificationEmails
   alias Tymeslot.Notifications.Email.CalendarSyncEmails
+  alias Tymeslot.Notifications.Email.CancellationEmails
   alias Tymeslot.Notifications.Email.EndChangeEmails
   alias Tymeslot.Notifications.Email.GroupMeetingEmails
   alias Tymeslot.Notifications.Email.GuestEmails
@@ -80,7 +81,7 @@ defmodule Tymeslot.Emails.EmailActions do
     # Meetings
     "send_confirmation_emails" => {["meeting_id"], {MeetingEmails, :handle_confirmation_emails}},
     "send_cancellation_emails" =>
-      {["meeting_id"], {MeetingEmails, :handle_cancellation_emails, :with_job_id}},
+      {["meeting_id"], {CancellationEmails, :handle_cancellation_emails, :with_job_id}},
     "send_reschedule_emails" =>
       {["meeting_id"], {RescheduleEmails, :handle_reschedule_emails, :with_job_id}},
     "send_end_change_emails" =>

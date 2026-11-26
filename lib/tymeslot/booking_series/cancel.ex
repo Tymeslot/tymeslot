@@ -64,6 +64,7 @@ defmodule Tymeslot.BookingSeries.Cancel do
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingConflictQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -195,7 +196,7 @@ defmodule Tymeslot.BookingSeries.Cancel do
   defp authorise(series, :organizer, opts) do
     with :ok <- owned_by(series, Keyword.get(opts, :acting_user)) do
       series.id
-      |> MeetingPayments.payment_for_series()
+      |> BookingPayments.payment_for_series()
       |> plan_refund(Keyword.get(opts, :refund, :remaining))
     end
   end
@@ -276,7 +277,7 @@ defmodule Tymeslot.BookingSeries.Cancel do
 
   # Refunded or recorded to be: the withdrawal's refund is made by its job.
   defp refunded_cents(series) do
-    case MeetingPayments.payment_for_series(series.id) do
+    case BookingPayments.payment_for_series(series.id) do
       nil -> 0
       payment -> payment.refunded_amount_cents + MeetingPayments.pending_refund_cents(payment)
     end
@@ -395,7 +396,7 @@ defmodule Tymeslot.BookingSeries.Cancel do
   # The remaining sessions' share, read in this transaction; the refund is
   # checked again under the payment's lock as it is recorded.
   defp schedule_refund(series, cancelled, {:remaining, payment}) do
-    case MeetingPayments.get_payment(payment.id) do
+    case BookingPayments.get_payment(payment.id) do
       nil ->
         {:ok, :none}
 

@@ -286,9 +286,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   def handle_event("toggle_payment_required", _params, socket) do
     # Guard: hosts who cannot accept charges must not flip the toggle even
     # if a stale/forged event arrives — the control renders disabled. The
-    # same applies while group bookings is enabled (mutual exclusion).
+    # same applies while email confirmation is on (mutual exclusion).
     if socket.assigns.payments_charges_enabled and
-         not socket.assigns.group_bookings_enabled and
          (socket.assigns.payment_required or not socket.assigns.requires_email_verification) do
       {:noreply,
        socket

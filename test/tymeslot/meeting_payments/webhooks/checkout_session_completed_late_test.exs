@@ -20,7 +20,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Invitations
-  alias Tymeslot.MeetingPayments
+
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated
@@ -275,7 +276,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedLateTest do
       assert recorded.last_event_id == "evt_LATE_NO_CHARGE"
       assert [refund] = refunds(bp)
       bp_id = bp.id
-      assert [%{id: ^bp_id}] = MeetingPayments.list_outstanding_refunds_for_host(bp.host_user_id)
+      assert [%{id: ^bp_id}] = BookingPayments.list_outstanding_refunds_for_host(bp.host_user_id)
 
       # Stripe's redelivery and the reconciler's replay change nothing.
       assert :ok = CheckoutSessionCompleted.handle(event)

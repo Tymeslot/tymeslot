@@ -20,7 +20,8 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
 
   alias Ecto.Changeset
   alias Ecto.UUID
-  alias Tymeslot.MeetingPayments
+
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Workers.ExecuteRefund
   alias Tymeslot.MeetingPayments.Workers.RefundLatePayment
@@ -110,7 +111,7 @@ defmodule Tymeslot.MeetingPayments.Workers.RefundLatePaymentTest do
 
     assert refunds(payment) == []
     payment_id = payment.id
-    assert [%{id: ^payment_id}] = MeetingPayments.list_outstanding_refunds_for_host(host.id)
+    assert [%{id: ^payment_id}] = BookingPayments.list_outstanding_refunds_for_host(host.id)
   end
 
   test "the discarded refusals are expected outcomes, not failures to record" do

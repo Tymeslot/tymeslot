@@ -15,7 +15,7 @@ defmodule Tymeslot.Bookings.CancelAwaitingPaymentTest do
 
   import Tymeslot.MeetingTestHelpers
 
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.Workers.ExpireCheckoutSession
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
@@ -105,6 +105,6 @@ defmodule Tymeslot.Bookings.CancelAwaitingPaymentTest do
       stripe_checkout_session_id: @session_id
     )
 
-    {meeting, MeetingPayments.payment_for_meeting(meeting.id, user.id)}
+    {meeting, BookingPayments.payment_for_meeting(meeting.id, user.id)}
   end
 end

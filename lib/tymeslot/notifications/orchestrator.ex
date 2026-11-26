@@ -268,17 +268,29 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
   @doc """
   Schedules cancellation notifications via EmailScheduler.
-  """
-  @spec send_cancellation_notifications(%{atom() => term()}) ::
-          {:ok, atom()} | {:error, term()}
-  def send_cancellation_notifications(meeting) do
-    with :ok <- Recipients.validate(meeting, :recipients) do
-      worker_module = get_email_worker_module()
 
-      case worker_module.schedule_cancellation_emails(meeting.id) do
+  `seat_refund:` (`Tymeslot.Meetings.Cancellation.seat_refund/0`) tells
+  the organiser's email of a group session the host cancelled whether its
+  paid seats are being refunded, how many and how much.
+  """
+  @spec send_cancellation_notifications(%{atom() => term()}, keyword()) ::
+          {:ok, atom()} | {:error, term()}
+  def send_cancellation_notifications(meeting, opts \\ []) do
+    with :ok <- Recipients.validate(meeting, :recipients) do
+      case schedule_cancellation(get_email_worker_module(), meeting.id, opts) do
         :ok -> {:ok, :cancellation_scheduled}
         {:error, reason} -> {:error, reason}
       end
+    end
+  end
+
+  defp schedule_cancellation(worker_module, meeting_id, opts) do
+    case Keyword.fetch(opts, :seat_refund) do
+      {:ok, seat_refund} ->
+        worker_module.schedule_cancellation_emails(meeting_id, seat_refund: seat_refund)
+
+      :error ->
+        worker_module.schedule_cancellation_emails(meeting_id)
     end
   end
 

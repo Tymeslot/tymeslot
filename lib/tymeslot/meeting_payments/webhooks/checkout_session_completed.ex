@@ -22,6 +22,10 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   `ReconcileAwaitingPayments.dispatch/2` applies when it replays this
   same event.
 
+  The payment of a paid series is handed to `Webhooks.SeriesCheckoutCompleted`,
+  and that of a held group seat to `Webhooks.SeatCheckoutCompleted`, once
+  the amount and the paid status have been checked here.
+
   A host whose account is pending deletion takes no booking: a checkout
   completed for one leaves the meeting expired and its payment refunded in
   full the same way. So is a payment whose meeting no longer exists,
@@ -50,6 +54,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   alias Tymeslot.MeetingPayments.Webhooks.LockedPayment
   alias Tymeslot.MeetingPayments.Webhooks.PaymentCompletion
   alias Tymeslot.MeetingPayments.Webhooks.PaymentLookup
+  alias Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompleted
   alias Tymeslot.MeetingPayments.Webhooks.SeriesCheckoutCompleted
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
@@ -129,12 +134,46 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   defp classify(:ok), do: {:ok, :ok}
   defp classify({:error, reason}), do: {{:error, :retry_later, reason}, :error}
 
+  # A seat payment whose hold is gone (deleted on erasure, or 30 days after
+  # it settled) has no seat left to book: one still awaiting its money is
+  # refunded in full, as a payment whose meeting is gone is. It never
+  # confirms the group meeting it was held on, which other seats share.
+  defp complete_payment(
+         %BookingPaymentSchema{seat_payment: true, seat_hold_id: nil} = payment,
+         event_id,
+         object
+       ),
+       do: refund_holdless_seat(payment, event_id, object)
+
   # A series' one payment confirms every session of it.
   defp complete_payment(%BookingPaymentSchema{series_id: series_id} = payment, event_id, object)
        when is_binary(series_id),
        do: SeriesCheckoutCompleted.run(payment, event_id, object)
 
+  # A held group seat's payment books the seat (or refunds it).
+  defp complete_payment(%BookingPaymentSchema{seat_hold_id: hold_id} = payment, event_id, object)
+       when is_binary(hold_id),
+       do: SeatCheckoutCompleted.run(payment, event_id, object)
+
   defp complete_payment(payment, event_id, object), do: run(payment, event_id, object)
+
+  defp refund_holdless_seat(payment, event_id, object) do
+    case LockedPayment.run(payment, event_id, &refund_orphaned(&1, event_id, object)) do
+      {:ok, {:refused, :meeting_missing, paid, nil}} ->
+        after_refusal(:meeting_missing, paid, nil, event_id, object)
+
+      {:ok, outcome} when outcome in [:no_op, :idempotent_replay] ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error("checkout.session.completed handler failed",
+          event_id: event_id,
+          reason: LogFormat.reason(reason)
+        )
+
+        {:error, reason}
+    end
+  end
 
   # Activation (the video room, the emails) runs only for the transaction
   # that moved the rows itself. A second completion of the same payment, the

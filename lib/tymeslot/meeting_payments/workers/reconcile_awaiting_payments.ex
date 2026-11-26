@@ -47,7 +47,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments do
 
     result =
       Enum.reduce(payments, %{reconciled: 0, skipped: 0, errors: 0}, fn payment, acc ->
-        case reconcile_one(payment) do
+        case reconcile(payment) do
           :reconciled -> Map.update!(acc, :reconciled, &(&1 + 1))
           :skipped -> Map.update!(acc, :skipped, &(&1 + 1))
           :error -> Map.update!(acc, :errors, &(&1 + 1))
@@ -63,9 +63,16 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments do
     {:ok, result}
   end
 
-  @spec reconcile_one(BookingPaymentSchema.t()) :: :reconciled | :skipped | :error
-  defp reconcile_one(%BookingPaymentSchema{stripe_checkout_session_id: session_id} = payment)
-       when is_binary(session_id) do
+  @doc """
+  Reconciles one pending payment with its Checkout session: polls Stripe and
+  replays completion for a paid session, or expiry for an expired one,
+  through the webhook handlers. A session still open is `:skipped`, for a
+  later run. Also used by `Tymeslot.Meetings.Workers.ExpireSeatHolds` for a
+  seat hold whose outcome never arrived.
+  """
+  @spec reconcile(BookingPaymentSchema.t()) :: :reconciled | :skipped | :error
+  def reconcile(%BookingPaymentSchema{stripe_checkout_session_id: session_id} = payment)
+      when is_binary(session_id) do
     case StripeCheckoutSessions.retrieve(session_id,
            connect_account: payment.stripe_account_id
          ) do

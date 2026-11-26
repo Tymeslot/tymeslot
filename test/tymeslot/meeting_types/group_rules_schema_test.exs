@@ -2,7 +2,7 @@ defmodule Tymeslot.MeetingTypes.GroupRulesSchemaTest do
   @moduledoc """
   What a group meeting type (more than one participant per slot) cannot also
   be: a type requiring approval, or one whose location is not fixed in
-  advance. Payment's exclusivity is covered in `MeetingTypeSchemaTest`.
+  advance. A group type may require payment (`MeetingTypeSchemaTest`).
   """
 
   use Tymeslot.DataCase, async: true

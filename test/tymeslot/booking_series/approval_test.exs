@@ -28,7 +28,8 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
   alias Tymeslot.BookingSeries.Approval, as: SeriesApproval
   alias Tymeslot.BookingSeries.Notifications, as: SeriesNotifications
   alias Tymeslot.CalendarMock
-  alias Tymeslot.MeetingPayments
+
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
@@ -418,7 +419,7 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       series: series
     } do
       pay(series)
-      payment = MeetingPayments.payment_for_series(series.id)
+      payment = BookingPayments.payment_for_series(series.id)
 
       StripeStub.expect(:create_refund, 1, fn request ->
         assert request.form["charge"] == "ch_SERIES"
@@ -430,7 +431,7 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       assert %{success: 1} = drain_refunds()
 
       assert statuses() == [:cancelled, :cancelled, :cancelled]
-      reloaded = MeetingPayments.payment_for_series(series.id)
+      reloaded = BookingPayments.payment_for_series(series.id)
       assert reloaded.id == payment.id
       assert reloaded.status == :refunded
       assert reloaded.refunded_amount_cents == 3 * Paid.price_cents()
@@ -444,7 +445,7 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       assert %{success: 1} = drain_refunds()
 
       assert statuses() == [:cancelled, :cancelled, :cancelled]
-      assert MeetingPayments.payment_for_series(series.id).status == :refunded
+      assert BookingPayments.payment_for_series(series.id).status == :refunded
     end
 
     test "an expiry refunds a paid series once", %{series: series} do
@@ -456,7 +457,7 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       assert %{success: 1} = drain_refunds()
 
       assert statuses() == [:expired, :expired, :expired]
-      assert MeetingPayments.payment_for_series(series.id).status == :refunded
+      assert BookingPayments.payment_for_series(series.id).status == :refunded
     end
 
     test "the host cannot cancel a held session on its own", %{host: host, series: series} do
@@ -496,7 +497,7 @@ defmodule Tymeslot.BookingSeries.ApprovalTest do
       assert statuses() == [:confirmed, :cancelled, :confirmed]
 
       assert %{status: :partially_refunded, refunded_amount_cents: refunded} =
-               MeetingPayments.payment_for_series(series.id)
+               BookingPayments.payment_for_series(series.id)
 
       assert refunded == Paid.price_cents()
     end

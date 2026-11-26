@@ -31,7 +31,8 @@ defmodule Tymeslot.MeetingPayments.Workers.BackfillCharge do
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Stripe.Error, as: StripeError
-  alias Tymeslot.MeetingPayments
+
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.ChargeBackfill
   alias Tymeslot.Workers.Backoff
@@ -66,7 +67,7 @@ defmodule Tymeslot.MeetingPayments.Workers.BackfillCharge do
   def perform(
         %Oban.Job{args: %{"booking_payment_id" => id, "payment_intent_id" => intent_id}} = job
       ) do
-    case MeetingPayments.get_payment(id) do
+    case BookingPayments.get_payment(id) do
       nil ->
         {:discard, :not_found}
 

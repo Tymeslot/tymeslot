@@ -212,25 +212,29 @@ defmodule Tymeslot.Meetings do
     to: Cancellation,
     as: :resolve_refund
 
+  @doc "Works out what cancelling a group session refunds. See `Tymeslot.Meetings.Cancellation`."
+  @spec resolve_seat_refund([struct()], map()) ::
+          {:ok, :refund_seats | :none} | {:error, :acknowledgement_required}
+  defdelegate resolve_seat_refund(payments, params), to: Cancellation
+
   @doc """
-  Cancels a meeting and issues the resolved refund to the attendee.
-
-  Only the meeting's organiser (`acting_user_id` must be its
-  `organizer_user_id`) may cancel through here, and a refund additionally
-  needs the payment to be theirs; anyone else gets `{:error, :not_found}`
-  before the meeting is touched.
-
-  Returns `{:ok, cancelled, :refund_pending}` when Stripe has not confirmed
-  the refund yet (Tymeslot finishes it), and `{:error, {:refund_failed,
-  reason}}` when the meeting was cancelled but the refund was declined, so
-  callers can tell the host rather than reporting a failed cancellation.
+  Cancels a meeting as its organiser (`acting_user_id`, else
+  `{:error, :not_found}`) and issues the resolved refund, or, for a group
+  session, records one per paid seat (`:refund_seats`). Returns
+  `{:ok, cancelled, :refund_pending}` when Stripe has not confirmed a
+  one-to-one refund yet (Tymeslot finishes it), and `{:error,
+  {:refund_failed, reason}}` when the meeting was cancelled but the refund
+  was declined. `seat_payment_ids:` names the paid seats the host chose
+  against; others paid under the lock are `{:error, {:payments_changed,
+  payments}}`, with nothing cancelled. See `Tymeslot.Meetings.Cancellation`.
   """
   @spec cancel_meeting_with_refund(
           Ecto.Schema.t(),
           integer(),
-          Cancellation.refund_action()
+          Cancellation.refund_action(),
+          keyword()
         ) :: {:ok, Ecto.Schema.t()} | {:ok, Ecto.Schema.t(), :refund_pending} | {:error, term()}
-  defdelegate cancel_meeting_with_refund(meeting, acting_user_id, refund_action),
+  defdelegate cancel_meeting_with_refund(meeting, acting_user_id, refund_action, opts \\ []),
     to: Cancellation,
     as: :cancel
 

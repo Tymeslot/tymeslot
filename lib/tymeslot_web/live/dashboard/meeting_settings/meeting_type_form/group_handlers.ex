@@ -31,22 +31,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GroupHandlers do
   @spec handle_event(String.t(), map(), Socket.t()) :: Socket.t()
   def handle_event("toggle_group_bookings", _params, socket) do
     # Guard: turning group bookings on is refused while anything stands in
-    # the way (`GroupRules.enable_blocker/1`: no plan access, payment or
-    # approval required, a location that is not fixed in advance). The
+    # the way (`GroupRules.enable_blocker/1`: no plan access, approval
+    # required, a location that is not fixed in advance). The
     # control renders disabled with the reason, so this only stops a stale
     # or forged event. Turning them off is refused only while planned dates
     # hold a fixed-date type on (`SessionHandlers.dates_planned?/1`).
-    #
-    # Enabling clears `payment_required`, keeping the two mutually exclusive;
-    # `GroupRules.enable_blocker/1` explains why that is not a dead end for a
-    # host who cannot reach the payments toggle.
     turning_on? = not socket.assigns.group_bookings_enabled
 
     if (turning_on? and GroupRules.enable_blocker(socket.assigns) == nil) or
          (not turning_on? and not SessionHandlers.dates_planned?(socket.assigns)) do
       socket
       |> assign(:group_bookings_enabled, !socket.assigns.group_bookings_enabled)
-      |> assign(:payment_required, false)
       |> Validation.clear_error(:max_participants)
       |> Autosave.maybe_run()
     else

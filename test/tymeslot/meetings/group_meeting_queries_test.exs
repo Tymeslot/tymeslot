@@ -123,6 +123,41 @@ defmodule Tymeslot.Meetings.GroupMeetingQueriesTest do
   end
 
   describe "set_future_group_capacity/3" do
+    test "lowering capacity keeps held seats", %{user: user, meeting_type: meeting_type} do
+      meeting =
+        insert_group_meeting(user, meeting_type, start_at(3, 10), %{
+          capacity: 5,
+          status: :awaiting_payment
+        })
+
+      insert(:seat_hold, meeting: meeting, seats: 3, email: "ann@example.com")
+
+      assert GroupMeetingQueries.set_future_group_capacity(
+               meeting_type.id,
+               2,
+               DateTime.utc_now()
+             ) == 1
+
+      assert Repo.reload!(meeting).capacity == 3
+    end
+
+    test "a released hold no longer holds capacity", %{user: user, meeting_type: meeting_type} do
+      meeting = insert_group_meeting(user, meeting_type, start_at(3, 10), %{capacity: 5})
+      insert(:participant, meeting: meeting)
+
+      insert(:seat_hold,
+        meeting: meeting,
+        seats: 3,
+        email: "ann@example.com",
+        status: :released,
+        released_reason: :expired
+      )
+
+      GroupMeetingQueries.set_future_group_capacity(meeting_type.id, 2, DateTime.utc_now())
+
+      assert Repo.reload!(meeting).capacity == 2
+    end
+
     test "a lowered limit stops at the seats taken, not counting declined guests", ctx do
       meeting =
         insert_group_meeting(ctx.user, ctx.meeting_type, start_at(3, 10), %{capacity: 10})

@@ -93,6 +93,41 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefundsTest do
     end
   end
 
+  describe "a seat its participant cancelled" do
+    test "is dated by when the participant left, not as a cancellation" do
+      html =
+        render_card(
+          payments: [
+            payment(
+              meeting: build(:group_meeting, status: :confirmed),
+              participant: build(:participant, cancelled_at: ~U[2026-11-02 09:00:00Z])
+            )
+          ]
+        )
+
+      assert html =~ "Left 2 Nov 2026"
+      refute html =~ "Cancelled 2 Nov"
+    end
+  end
+
+  describe "a seat paid for but never booked" do
+    test "is dated by its payment, as not booked" do
+      html =
+        render_card(
+          payments: [
+            payment(
+              meeting: build(:group_meeting, status: :confirmed),
+              seat_payment: true,
+              participant_id: nil,
+              paid_at: ~U[2026-11-03 09:00:00Z]
+            )
+          ]
+        )
+
+      assert html =~ "Not booked, paid 3 Nov 2026"
+    end
+  end
+
   # Italian puts the article before the date, elided before a day read with
   # a vowel, so it cannot be written into the translation.
   describe "in Italian" do

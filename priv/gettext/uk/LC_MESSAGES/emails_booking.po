@@ -756,3 +756,11 @@ msgstr "Реєстрацію закрито"
 #, elixir-autogen, elixir-format
 msgid "The list is also attached as a CSV file for a spreadsheet."
 msgstr "Список також додано як файл CSV для електронної таблиці."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "For %{count} seat"
+msgid_plural "For %{count} seats"
+msgstr[0] "За %{count} місце"
+msgstr[1] "За %{count} місця"
+msgstr[2] "За %{count} місць"

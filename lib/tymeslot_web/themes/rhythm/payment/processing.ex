@@ -16,9 +16,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Payment.Processing do
       assign(
         assigns,
         :status,
-        PaymentReturn.progress(
-          PaymentReturn.outcome(assigns.loading, assigns.payment, assigns.meeting)
-        )
+        PaymentReturn.progress(PaymentReturn.page_outcome(assigns))
       )
 
     ~H"""
@@ -37,6 +35,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Payment.Processing do
         payment={@payment}
         meeting={@meeting}
         rebook_path={assigns[:rebook_path]}
+        outcome={assigns[:outcome]}
+        seat_hold={assigns[:seat_hold]}
       />
     </Page.page>
     """

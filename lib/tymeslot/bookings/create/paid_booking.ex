@@ -30,12 +30,17 @@ defmodule Tymeslot.Bookings.Create.PaidBooking do
   require Logger
 
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.Meetings.Scheduling
 
   @typedoc "The successful outcome: a held slot plus somewhere to go and pay."
   @type result ::
-          {:ok, :payment_required, %{meeting: struct(), checkout_url: String.t()}}
+          {:ok, :payment_required,
+           %{
+             required(:meeting) => map(),
+             required(:checkout_url) => String.t(),
+             optional(:seat_hold) => map()
+           }}
           | {:error, term()}
 
   @doc """
@@ -78,7 +83,7 @@ defmodule Tymeslot.Bookings.Create.PaidBooking do
   end
 
   defp checkout_or_expire(meeting) do
-    case MeetingPayments.create_checkout_session(meeting) do
+    case Checkout.create_checkout_session(meeting) do
       {:ok, result} ->
         {:ok, result}
 

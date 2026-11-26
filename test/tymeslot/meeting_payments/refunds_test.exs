@@ -6,8 +6,9 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
   @moduletag :payments
 
   alias Ecto.UUID
-  alias Tymeslot.MeetingPayments
+
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.StripeFixtures
@@ -345,7 +346,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
       payment = paid_booking_payment()
 
       assert {:ok, %{id: id}} =
-               MeetingPayments.get_payment_for_host(payment.id, payment.host_user_id)
+               BookingPayments.get_payment_for_host(payment.id, payment.host_user_id)
 
       assert id == payment.id
     end
@@ -354,13 +355,13 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
       payment = paid_booking_payment()
 
       assert {:error, :not_found} =
-               MeetingPayments.get_payment_for_host(payment.id, payment.host_user_id + 1)
+               BookingPayments.get_payment_for_host(payment.id, payment.host_user_id + 1)
 
       assert {:error, :not_found} =
-               MeetingPayments.get_payment_for_host(UUID.generate(), payment.host_user_id)
+               BookingPayments.get_payment_for_host(UUID.generate(), payment.host_user_id)
 
       assert {:error, :not_found} =
-               MeetingPayments.get_payment_for_host("not-a-uuid", payment.host_user_id)
+               BookingPayments.get_payment_for_host("not-a-uuid", payment.host_user_id)
     end
   end
 
@@ -369,10 +370,10 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
       meeting = insert(:meeting)
       payment = paid_booking_payment(%{meeting_id: meeting.id})
 
-      assert %{id: id} = MeetingPayments.payment_for_meeting(meeting.id, payment.host_user_id)
+      assert %{id: id} = BookingPayments.payment_for_meeting(meeting.id, payment.host_user_id)
       assert id == payment.id
 
-      assert MeetingPayments.payment_for_meeting(meeting.id, payment.host_user_id + 1) == nil
+      assert BookingPayments.payment_for_meeting(meeting.id, payment.host_user_id + 1) == nil
     end
   end
 

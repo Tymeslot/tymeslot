@@ -165,6 +165,8 @@ config :tymeslot,
     {"0 5 * * *", Tymeslot.Workers.IntegrationAutoPauseWorker},
     # Run every 15 min to reconcile awaiting_payment meetings whose webhook never arrived
     {"*/15 * * * *", Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments},
+    # Run every 5 min to settle paid seat holds whose payment outcome never arrived
+    {"*/5 * * * *", Tymeslot.Meetings.Workers.ExpireSeatHolds},
     # Run every 15 min to give refunds left pending without a job a new one
     {"*/15 * * * *", Tymeslot.MeetingPayments.Workers.SweepPendingRefunds},
     # Run daily at 04:30 UTC to cross-check booking analytics against bookings
@@ -669,6 +671,10 @@ config :tymeslot, :payments,
     # after their meeting or poll ends, before it is anonymised. The meeting
     # rows themselves stay for statistics. See Tymeslot.InviteeData.
     invitee_data_days: 730,
+    # What a booker gave while paying for a seat, kept for a month after the
+    # hold converted or lapsed, for payment questions. The participant row
+    # keeps a paid booker's details; see Tymeslot.InviteeData.
+    seat_hold_days: 30,
     # Statutory retention for financial records (booking payments, payment
     # transactions, subscription invoices), in years counted from the end of
     # the financial year a record belongs to. Ten is the longest period common

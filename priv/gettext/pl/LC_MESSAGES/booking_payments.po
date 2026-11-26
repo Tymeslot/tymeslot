@@ -141,3 +141,27 @@ msgid_plural "Thank you, your %{count} sessions are confirmed, the first on %{on
 msgstr[0] "Dziękujemy, %{count} sesja została potwierdzona, pierwsza: %{on_date}."
 msgstr[1] "Dziękujemy, %{count} sesje zostały potwierdzone, pierwsza: %{on_date}."
 msgstr[2] "Dziękujemy, %{count} sesji zostało potwierdzonych, pierwsza: %{on_date}."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "The payment wasn't completed in time, so the seat held for you was released. You can return and book again."
+msgid_plural "The payment wasn't completed in time, so the seats held for you were released. You can return and book again."
+msgstr[0] "Płatność nie została zrealizowana na czas, więc zarezerwowane dla ciebie miejsce zostało zwolnione. Możesz wrócić i zarezerwować termin ponownie."
+msgstr[1] "Płatność nie została zrealizowana na czas, więc zarezerwowane dla ciebie miejsca zostały zwolnione. Możesz wrócić i zarezerwować termin ponownie."
+msgstr[2] "Płatność nie została zrealizowana na czas, więc zarezerwowane dla ciebie miejsca zostały zwolnione. Możesz wrócić i zarezerwować termin ponownie."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Your payment arrived after the seat held for you was released, and the session had no room left. Your payment is being refunded."
+msgid_plural "Your payment arrived after the seats held for you were released, and the session had no room left. Your payment is being refunded."
+msgstr[0] "Płatność dotarła po zwolnieniu zarezerwowanego dla ciebie miejsca, a sesja była już pełna. Zwrot płatności jest w toku."
+msgstr[1] "Płatność dotarła po zwolnieniu zarezerwowanych dla ciebie miejsc, a sesja była już pełna. Zwrot płatności jest w toku."
+msgstr[2] "Płatność dotarła po zwolnieniu zarezerwowanych dla ciebie miejsc, a sesja była już pełna. Zwrot płatności jest w toku."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "Your seat was released"
+msgid_plural "Your seats were released"
+msgstr[0] "Twoje miejsce zostało zwolnione"
+msgstr[1] "Twoje miejsca zostały zwolnione"
+msgstr[2] "Twoje miejsca zostały zwolnione"

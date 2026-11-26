@@ -45,6 +45,7 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.TransactionalEmailDelivery
@@ -61,7 +62,7 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"booking_payment_id" => booking_payment_id}} = job) do
-    case MeetingPayments.get_payment(booking_payment_id) do
+    case BookingPayments.get_payment(booking_payment_id) do
       nil ->
         Logger.warning("Refund email skipped — booking_payment not found",
           booking_payment_id: booking_payment_id
@@ -117,7 +118,7 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
 
   defp build_context(%BookingPaymentSchema{} = payment) do
     # A series payment is named after its first session.
-    meeting = payment |> MeetingPayments.meetings_for_payment() |> List.first()
+    meeting = payment |> BookingPayments.meetings_for_payment() |> List.first()
     refunded = MeetingPayments.stripe_refunded_cents(payment)
 
     context = %RefundContext{

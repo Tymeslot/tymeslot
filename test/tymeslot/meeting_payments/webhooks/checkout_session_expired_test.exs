@@ -12,7 +12,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpiredTest do
   import Ecto.Query, only: [from: 2]
   import Tymeslot.Factory
 
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -172,7 +172,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpiredTest do
           stripe_checkout_session_id: "cs_CANCELLED_PENDING"
         )
 
-      Phoenix.PubSub.subscribe(Tymeslot.PubSub, MeetingPayments.payment_topic(meeting.id))
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, Checkout.payment_topic(meeting.id))
 
       event =
         expired_event("evt_CANCELLED_PENDING", %{

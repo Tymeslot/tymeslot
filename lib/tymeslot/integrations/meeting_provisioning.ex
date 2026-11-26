@@ -77,7 +77,8 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviders
   alias Tymeslot.Integrations.Video.Providers.TeamsProvider
-  alias Tymeslot.MeetingPayments
+
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Workers.CalendarEventWorker
@@ -532,7 +533,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   end
 
   defp paid_at(%MeetingSchema{id: meeting_id}) do
-    case MeetingPayments.payment_for_meeting(meeting_id) do
+    case BookingPayments.payment_for_meeting(meeting_id) do
       %{paid_at: %DateTime{} = paid_at} -> paid_at
       _unpaid -> nil
     end

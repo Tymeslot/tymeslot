@@ -22,6 +22,8 @@ defmodule Tymeslot.Emails.EmailScheduler do
     participants' voting links and receipts
   - `SessionScheduler`: a planned session's participant list, at its
     registration close
+  - `SeatScheduler`: the emails of a single group-booking seat, one job per
+    seat
   - `SeriesScheduler`: a booking series' one confirmation, the
     cancellation of several of its sessions at once, and the request and
     its outcome for a series held for approval
@@ -48,7 +50,7 @@ defmodule Tymeslot.Emails.EmailScheduler do
   defdelegate schedule_confirmation_emails(meeting_id), to: MeetingScheduler
   defdelegate schedule_seat_confirmation_emails(meeting_id, participant_id), to: SeatScheduler
   defdelegate schedule_seat_slot_revived_email(meeting_id, participant_id), to: SeatScheduler
-  defdelegate schedule_cancellation_emails(meeting_id), to: MeetingScheduler
+  defdelegate schedule_cancellation_emails(meeting_id, opts \\ []), to: MeetingScheduler
   defdelegate schedule_verification_email(meeting_id, send \\ 1), to: MeetingScheduler
 
   defdelegate schedule_seat_verification_email(meeting_id, participant_id, send \\ 1),

@@ -23,7 +23,9 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
   alias Tymeslot.CalendarMock
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Emails.Templates.AppointmentCancellation.RefundNotice
-  alias Tymeslot.MeetingPayments
+
+  alias Tymeslot.MeetingPayments.BookingPayments
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
@@ -56,7 +58,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
     expect_checkout()
     assert {:ok, :payment_required, %{series: series}} = book(host, paid_series_type(host), 3)
 
-    %{host: host, series: series, payment: MeetingPayments.payment_for_series(series.id)}
+    %{host: host, series: series, payment: BookingPayments.payment_for_series(series.id)}
   end
 
   defp meetings,
@@ -80,7 +82,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
   defp lapse(series),
     do: assert(:ok = CheckoutSessionExpired.handle(expired_event("evt_EXPIRED", series.id)))
 
-  defp outstanding(host), do: MeetingPayments.list_outstanding_refunds_for_host(host.user.id)
+  defp outstanding(host), do: BookingPayments.list_outstanding_refunds_for_host(host.user.id)
 
   describe "a session held for the series' payment" do
     test "cannot be cancelled alone by the host", %{host: host} do
@@ -110,7 +112,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
   } do
     [first, second, _third] = meetings()
     set_status(second, :cancelled)
-    :ok = Phoenix.PubSub.subscribe(Tymeslot.PubSub, MeetingPayments.payment_topic(first.id))
+    :ok = Phoenix.PubSub.subscribe(Tymeslot.PubSub, Checkout.payment_topic(first.id))
 
     pay(series)
 
@@ -191,7 +193,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
       StripeFixtures.object("checkout_session_expired", %{"id" => session_id()})
     end)
 
-    assert :ok = MeetingPayments.abandon_checkout(first.id)
+    assert :ok = Checkout.abandon_checkout(first.id)
   end
 
   describe "the host's outstanding refunds" do
@@ -206,7 +208,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
       set_status(second, :cancelled)
 
       assert outstanding(host) == []
-      assert %{count: 0} = MeetingPayments.outstanding_refunds_summary_for_host(host.user.id)
+      assert %{count: 0} = BookingPayments.outstanding_refunds_summary_for_host(host.user.id)
     end
 
     test "list a series once none goes ahead, by its first session still there", %{
@@ -223,7 +225,7 @@ defmodule Tymeslot.BookingSeries.PaidSeriesEdgesTest do
       assert listed.meeting.id == second.id
 
       assert %{count: 1, totals: [%{currency: "eur", amount_cents: 15_000}]} =
-               MeetingPayments.outstanding_refunds_summary_for_host(host.user.id)
+               BookingPayments.outstanding_refunds_summary_for_host(host.user.id)
     end
   end
 

@@ -11,7 +11,7 @@ defmodule Tymeslot.BookingSeries.Payment do
   sessions are inserted in the series' transaction; the checkout is opened
   once it has committed, never holding a connection across the Stripe call.
   A checkout that cannot be opened releases every session at once
-  (`MeetingPayments.expire_held_series/1`) rather than leaving them held
+  (`Checkout.expire_held_series/1`) rather than leaving them held
   until the reconciliation sweep.
   """
 
@@ -20,7 +20,7 @@ defmodule Tymeslot.BookingSeries.Payment do
   alias Tymeslot.Bookings.Create.Persist
   alias Tymeslot.BookingSeries.SeriesSchema
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.Meetings.MeetingSchema
 
   @doc """
@@ -44,7 +44,7 @@ defmodule Tymeslot.BookingSeries.Payment do
   """
   @spec checkout(SeriesSchema.t()) :: {:ok, String.t()} | {:error, {:checkout_failed, term()}}
   def checkout(%SeriesSchema{} = series) do
-    case MeetingPayments.create_checkout_session_for_series(series) do
+    case Checkout.create_checkout_session_for_series(series) do
       {:ok, %{checkout_url: url}} ->
         {:ok, url}
 
@@ -57,9 +57,9 @@ defmodule Tymeslot.BookingSeries.Payment do
   # Best effort, as for a single booking: a series that fails to expire is
   # left to the reconciliation sweep.
   defp release(series, reason) do
-    case MeetingPayments.expire_held_series(series) do
+    case Checkout.expire_held_series(series) do
       {:ok, :expired, first} ->
-        MeetingPayments.announce_expired(first)
+        Checkout.announce_expired(first)
 
       {:ok, :unchanged, _first_id} ->
         :ok

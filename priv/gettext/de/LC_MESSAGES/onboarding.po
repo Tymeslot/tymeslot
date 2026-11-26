@@ -222,3 +222,13 @@ msgstr "Ihr Dashboard-Kalender, neu gestaltet"
 #, elixir-autogen, elixir-format
 msgid "We've redesigned the calendar from the ground up: a fresh look, a clearer layout with more room for your week, and quicker ways to plan, create and change your meetings. Have a look around, or read the docs for a tour of everything that's new."
 msgstr "Wir haben den Kalender von Grund auf neu gestaltet: ein frisches Aussehen, ein übersichtlicheres Layout mit mehr Platz für Ihre Woche und schnellere Wege, Ihre Termine zu planen, anzulegen und zu ändern. Sehen Sie sich um oder lesen Sie in der Dokumentation nach, was alles neu ist."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "A group meeting type can now take payment. Set a price and each person pays for their own spot when they book, including any guests they bring. Their spot is held while they pay, and if you cancel the session, everyone still booked can be refunded in full."
+msgstr "Ein Termintyp für Gruppen kann jetzt Zahlungen annehmen. Legen Sie einen Preis fest, und jede Person bezahlt bei der Buchung ihren eigenen Platz, samt der Plätze für mitgebrachte Gäste. Während der Zahlung bleibt der Platz reserviert, und wenn Sie den Termin absagen, lässt sich allen, die noch gebucht sind, der volle Betrag erstatten."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Charge for your group sessions"
+msgstr "Gruppentermine kostenpflichtig anbieten"

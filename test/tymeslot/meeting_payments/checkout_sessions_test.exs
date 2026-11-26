@@ -11,6 +11,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
   alias Tymeslot.Integrations.Stripe.Error, as: StripeError
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.MeetingPayments.CheckoutSessions
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.Profiles
@@ -313,6 +314,76 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
     end
   end
 
+  # Stripe refuses a session expiring less than 30 minutes after it is
+  # created, so the expiry is counted from just before the call, not from
+  # when the booking began.
+  describe "session expiry" do
+    test "a booking's session expires 30 minutes after it is created", %{
+      user: user,
+      meeting_type: mt
+    } do
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          meeting_type_ref: mt,
+          status: :awaiting_payment
+        )
+
+      StripeStub.expect(
+        :create_checkout_session,
+        StripeFixtures.object("checkout_session_payment", %{
+          "id" => "cs_ONE",
+          "url" => "https://checkout.stripe.com/cs_ONE"
+        })
+      )
+
+      assert {:ok, _result} = CheckoutSessions.create_session_for_booking(meeting)
+
+      assert [%{form: %{"expires_at" => expires_at}}] =
+               StripeStub.requests(:create_checkout_session)
+
+      assert_in_delta String.to_integer(expires_at), System.os_time(:second) + 30 * 60, 5
+    end
+
+    test "a series' session expires 30 minutes after it is created", %{
+      user: user,
+      meeting_type: mt
+    } do
+      series =
+        insert(:booking_series,
+          organizer_user: nil,
+          organizer_user_id: user.id,
+          unit_price_cents: 5000
+        )
+
+      for position <- 1..2 do
+        insert(:meeting,
+          organizer_user_id: user.id,
+          meeting_type_ref: mt,
+          status: :awaiting_payment,
+          series_id: series.id,
+          series_position: position
+        )
+      end
+
+      StripeStub.expect(
+        :create_checkout_session,
+        StripeFixtures.object("checkout_session_payment", %{
+          "id" => "cs_SERIES",
+          "url" => "https://checkout.stripe.com/cs_SERIES"
+        })
+      )
+
+      assert {:ok, _result} = CheckoutSessions.create_session_for_series(series)
+
+      assert [%{form: %{"expires_at" => expires_at, "line_items" => line_items}}] =
+               StripeStub.requests(:create_checkout_session)
+
+      assert [%{"quantity" => "2"}] = line_items
+      assert_in_delta String.to_integer(expires_at), System.os_time(:second) + 30 * 60, 5
+    end
+  end
+
   describe "Stripe return URLs" do
     # Stripe keeps these URLs on every Checkout Session it creates, so a
     # session opened before a deploy still returns to them after it. Their
@@ -363,7 +434,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
         # so the cancel URL carries the guest's proof of its own.
         assert %{"return_token" => token} = URI.decode_query(cancel.query)
         assert map_size(URI.decode_query(cancel.query)) == 1
-        assert MeetingPayments.returned_from_checkout?(meeting.id, token)
+        assert Checkout.returned_from_checkout?(meeting.id, token)
       end
     end
   end

@@ -123,10 +123,16 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementRefusalTest do
       assigns: %{
         __changed__: %{},
         current_user: ctx.host,
+        # A refused cancel reloads the list, as the component's mount set it up.
+        filter: "upcoming",
+        page_filter: nil,
+        focus: nil,
+        per_page: 20,
         cancel_booking_payment: nil,
         cancel_meeting_modal_data: meeting,
         show_cancel_meeting_modal: true
-      }
+      },
+      private: %{live_temp: %{}, lifecycle: %Phoenix.LiveView.Lifecycle{}}
     }
 
     assert {:noreply, _socket} =

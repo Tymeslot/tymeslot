@@ -19,7 +19,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedCancelledTes
   import Ecto.Query, only: [from: 2]
   import Tymeslot.Factory
 
-  alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingPayments.Checkout
+
+  alias Tymeslot.MeetingPayments.BookingPayments
   alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated
@@ -44,7 +46,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedCancelledTes
           stripe_checkout_session_id: "cs_CANCELLED_PAID"
         )
 
-      Phoenix.PubSub.subscribe(Tymeslot.PubSub, MeetingPayments.payment_topic(meeting.id))
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, Checkout.payment_topic(meeting.id))
 
       assert :ok =
                CheckoutSessionCompleted.handle(
@@ -67,7 +69,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedCancelledTes
       refute_enqueued(worker: EmailWorker)
 
       # Until the refund goes through, the host sees it owed.
-      assert [%{id: id}] = MeetingPayments.list_outstanding_refunds_for_host(bp.host_user_id)
+      assert [%{id: id}] = BookingPayments.list_outstanding_refunds_for_host(bp.host_user_id)
       assert id == bp.id
     end
 
