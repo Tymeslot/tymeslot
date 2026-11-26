@@ -138,7 +138,17 @@ defmodule Tymeslot.DataCase do
     shared = not tags[:async]
     pid = Sandbox.start_owner!(Repo, shared: shared)
 
-    on_exit(fn -> Sandbox.stop_owner(pid) end)
+    on_exit(fn ->
+      Sandbox.stop_owner(pid)
+
+      # The pool leaves shared mode only once it handles the owner's `:DOWN`,
+      # which can arrive after the next module has started. Until then it
+      # routes every process it has no checkout for to the dead owner, so a
+      # `sandbox: false` test whose `Ecto.Migrator` task queries first fails
+      # with "owner exited". Resetting synchronously closes that window.
+      if shared, do: Sandbox.mode(Repo, :manual)
+    end)
+
     LeftoverProcesses.stop_on_exit()
   end
 
