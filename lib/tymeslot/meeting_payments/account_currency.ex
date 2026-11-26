@@ -6,10 +6,10 @@ defmodule Tymeslot.MeetingPayments.AccountCurrency do
   currency. Reached through `Tymeslot.MeetingPayments`.
   """
 
-  alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.Currency
+  alias Tymeslot.MeetingPayments.SeatPaymentQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Repo
@@ -155,7 +155,7 @@ defmodule Tymeslot.MeetingPayments.AccountCurrency do
   # already confirmed, so the meeting's status alone does not show it.
   defp check_no_pending_payments(user_id) do
     if MeetingQueries.count_awaiting_payment_for_organizer(user_id) > 0 or
-         BookingPaymentQueries.pending_seat_payment_for_host?(user_id),
+         SeatPaymentQueries.pending_seat_payment_for_host?(user_id),
        do: {:error, :pending_payments_exist},
        else: :ok
   end

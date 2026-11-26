@@ -6,6 +6,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueriesTest do
 
   alias Ecto.UUID
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments.SeatPaymentQueries
 
   describe "a group meeting's seat payments" do
     test "by_meeting_id ignores seat payments" do
@@ -37,7 +38,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueriesTest do
       assert BookingPaymentQueries.for_meeting(meeting.id) == nil
       assert BookingPaymentQueries.for_meeting_for_host(meeting.id, host.id) == nil
 
-      assert Enum.map(BookingPaymentQueries.list_for_live_seats(meeting.id), & &1.id) ==
+      assert Enum.map(SeatPaymentQueries.list_for_live_seats(meeting.id), & &1.id) ==
                [first.id, second.id]
     end
 
@@ -67,7 +68,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueriesTest do
           seat_payment: true
         )
 
-      assert Enum.map(BookingPaymentQueries.list_for_live_seats(meeting.id), & &1.id) == [
+      assert Enum.map(SeatPaymentQueries.list_for_live_seats(meeting.id), & &1.id) == [
                live.id
              ]
     end
@@ -76,7 +77,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueriesTest do
       meeting = insert(:meeting)
       payment = insert(:booking_payment, meeting: meeting)
 
-      assert BookingPaymentQueries.list_for_live_seats(meeting.id) == []
+      assert SeatPaymentQueries.list_for_live_seats(meeting.id) == []
       assert BookingPaymentQueries.by_meeting_id(meeting.id).id == payment.id
     end
   end
@@ -89,12 +90,12 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueriesTest do
       payment =
         insert(:booking_payment, meeting: meeting, seat_hold_id: hold.id, seat_payment: true)
 
-      assert BookingPaymentQueries.by_seat_hold_id(hold.id).id == payment.id
+      assert SeatPaymentQueries.by_seat_hold_id(hold.id).id == payment.id
     end
 
     test "is nil for an unknown or malformed id" do
-      assert BookingPaymentQueries.by_seat_hold_id(UUID.generate()) == nil
-      assert BookingPaymentQueries.by_seat_hold_id("not-a-uuid") == nil
+      assert SeatPaymentQueries.by_seat_hold_id(UUID.generate()) == nil
+      assert SeatPaymentQueries.by_seat_hold_id("not-a-uuid") == nil
     end
   end
 end

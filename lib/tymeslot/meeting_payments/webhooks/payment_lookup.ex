@@ -52,6 +52,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
   alias Tymeslot.Integrations.Stripe.PaymentIntents
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.MeetingPayments.SeatPaymentQueries
 
   @doc """
   Resolves the row for a `checkout.session.*` event, or `nil`.
@@ -187,7 +188,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.PaymentLookup do
   defp by_reference("series:" <> series_id), do: BookingPaymentQueries.by_series_id(series_id)
 
   defp by_reference("seat_hold:" <> hold_id),
-    do: BookingPaymentQueries.by_seat_hold_id(hold_id)
+    do: SeatPaymentQueries.by_seat_hold_id(hold_id)
 
   defp by_reference(meeting_id) when is_binary(meeting_id) do
     case UUID.cast(meeting_id) do

@@ -25,6 +25,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountRetirement do
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.Currency
   alias Tymeslot.MeetingPayments.HeldMeetings
+  alias Tymeslot.MeetingPayments.OutstandingRefundQueries
   alias Tymeslot.MeetingPayments.Workers.DeauthorizeConnectAccount
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.SeatHolds
@@ -112,7 +113,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountRetirement do
           | {:error, term()}
   def disconnect(user) do
     pending = BookingPaymentQueries.list_pending_for_host(user.id)
-    outstanding = BookingPaymentQueries.outstanding_refunds_summary_for_host(user.id)
+    outstanding = OutstandingRefundQueries.outstanding_refunds_summary_for_host(user.id)
     account = ConnectAccountQueries.live_for_user(user.id)
 
     expire_stripe_sessions(pending, account)

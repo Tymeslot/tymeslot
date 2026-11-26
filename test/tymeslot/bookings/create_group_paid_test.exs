@@ -16,8 +16,8 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
   alias Ecto.Changeset
   alias Tymeslot.Bookings.Create
   alias Tymeslot.Bookings.CreateGroup
-  alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.Checkout
+  alias Tymeslot.MeetingPayments.SeatPaymentQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.SeatHolds
@@ -128,7 +128,7 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
     assert ParticipantQueries.list_live_for_meeting(meeting.id) == []
     assert Seats.seats_left(meeting, 4) == 2
 
-    payment = BookingPaymentQueries.by_seat_hold_id(hold.id)
+    payment = SeatPaymentQueries.by_seat_hold_id(hold.id)
     assert payment.amount_cents == 4000
     assert payment.seats == 2
 
@@ -146,7 +146,7 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
     assert {:ok, :payment_required, %{seat_hold: %{seats: 2} = hold}} =
              execute(ctx, "one@example.com", %{guest_emails: guests})
 
-    assert %{seats: 2, amount_cents: 4000} = BookingPaymentQueries.by_seat_hold_id(hold.id)
+    assert %{seats: 2, amount_cents: 4000} = SeatPaymentQueries.by_seat_hold_id(hold.id)
   end
 
   describe "CreateGroup.seats_for/3" do
@@ -191,7 +191,7 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
 
     hold = hold_for("one@example.com")
     assert %{status: :released, released_reason: :failed} = hold
-    assert BookingPaymentQueries.by_seat_hold_id(hold.id).status == :failed
+    assert SeatPaymentQueries.by_seat_hold_id(hold.id).status == :failed
 
     meeting = Repo.get!(MeetingSchema, hold.meeting_id)
     assert meeting.status == :expired
@@ -217,7 +217,7 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
 
     hold = hold_for("two@example.com")
     assert %{status: :released, released_reason: :failed} = hold
-    assert BookingPaymentQueries.by_seat_hold_id(hold.id).status == :failed
+    assert SeatPaymentQueries.by_seat_hold_id(hold.id).status == :failed
     assert Repo.get!(MeetingSchema, meeting.id).status == :confirmed
     assert Seats.seats_left(meeting, 4) == 3
     refute_receive :expired
@@ -230,7 +230,7 @@ defmodule Tymeslot.Bookings.CreateGroupPaidTest do
     expect_checkout(:error)
     assert {:error, :checkout_failed} = execute(ctx, "two@example.com")
 
-    assert BookingPaymentQueries.by_seat_hold_id(hold_for("two@example.com").id).status == :failed
+    assert SeatPaymentQueries.by_seat_hold_id(hold_for("two@example.com").id).status == :failed
     assert Repo.get!(MeetingSchema, meeting.id).status == :awaiting_payment
     assert SeatHolds.seats_held(meeting.id) == 1
     refute_receive :expired

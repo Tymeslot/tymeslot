@@ -12,7 +12,9 @@ defmodule Tymeslot.MeetingPayments.BookingPayments do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.HeldMeetings
+  alias Tymeslot.MeetingPayments.OutstandingRefundQueries
   alias Tymeslot.MeetingPayments.Refunds
+  alias Tymeslot.MeetingPayments.SeatPaymentQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.MeetingState
 
@@ -54,7 +56,7 @@ defmodule Tymeslot.MeetingPayments.BookingPayments do
   """
   @spec list_outstanding_refunds_for_host(integer(), keyword()) :: [BookingPaymentSchema.t()]
   def list_outstanding_refunds_for_host(host_user_id, opts \\ []),
-    do: BookingPaymentQueries.outstanding_refunds_for_host(host_user_id, opts)
+    do: OutstandingRefundQueries.outstanding_refunds_for_host(host_user_id, opts)
 
   @doc """
   Summarises the host's outstanding refunds: how many there are, and how much
@@ -66,7 +68,7 @@ defmodule Tymeslot.MeetingPayments.BookingPayments do
   """
   @spec outstanding_refunds_summary_for_host(integer()) :: outstanding_refunds_summary()
   def outstanding_refunds_summary_for_host(host_user_id),
-    do: BookingPaymentQueries.outstanding_refunds_summary_for_host(host_user_id)
+    do: OutstandingRefundQueries.outstanding_refunds_summary_for_host(host_user_id)
 
   @doc """
   Returns the total count of pending booking payments for a host.
@@ -106,7 +108,7 @@ defmodule Tymeslot.MeetingPayments.BookingPayments do
   `get_payment/1`: for workers and system rules only.
   """
   @spec payment_for_seat_hold(Ecto.UUID.t()) :: BookingPaymentSchema.t() | nil
-  def payment_for_seat_hold(hold_id), do: BookingPaymentQueries.by_seat_hold_id(hold_id)
+  def payment_for_seat_hold(hold_id), do: SeatPaymentQueries.by_seat_hold_id(hold_id)
 
   @doc """
   Fetches a booking payment by ID only if `host_user_id` took it.
@@ -146,7 +148,7 @@ defmodule Tymeslot.MeetingPayments.BookingPayments do
   """
   @spec payment_for_participant(term()) :: BookingPaymentSchema.t() | nil
   def payment_for_participant(participant_id),
-    do: BookingPaymentQueries.by_participant_id(participant_id)
+    do: SeatPaymentQueries.by_participant_id(participant_id)
 
   @doc """
   How many of `payments` there are and how much of their money each currency
@@ -232,7 +234,7 @@ defmodule Tymeslot.MeetingPayments.BookingPayments do
   @spec seat_payments_for_meeting(Ecto.UUID.t(), integer()) :: [BookingPaymentSchema.t()]
   def seat_payments_for_meeting(meeting_id, host_user_id) when is_integer(host_user_id) do
     meeting_id
-    |> BookingPaymentQueries.list_for_live_seats()
+    |> SeatPaymentQueries.list_for_live_seats()
     |> Enum.filter(&(&1.host_user_id == host_user_id and Refunds.refund_outstanding?(&1)))
   end
 

@@ -47,11 +47,11 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompleted do
   alias Tymeslot.Bookings.SeatEffects
   alias Tymeslot.Bookings.SeatRelease
   alias Tymeslot.Infrastructure.Logging.LogFormat
-  alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.MeetingPayments.Refunds
+  alias Tymeslot.MeetingPayments.SeatPaymentQueries
   alias Tymeslot.MeetingPayments.Webhooks.LockedPayment
   alias Tymeslot.MeetingPayments.Webhooks.PaymentCompletion
-  alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Meetings.SeatHoldSchema
@@ -114,7 +114,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompleted do
          {:ok, booking} <- CreateGroup.complete_paid_hold(locked.seat_hold_id),
          {:ok, paid} <- PaymentCompletion.mark_paid(locked, event_id, object),
          {:ok, linked} <-
-           BookingPaymentQueries.link_seat(paid, %{
+           SeatPaymentQueries.link_seat(paid, %{
              participant_id: booking.participant.id,
              meeting_id: booking.meeting.id
            }) do

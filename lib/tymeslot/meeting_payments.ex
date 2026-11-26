@@ -38,7 +38,6 @@ defmodule Tymeslot.MeetingPayments do
   alias Tymeslot.Integrations.Stripe
   alias Tymeslot.MeetingPayments.AccountCurrency
   alias Tymeslot.MeetingPayments.ApplicationFee
-  alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccountRetirement
@@ -49,6 +48,7 @@ defmodule Tymeslot.MeetingPayments do
   alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.MeetingPayments.RefundSchema
+  alias Tymeslot.MeetingPayments.SeatPaymentQueries
   alias Tymeslot.MeetingPayments.Workers.ResyncConnectAccount
 
   @type account :: ConnectAccountSchema.t()
@@ -333,12 +333,12 @@ defmodule Tymeslot.MeetingPayments do
   difference is charged or refunded. A free seat has no payment, and
   nothing changes. Inside the move's transaction, under its meeting locks,
   so the payment row is locked after them (see
-  `BookingPaymentQueries.move_to_participant/3` for why that order is safe).
+  `SeatPaymentQueries.move_to_participant/3` for why that order is safe).
   """
   @spec move_seat_payment(binary(), %{id: binary()}, %{id: binary()}) :: :ok
   def move_seat_payment(old_participant_id, new_participant, new_meeting) do
     _moved =
-      BookingPaymentQueries.move_to_participant(old_participant_id, new_participant, new_meeting)
+      SeatPaymentQueries.move_to_participant(old_participant_id, new_participant, new_meeting)
 
     :ok
   end

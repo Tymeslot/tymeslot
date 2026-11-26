@@ -34,13 +34,14 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     BookingPaymentQueries,
     BookingPaymentSchema,
     ConnectAccountQueries,
-    Currency
+    Currency,
+    SeatPaymentQueries
   }
 
-  alias Tymeslot.Meetings.MeetingQueries
-  alias Tymeslot.Meetings.SeatHolds
-  alias Tymeslot.Meetings.SeatHoldSchema
   alias Tymeslot.MeetingPayments.Workers.ExpireCheckoutSession
+
+  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.SeatHoldSchema
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
@@ -541,56 +542,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   """
   @spec abandon_seat_checkout(String.t()) :: :ok | {:error, term()}
   def abandon_seat_checkout(hold_id),
-    do: hold_id |> BookingPaymentQueries.by_seat_hold_id() |> expire_open_session()
-
-  @doc """
-  After the transaction that released `holds` for a cancelled meeting has
-  committed: expires each hold's open checkout (`abandon_seat_checkout/1`)
-  and tells its booker's payment page it expired. Best effort: a checkout
-  Stripe completes anyway is refunded in full, its hold having been
-  released for a cancelled meeting, so a failure to expire one is logged
-  and the rest go on.
-  """
-  @spec abandon_released_seat_holds([SeatHoldSchema.t()]) :: :ok
-  def abandon_released_seat_holds(holds) when is_list(holds) do
-    Enum.each(holds, fn hold ->
-      case abandon_seat_checkout(hold.id) do
-        :ok ->
-          :ok
-
-        {:error, reason} ->
-          Logger.warning("Could not expire the checkout of a seat hold on a cancelled meeting",
-            seat_hold_id: hold.id,
-            reason: LogFormat.reason(reason)
-          )
-      end
-
-      SeatHolds.broadcast(hold.id, :expired)
-    end)
-  end
-
-  @doc """
-  Fails the pending payment opened for the seat hold `hold_id`, whose
-  checkout could not be opened, locking it first. Must run inside the
-  transaction releasing the hold, before the meeting and the hold are
-  locked (payment, meeting, hold is the order every path takes).
-
-  Stripe may have created the session even though the call creating it
-  failed or timed out, so without this the row would stay `pending` with no
-  session id, which nothing ever settles. Returns `{:ok, :unchanged}` when
-  there is no pending payment for the hold.
-  """
-  @spec fail_seat_payment(String.t()) ::
-          {:ok, BookingPaymentSchema.t() | :unchanged} | {:error, Ecto.Changeset.t()}
-  def fail_seat_payment(hold_id) do
-    case BookingPaymentQueries.lock_by_seat_hold_id(hold_id) do
-      %BookingPaymentSchema{status: :pending} = payment ->
-        BookingPaymentQueries.update(payment, %{status: :failed})
-
-      _settled_or_missing ->
-        {:ok, :unchanged}
-    end
-  end
+    do: hold_id |> SeatPaymentQueries.by_seat_hold_id() |> expire_open_session()
 
   defp expire_open_session(%{
          status: :pending,

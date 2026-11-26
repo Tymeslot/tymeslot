@@ -13,6 +13,7 @@ defmodule Tymeslot.MeetingPayments.Checkout do
   alias Tymeslot.MeetingPayments.CheckoutOutcome
   alias Tymeslot.MeetingPayments.CheckoutSessions
   alias Tymeslot.MeetingPayments.HeldMeetings
+  alias Tymeslot.MeetingPayments.SeatHoldCheckouts
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.SeatHoldSchema
 
@@ -68,11 +69,11 @@ defmodule Tymeslot.MeetingPayments.Checkout do
 
   @doc """
   Fails the pending payment of a seat hold whose checkout could not be
-  opened. See `CheckoutSessions.fail_seat_payment/1`.
+  opened. See `SeatHoldCheckouts.fail_seat_payment/1`.
   """
   @spec fail_seat_payment(String.t()) ::
           {:ok, BookingPaymentSchema.t() | :unchanged} | {:error, Ecto.Changeset.t()}
-  defdelegate fail_seat_payment(hold_id), to: CheckoutSessions
+  defdelegate fail_seat_payment(hold_id), to: SeatHoldCheckouts
 
   @doc """
   Opens one Stripe Checkout for every session of a paid series, held
@@ -130,10 +131,10 @@ defmodule Tymeslot.MeetingPayments.Checkout do
   @doc """
   Once a meeting's cancellation has committed, expires the open checkouts
   of the seat holds it released and tells their bookers. See
-  `CheckoutSessions.abandon_released_seat_holds/1`.
+  `SeatHoldCheckouts.abandon_released_seat_holds/1`.
   """
   @spec abandon_released_seat_holds([SeatHoldSchema.t()]) :: :ok
-  defdelegate abandon_released_seat_holds(holds), to: CheckoutSessions
+  defdelegate abandon_released_seat_holds(holds), to: SeatHoldCheckouts
 
   @doc """
   What an attendee returning from Stripe Checkout should be told about their

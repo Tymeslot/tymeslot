@@ -10,8 +10,8 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
 
   alias Ecto.Changeset
   alias Ecto.UUID
-  alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.Checkout
+  alias Tymeslot.MeetingPayments.SeatPaymentQueries
   alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Profiles
   alias Tymeslot.SignedToken
@@ -192,7 +192,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
 
       # Nothing is stubbed, so any Stripe call fails the test.
       assert {:error, :hold_expired} = Checkout.create_seat_checkout_session(hold)
-      assert BookingPaymentQueries.by_seat_hold_id(hold.id) == nil
+      assert SeatPaymentQueries.by_seat_hold_id(hold.id) == nil
     end
 
     test "a released hold is refused", %{meeting: meeting} do
@@ -205,7 +205,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
         )
 
       assert {:error, :hold_expired} = Checkout.create_seat_checkout_session(hold)
-      assert BookingPaymentQueries.by_seat_hold_id(hold.id) == nil
+      assert SeatPaymentQueries.by_seat_hold_id(hold.id) == nil
     end
 
     test "a hold already converted to a seat is refused", %{meeting: meeting} do
@@ -220,7 +220,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
         )
 
       assert {:error, :hold_expired} = Checkout.create_seat_checkout_session(hold)
-      assert BookingPaymentQueries.by_seat_hold_id(hold.id) == nil
+      assert SeatPaymentQueries.by_seat_hold_id(hold.id) == nil
     end
 
     test "a host without payments access cannot open a seat checkout", %{meeting: meeting} do
@@ -228,7 +228,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
       hold = insert(:seat_hold, meeting: meeting, email: "a@example.com")
 
       assert {:error, :payments_unavailable} = Checkout.create_seat_checkout_session(hold)
-      assert BookingPaymentQueries.by_seat_hold_id(hold.id) == nil
+      assert SeatPaymentQueries.by_seat_hold_id(hold.id) == nil
     end
 
     test "a type no longer paid opens no checkout", %{meeting: meeting, meeting_type: mt} do
@@ -236,7 +236,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsSeatTest do
       hold = insert(:seat_hold, meeting: meeting, email: "a@example.com")
 
       assert {:error, :payment_not_required} = Checkout.create_seat_checkout_session(hold)
-      assert BookingPaymentQueries.by_seat_hold_id(hold.id) == nil
+      assert SeatPaymentQueries.by_seat_hold_id(hold.id) == nil
     end
   end
 
