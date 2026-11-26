@@ -23,8 +23,11 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefund do
   `SweepPendingRefunds` gives the refund a new job. A read Stripe refuses
   for good (a revoked Connect account) leaves the refund pending too,
   since an earlier request may have made it: it is reported as stuck at
-  once and the job cancelled, and the sweeper tries it again later, in
-  case the account is reconnected.
+  once, and the job snoozes and tries again, in case the account is
+  reconnected, first after fifteen minutes and twice as long each
+  time after, up to a day apart, until the refund is settled (by
+  `Tymeslot.Release.settle_stuck_refund/2`, say). The waiting job keeps the
+  sweeper from giving the refund another.
 
   At most one job waits per refund.
   """
@@ -45,12 +48,19 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefund do
   @base_backoff_seconds 60
   @max_backoff_seconds 3_600
 
+  # A refund whose charge's refunds Stripe will not list is tried again
+  # after fifteen minutes, doubling each time the job has waited, up to a
+  # day: an operator settles it, or the account is reconnected, within days,
+  # not minutes, and each try costs a Stripe call and an error log.
+  @stuck_base_seconds 15 * 60
+  @stuck_max_seconds 24 * 60 * 60
+
   # A job attempt may take this long at Stripe; nobody is waiting on it.
   @deadline_ms 20_000
 
   # Each of these has been reported already (`Refunds.FailureNotice`), or the
   # refund is gone.
-  @expected [:refund_failed, :missing_charge, :refund_stuck, :not_found]
+  @expected [:refund_failed, :missing_charge, :not_found]
 
   @behaviour ExpectedJobOutcome
 
@@ -94,7 +104,10 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefund do
   defp result({:ok, _refund}, _job), do: :ok
   defp result({:error, reason}, _job) when reason in @expected, do: {:cancel, reason}
 
-  defp result({:stuck, _refund}, _job), do: {:cancel, :refund_stuck}
+  defp result({:stuck, _refund}, %Oban.Job{meta: meta}) do
+    waited = Map.get(meta, "snoozed", 0)
+    {:snooze, Backoff.exponential(waited + 1, @stuck_base_seconds, @stuck_max_seconds)}
+  end
 
   defp result({:pending, refund}, job) do
     if last?(job) and not RefundQueries.leased?(refund), do: FailureNotice.stuck(refund)

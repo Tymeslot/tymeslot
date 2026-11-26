@@ -25,10 +25,11 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes.DedupKey do
     account_deletion_held_last_admin: {:user_id, "unknown"},
     # Each failed refund is money an attendee is owed: one alert per refund.
     refund_failed: {:refund_id, "unknown"},
-    # A stuck refund is reported by every job that leaves it pending, and
-    # the pending-refund sweep gives it a new job every 15 minutes (one whose
-    # charge's refunds Stripe will not list is stuck at its first attempt):
-    # one alert per refund, not one per job.
+    # A stuck refund is reported again by every attempt that leaves it so:
+    # each job whose last attempt leaves it pending, the pending-refund
+    # sweep giving it a new one, and, for one whose charge's refunds Stripe
+    # will not list, each wake of its job, at most a day apart. One alert
+    # per refund, not one per attempt.
     refund_stuck: {:refund_id, "unknown"},
     # A refund is settled once succeeded, so it is reversed at most once.
     refund_failure_reversed: {:refund_id, "unknown"},

@@ -220,7 +220,8 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   `{:error, :refund_failed}` once it failed, `{:error, :missing_charge}`
   when the last attempt found no charge to refund, and `{:stuck, refund}`
   when Stripe refuses to list the charge's refunds: the refund stays
-  pending, reported, until `Workers.SweepPendingRefunds` tries it again.
+  pending, reported, and its `Workers.ExecuteRefund` job snoozes and tries
+  again, up to a day apart, until it is settled.
   """
   @spec execute(RefundSchema.t(), keyword()) :: attempt_result()
   defdelegate execute(refund, opts), to: RefundExecutor, as: :run

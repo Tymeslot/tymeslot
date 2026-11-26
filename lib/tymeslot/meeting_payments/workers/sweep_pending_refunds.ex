@@ -7,9 +7,12 @@ defmodule Tymeslot.MeetingPayments.Workers.SweepPendingRefunds do
   fresh one.
 
   A refund whose job is still waiting or running already has one, and
-  `ExecuteRefund`'s uniqueness makes the insert a no-op for it. The
-  insert asks nothing of Stripe and sends nothing: the job's attempts do,
-  as for any other refund.
+  `ExecuteRefund`'s uniqueness makes the insert a no-op for it. That
+  includes a refund whose charge's refunds Stripe will not list: its job
+  waits, snoozed at intervals that grow to a day, rather than ending, so
+  the sweep never adds an attempt (and a Stripe call) of its own every run.
+  The insert asks nothing of Stripe and sends nothing: the job's attempts
+  do, as for any other refund.
 
   Every refund row is recorded by `Refunds.request_refund/4` together with
   its job, so the first run after this sweeper is deployed finds only
