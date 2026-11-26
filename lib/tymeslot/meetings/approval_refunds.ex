@@ -121,6 +121,16 @@ defmodule Tymeslot.Meetings.ApprovalRefunds do
       {:ok, _refund} ->
         :ok
 
+      # Stripe holds the money until the dispute closes, and its close
+      # refunds what is left of a request released unapproved
+      # (`MeetingPayments.Webhooks.ChargeDisputeClosed`), so nobody needs
+      # telling.
+      {:error, :under_dispute} ->
+        Logger.info("Refund of a released request left to its dispute's close",
+          meeting_id: meeting.id,
+          payment_id: payment.id
+        )
+
       {:error, reason} ->
         # A refusal must not undo the already-committed release (see module
         # docs on ordering). The approval window can run up to 336 hours, so

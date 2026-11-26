@@ -233,6 +233,39 @@ defmodule Tymeslot.Meetings.ApprovalRelease do
   def refunds_on_release?(%{first_announced_at: %DateTime{}}), do: false
   def refunds_on_release?(_meeting), do: true
 
+  @doc """
+  Whether a meeting ended as a held request the host never approved:
+  declined (`decline/2`), expired unanswered (`expire/1`), or withdrawn
+  before an answer (`withdraw/2`), which includes one cancelled while its
+  payment was still awaited. Whether its payment goes back on its own is
+  `refunds_on_release?/1`.
+
+  The status cannot say: a decline and a withdrawal are `:cancelled` like
+  any cancelled meeting, and an expiry is `:expired` like a lapsed checkout.
+  So it is read from what each exit writes. A decline alone stamps
+  `approval_declined_at`. An expiry stamps `approval_resolved_at`, which an
+  approval stamps too, so an approved meeting whose reschedule request
+  lapsed (`reschedule_requested_at`) is not one. A withdrawal stamps
+  neither, and is the one cancelled meeting still carrying the
+  `approval_requested_at` of a request nobody answered: every way out of
+  the gate into a confirmed meeting stamps `approval_resolved_at`, a
+  reschedule onto a type without the gate included
+  (`Bookings.RescheduleGate`).
+  """
+  @spec released_request?(Meeting.t() | map()) :: boolean()
+  def released_request?(%{status: :cancelled, approval_declined_at: %DateTime{}}), do: true
+
+  def released_request?(%{
+        status: :cancelled,
+        approval_requested_at: %DateTime{},
+        approval_resolved_at: nil
+      }),
+      do: true
+
+  def released_request?(%{status: :expired, reschedule_requested_at: %DateTime{}}), do: false
+  def released_request?(%{status: :expired, approval_resolved_at: %DateTime{}}), do: true
+  def released_request?(_meeting), do: false
+
   # Capped here rather than only in the form, because the reason is quoted
   # verbatim into an email to a third party and the two places a host can type
   # one are both client-side limits a request can simply not honour.
