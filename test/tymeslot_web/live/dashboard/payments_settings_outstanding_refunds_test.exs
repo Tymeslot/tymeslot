@@ -384,6 +384,49 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
     end
   end
 
+  # Only the part not already pending is left for the host to settle, and
+  # Tymeslot cannot refund it here, so the row points at Stripe for it while
+  # still noting what is pending.
+  describe "a row partly being processed that cannot be refunded here" do
+    test "points at Stripe once the refund window has passed", %{conn: conn} do
+      host = connected_host()
+
+      payment =
+        cancelled_payment_for(host, %{
+          paid_at: DateTime.add(DateTime.utc_now(:second), -61, :day)
+        })
+
+      insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2000)
+
+      {view, _html} = open_payments(conn, host)
+
+      assert has_element?(view, "#outstanding-refund-#{payment.id}", "Refund in Stripe")
+      assert has_element?(view, "#outstanding-refund-#{payment.id}", "€20.00 being processed")
+      refute has_element?(view, "#outstanding-refund-#{payment.id}", "Refund processing")
+      refute has_element?(view, refund_button(payment))
+    end
+
+    test "points at Stripe once Stripe is disconnected", %{conn: conn} do
+      host = connected_host()
+      payment = cancelled_payment_for(host)
+      insert(:booking_payment_refund, booking_payment: payment, amount_cents: 2000)
+
+      {view, _html} = open_payments(conn, host)
+      assert has_element?(view, refund_button(payment))
+
+      view |> element("button[phx-click='open_disconnect_modal']") |> render_click()
+
+      view
+      |> element("#disconnect-modal [data-testid='confirm-disconnect-stripe']")
+      |> render_click()
+
+      assert has_element?(view, "#outstanding-refund-#{payment.id}", "Refund in Stripe")
+      assert has_element?(view, "#outstanding-refund-#{payment.id}", "€20.00 being processed")
+      refute has_element?(view, "#outstanding-refund-#{payment.id}", "Refund processing")
+      refute has_element?(view, refund_button(payment))
+    end
+  end
+
   # The card used to live inside the "has a connect account" branch, so the one
   # record inside Tymeslot that the host was still holding an attendee's money
   # vanished at exactly the moment it mattered most. The soft delete detaches
