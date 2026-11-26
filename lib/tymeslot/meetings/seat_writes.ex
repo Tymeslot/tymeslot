@@ -19,6 +19,7 @@ defmodule Tymeslot.Meetings.SeatWrites do
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Meetings.SeatHoldQueries
@@ -134,8 +135,7 @@ defmodule Tymeslot.Meetings.SeatWrites do
          (hooks.registration_reserved? or registration_open?(meeting)) do
       seat = insert_seat_or_rollback(meeting, seat_request, seats_requested, hooks.hold)
 
-      {meeting, confirmed?} =
-        if hooks.hold, do: {meeting, false}, else: confirm_if_awaiting_payment(meeting)
+      {meeting, confirmed?} = settle_awaiting_payment(meeting, seat)
 
       Map.merge(seat, %{meeting: meeting, created_meeting?: confirmed?})
     else
@@ -143,20 +143,37 @@ defmodule Tymeslot.Meetings.SeatWrites do
     end
   end
 
-  # A slot a hold created stays `:awaiting_payment` until its first real
-  # participant, a free seat joining it or a paid hold converting. That is
+  # A slot a hold created stays `:awaiting_payment` until its first seat
+  # that counts, a free seat joining it or a paid hold converting. That is
   # when the slot comes into being for the seat's callers: it has no
   # calendar event, reminders or video room yet, so the seat reports
-  # `created_meeting?: true` and they schedule them. Call with the meeting
-  # row locked. Returns the meeting and whether it was confirmed now.
-  defp confirm_if_awaiting_payment(%Meeting{status: :awaiting_payment} = meeting) do
-    case GroupMeetingQueries.confirm_awaiting_payment(meeting) do
-      {:ok, confirmed} -> {confirmed, true}
+  # `created_meeting?: true` and they schedule them. A seat awaiting email
+  # verification does not count yet, so it holds the slot for verification
+  # instead, as a slot its first seat creates held is: verifying it brings
+  # the slot to life (`Tymeslot.Bookings.SlotActivation`), and until then
+  # nobody but its bookers knows of the slot. Another hold changes nothing.
+  # Call with the meeting row locked. Returns the meeting and whether it was
+  # confirmed now.
+  defp settle_awaiting_payment(%Meeting{status: :awaiting_payment} = meeting, %{
+         participant: participant
+       }) do
+    result =
+      if ParticipantSchema.unverified?(participant),
+        do:
+          GroupMeetingQueries.hold_awaiting_payment_for_verification(
+            meeting,
+            participant.verification_deadline_at
+          ),
+        else: GroupMeetingQueries.confirm_awaiting_payment(meeting)
+
+    case result do
+      {:ok, %Meeting{status: :confirmed} = confirmed} -> {confirmed, true}
+      {:ok, held} -> {held, false}
       {:error, changeset} -> Repo.rollback(changeset)
     end
   end
 
-  defp confirm_if_awaiting_payment(%Meeting{} = meeting), do: {meeting, false}
+  defp settle_awaiting_payment(%Meeting{} = meeting, _seat), do: {meeting, false}
 
   # The joiner read the slot in their own language: their locale's copy of
   # its texts joins the slot's (`AttendeeTexts.merge/2`), under the lock

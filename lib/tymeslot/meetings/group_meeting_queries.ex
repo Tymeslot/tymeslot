@@ -163,6 +163,41 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
   end
 
   @doc """
+  Holds a group meeting a seat hold created (`:awaiting_payment`) for email
+  verification once a seat awaiting its booker's verification joins it, with
+  that seat's `deadline`, as a slot whose first seat is held is created
+  (`MeetingSchema.group_changeset/2`). The meeting enters the slot unique
+  index here, so its constraint is declared. Call with the meeting row
+  locked.
+  """
+  @spec hold_awaiting_payment_for_verification(Meeting.t(), DateTime.t()) ::
+          {:ok, Meeting.t()} | {:error, Changeset.t()}
+  def hold_awaiting_payment_for_verification(
+        %Meeting{status: :awaiting_payment} = meeting,
+        %DateTime{} = deadline
+      ) do
+    meeting
+    |> Changeset.change(status: :awaiting_verification, verification_deadline_at: deadline)
+    |> UniqueSlot.constrain()
+    |> Repo.update()
+  end
+
+  @doc """
+  Returns a group meeting held for verification
+  (`hold_awaiting_payment_for_verification/2`) to `:awaiting_payment` once
+  its last seat awaiting verification has gone while seat holds remain on
+  it, clearing the verification deadline a slot only holds take never
+  carries. The meeting leaves the slot unique index, so nothing can
+  conflict. Call with the meeting row locked.
+  """
+  @spec return_to_awaiting_payment(Meeting.t()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
+  def return_to_awaiting_payment(%Meeting{status: :awaiting_verification} = meeting) do
+    meeting
+    |> Changeset.change(status: :awaiting_payment, verification_deadline_at: nil)
+    |> Repo.update()
+  end
+
+  @doc """
   Sets `capacity` on a meeting type's future, live group meetings
   (`capacity > 1`, start time after `now`), returning how many were updated.
 

@@ -24,11 +24,13 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.EmailVerification
   alias Tymeslot.Meetings.EmailVerificationJobs
+  alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingTransitionQueries
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.ParticipantSchema, as: Participant
+  alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.MeetingTypeSchema, as: MeetingType
   alias Tymeslot.MeetingTypes.SeriesSettings
@@ -182,7 +184,9 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
   left with no held seat is voided with it, so its time is free again
   (`:expired`, or `:cancelled` for one the organiser knew of before its last
   confirmed seat left, see `Tymeslot.Bookings.SeatRelease`); a live slot, or
-  one still holding another seat, is not touched.
+  one still holding another seat, is not touched. A held slot left with only
+  seat holds for bookers still paying awaits their payment again
+  (`:awaiting_payment`).
   """
   @spec expire_seat(Participant.t()) ::
           {:ok, Participant.t()} | {:error, :not_awaiting_verification}
@@ -284,17 +288,28 @@ defmodule Tymeslot.Meetings.EmailVerification.Seats do
   # organiser was told of it and then that it was cancelled, so it ends
   # `:cancelled`, which keeps it in their history and out of the prune of
   # unverified holds.
+  #
+  # Seats held for bookers still paying (`Tymeslot.Meetings.SeatHolds`) keep
+  # the slot too: their payment must still find it. With no held seat left
+  # it awaits payment again, as a slot only holds took does, so it settles
+  # with its holds (`SeatRelease.settle_after_hold/1`).
   defp void_if_unheld(%Meeting{status: :awaiting_verification} = slot, now) do
-    if ParticipantQueries.count_seats_held(slot.id) == 0 do
-      {:ok, voided} =
-        MeetingTransitionQueries.transition_from_awaiting_verification(slot.id,
-          status: voided_status(slot),
-          cancelled_at: now
-        )
+    cond do
+      ParticipantQueries.count_seats_held(slot.id) > 0 ->
+        slot
 
-      voided
-    else
-      slot
+      SeatHolds.seats_held(slot.id) > 0 ->
+        {:ok, awaiting_payment} = GroupMeetingQueries.return_to_awaiting_payment(slot)
+        awaiting_payment
+
+      true ->
+        {:ok, voided} =
+          MeetingTransitionQueries.transition_from_awaiting_verification(slot.id,
+            status: voided_status(slot),
+            cancelled_at: now
+          )
+
+        voided
     end
   end
 
