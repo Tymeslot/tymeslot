@@ -147,6 +147,37 @@ defmodule Tymeslot.Meetings.Workers.ExpireSeatHoldsTest do
     assert Repo.reload!(payment).status == :pending
   end
 
+  test "a session Stripe cannot be asked about is counted as an error and left held", ctx do
+    {hold, payment} = overdue_hold(ctx, 10, stripe_checkout_session_id: "cs_sweep_unreadable")
+    StripeStub.stub(:retrieve_checkout_session, {:error_fixture, "api_error"})
+
+    capture_log(fn ->
+      assert {:ok, %{errors: 1, released: 0, reconciled: 0}} = perform_job(ExpireSeatHolds, %{})
+    end)
+
+    assert SeatHolds.get(hold.id).status == :held
+    assert Repo.reload!(payment).status == :pending
+  end
+
+  # An asynchronous payment method (a bank debit) completes the session
+  # before the money arrives; the hold waits for the payment's own outcome.
+  test "a completed session still awaiting its asynchronous payment is skipped", ctx do
+    {hold, payment} = overdue_hold(ctx, 10, stripe_checkout_session_id: "cs_sweep_async")
+
+    stripe_reports(%{
+      "status" => "complete",
+      "payment_status" => "unpaid",
+      "amount_total" => 2500,
+      "currency" => payment.currency
+    })
+
+    assert {:ok, %{skipped: 1, released: 0, reconciled: 0}} = perform_job(ExpireSeatHolds, %{})
+
+    assert SeatHolds.get(hold.id).status == :held
+    assert Repo.reload!(payment).status == :pending
+    assert Repo.get!(MeetingSchema, ctx.meeting.id).status == :awaiting_payment
+  end
+
   test "a hold inside its grace period is left alone", ctx do
     {hold, _payment} = overdue_hold(ctx, 2, stripe_checkout_session_id: "cs_sweep_grace")
 
