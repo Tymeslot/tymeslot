@@ -25,7 +25,7 @@ defmodule Tymeslot.Repo.Migrations.AddDisputedLostCentsToBookingPayments do
 
   def change do
     alter table(:booking_payments) do
-      add(:disputed_lost_cents, :integer, default: 0, null: false)
+      add :disputed_lost_cents, :integer, default: 0, null: false
     end
 
     create(
