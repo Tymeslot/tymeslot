@@ -435,7 +435,7 @@ defmodule Tymeslot.BookingSeries.CancelRefundTest do
       assert [_one] = email_jobs("send_series_cancellation")
 
       # A failed attempt is retried quietly.
-      StripeStub.expect(:create_refund, {:error_fixture, "api_error"})
+      StripeStub.expect(:create_refund, 3, {:transport_error, :timeout})
       assert {:error, :pending} = run_refund_job(attempt: 1)
       assert refund_failed_jobs() == []
 

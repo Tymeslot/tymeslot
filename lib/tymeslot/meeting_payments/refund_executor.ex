@@ -33,9 +33,9 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
        that, as Stripe may not list a refund it is still making. Once
        Stripe has stored an answer under a key that leaves the refund open
        (`RefundOutcome`'s `:retry_new_key`), the next attempt takes its
-       own key, so it never replays that answer, and runs no sooner than a
-       minute later, giving Stripe time to list a refund the answered
-       request may have made.
+       own key, so it never replays that answer, and runs no sooner than
+       `settle_wait_seconds/1` allows, giving Stripe time to list a refund
+       the answered request may have made.
        A refund carrying a `legacy_idempotency_key` replays that key, with
        the request first sent under it (which named no refund row), on
        every attempt until 24 hours after `legacy_since`, while Stripe may
@@ -52,6 +52,7 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
 
   require Logger
 
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Stripe.IdempotencyKey
   alias Tymeslot.Integrations.Stripe.Refunds, as: StripeRefunds
@@ -76,15 +77,40 @@ defmodule Tymeslot.MeetingPayments.RefundExecutor do
   @clock_margin_seconds 5 * 60
 
   # How long Stripe is given to list a refund that a request it answered
-  # with an error may still have made, before the next attempt reads the
-  # list and sends under a new key.
-  @settle_seconds 60
+  # with an error (a 5xx, say) may still have made, before the next attempt
+  # reads the list and, finding nothing, sends under a new key. Stripe
+  # promises no bound on that lag, and 5xx answers come in incidents, when
+  # it is at its longest. Too short a wait costs a second refund of money
+  # the host may no longer hold; a long one costs only a refund made a few
+  # minutes later after a rare error. Ten minutes also gives the
+  # `charge.refunded` webhook time to record a refund the request made.
+  @settle_seconds 10 * 60
 
   @type result ::
           {:ok, RefundSchema.t()}
           | {:pending, RefundSchema.t()}
           | {:stuck, RefundSchema.t()}
           | {:error, :not_found | :missing_charge | :refund_failed}
+
+  @doc """
+  How many seconds `refund` must wait before its next attempt. An attempt
+  whose request Stripe answered in a way that leaves the refund open gave
+  up its key (`RefundOutcome`'s `:retry_new_key`, leaving `key_attempt`
+  unset), and the next one, which sends under a new key, waits until
+  #{@settle_seconds} seconds after that attempt began (its claim sets
+  `updated_at`). Otherwise 0.
+  """
+  @spec settle_wait_seconds(RefundSchema.t()) :: non_neg_integer()
+  def settle_wait_seconds(%RefundSchema{
+        status: :pending,
+        attempt: attempt,
+        key_attempt: nil,
+        updated_at: %DateTime{} = attempted_at
+      })
+      when attempt > 0,
+      do: max(@settle_seconds - DateTime.diff(Clock.utc_now(), attempted_at, :second), 0)
+
+  def settle_wait_seconds(%RefundSchema{}), do: 0
 
   @doc """
   Makes one attempt at `refund`; see the moduledoc. Raises `ArgumentError`

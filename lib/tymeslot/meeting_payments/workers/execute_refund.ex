@@ -11,7 +11,11 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefund do
 
   Each run is one attempt (`Refunds.execute/2`). A refund still pending is
   retried over about four hours (`backoff/1`); each attempt after the first
-  first adopts a refund Stripe already made for it. The last attempt sends
+  first adopts a refund Stripe already made for it. An attempt after one
+  whose request Stripe answered with an error that leaves the refund open
+  waits first, snoozing until Stripe has had time to list a refund that
+  request may have made (`RefundExecutor.settle_wait_seconds/1`); the
+  snooze spends none of the job's attempts. The last attempt sends
   no new request: it adopts the refund if Stripe made it, and otherwise
   fails it with `"retries_exhausted"` and reports it
   (`Refunds.FailureNotice`). A refund Stripe refused, or whose charge could
@@ -38,6 +42,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefund do
     unique: [keys: [:refund_id], states: :incomplete, period: :infinity]
 
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.MeetingPayments.RefundExecutor
   alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.MeetingPayments.Refunds.FailureNotice
@@ -89,13 +94,20 @@ defmodule Tymeslot.MeetingPayments.Workers.ExecuteRefund do
   def perform(%Oban.Job{args: %{"refund_id" => id}} = job) do
     case RefundQueries.get(id) do
       nil -> {:discard, :not_found}
-      refund -> refund |> attempt(job) |> result(job)
+      refund -> run(refund, job)
     end
   end
 
   @impl Oban.Worker
   def backoff(%Oban.Job{attempt: attempt}),
     do: Backoff.exponential(attempt, @base_backoff_seconds, @max_backoff_seconds)
+
+  defp run(refund, job) do
+    case RefundExecutor.settle_wait_seconds(refund) do
+      0 -> refund |> attempt(job) |> result(job)
+      seconds -> {:snooze, seconds}
+    end
+  end
 
   defp attempt(refund, job),
     do:

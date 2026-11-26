@@ -16,6 +16,7 @@ defmodule Tymeslot.MeetingPayments.RefundRetryKeyTest do
 
   import Tymeslot.AdminAlertsCaptureHelpers
   import Tymeslot.Factory
+  import Tymeslot.Test.ClockHelpers
 
   alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.MeetingPayments.Refunds
@@ -54,6 +55,13 @@ defmodule Tymeslot.MeetingPayments.RefundRetryKeyTest do
 
   defp create_keys,
     do: :create_refund |> StripeStub.requests() |> Enum.map(& &1.headers["idempotency-key"])
+
+  # Moves the clock past the wait a refund serves after an attempt that gave
+  # up its key, so its job attempts it.
+  defp settle_window_passed(refund) do
+    attempted_at = RefundQueries.get(refund.id).updated_at
+    freeze_clock(DateTime.add(attempted_at, 10 * 60, :second))
+  end
 
   describe "a request whose answer never arrived" do
     test "is sent again under its own key, which records the refund it made",
@@ -137,7 +145,43 @@ defmodule Tymeslot.MeetingPayments.RefundRetryKeyTest do
       assert {:pending, refund} = Refunds.refund_now(payment, 2_000, :host, [])
 
       assert [job] = all_enqueued(worker: ExecuteRefund, args: %{"refund_id" => refund.id})
-      assert_in_delta DateTime.diff(job.scheduled_at, DateTime.utc_now(), :second), 60, 5
+      assert_in_delta DateTime.diff(job.scheduled_at, DateTime.utc_now(), :second), 600, 5
+    end
+
+    # The job's own backoff would run the next attempt a minute later.
+    test "the next attempt waits ten minutes from the failed one, spending no attempt",
+         %{payment: payment} do
+      StripeStub.expect(:create_refund, {:error_fixture, "api_error"})
+      assert {:pending, refund} = Refunds.refund_now(payment, 2_000, :host, [])
+      attempted_at = RefundQueries.get(refund.id).updated_at
+
+      freeze_clock(DateTime.add(attempted_at, 60, :second))
+      assert {:snooze, 540} = perform_job(ExecuteRefund, %{refund_id: refund.id}, attempt: 2)
+
+      freeze_clock(DateTime.add(attempted_at, 599, :second))
+      assert {:snooze, 1} = perform_job(ExecuteRefund, %{refund_id: refund.id}, attempt: 2)
+
+      assert StripeStub.requests(:list_refunds) == []
+      assert [_first] = StripeStub.requests(:create_refund)
+      assert %{attempt: 1} = RefundQueries.get(refund.id)
+
+      freeze_clock(DateTime.add(attempted_at, 600, :second))
+      StripeStub.expect(:list_refunds, StripeFixtures.list([]))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_LATER"))
+
+      assert :ok = perform_job(ExecuteRefund, %{refund_id: refund.id}, attempt: 2)
+      assert create_keys() == ["tymeslot:refund:#{refund.id}:1", "tymeslot:refund:#{refund.id}:2"]
+    end
+
+    test "an attempt that kept its key does not wait", %{payment: payment} do
+      # The client tries an unanswered request three times.
+      StripeStub.expect(:create_refund, 3, {:transport_error, :timeout})
+      assert {:pending, refund} = Refunds.refund_now(payment, 2_000, :host, [])
+
+      StripeStub.expect(:list_refunds, StripeFixtures.list([]))
+      StripeStub.expect(:create_refund, StripeStubResponses.refund("re_AT_ONCE"))
+
+      assert :ok = perform_job(ExecuteRefund, %{refund_id: refund.id}, attempt: 2)
     end
 
     test "a later refusal saying the charge is refunded waits for Stripe's list",
@@ -146,12 +190,15 @@ defmodule Tymeslot.MeetingPayments.RefundRetryKeyTest do
       assert {:pending, refund} = Refunds.refund_now(payment, 5_000, :host, [])
 
       # The 5xx'd request made the refund, which Stripe does not list yet.
+      settle_window_passed(refund)
       StripeStub.expect(:list_refunds, StripeFixtures.list([]))
       StripeStub.expect(:create_refund, {:error_fixture, "charge_already_refunded"})
 
       assert {:error, :pending} = perform_job(ExecuteRefund, %{refund_id: refund.id})
       assert %{status: :pending, failure_code: nil} = RefundQueries.get(refund.id)
       refute_enqueued(worker: SendRefundFailed)
+
+      settle_window_passed(refund)
 
       made =
         StripeFixtures.object("refund_with_charge", %{
