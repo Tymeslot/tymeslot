@@ -41,14 +41,15 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
   Builds the options map expected by `embed_code/2` from socket assigns.
 
   Remaps `:embed_layout` → `:layout` and collects `:initial_height`,
-  `:max_width`, `:username`, `:base_url`, `:booking_url` and the link's
-  `:prefill_name` and `:prefill_email` in one place so both the on-screen
-  snippet renderer and the copy handler stay in sync.
+  `:max_width`, `:username`, `:meeting_type`, `:base_url`, `:booking_url`
+  and the link's `:prefill_name` and `:prefill_email` in one place so both
+  the on-screen snippet renderer and the copy handler stay in sync.
   """
   @spec snippet_options(map()) :: map()
   def snippet_options(assigns) do
     %{
       username: assigns[:username],
+      meeting_type: assigns[:meeting_type],
       base_url: assigns[:base_url],
       booking_url: assigns[:booking_url],
       layout: assigns[:embed_layout],
@@ -95,6 +96,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
   def embed_code("inline", %{username: username, base_url: base_url} = options) do
     username = sanitize_username(username)
     base_url = escape(base_url)
+    type_attr = data_attr("meeting-type", sanitize_meeting_type(options[:meeting_type]))
 
     attrs =
       Enum.join([
@@ -108,7 +110,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
 
     String.trim("""
     <!-- Tymeslot Inline -->
-    <div id="tymeslot-booking" data-username="#{username}"#{attrs}></div>
+    <div id="tymeslot-booking" data-username="#{username}"#{type_attr}#{attrs}></div>
     <script src="#{base_url}/embed.js" async></script>
     """)
   end
@@ -174,16 +176,18 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
   def embed_code(_type, _assigns), do: ""
 
   # Builds the JS options string passed as the 2nd argument to
-  # TymeslotBooking.open / initFloating. Only includes sanitised values.
+  # TymeslotBooking.open / initFloating. Only includes sanitised values, the
+  # meeting type first, as it says what the snippet opens.
   defp build_js_options(options) do
     js_list =
-      %{
-        locale: sanitize_locale(options[:locale]),
-        theme: sanitize_theme(options[:theme]),
-        primaryColor: sanitize_primary_color(options[:primary_color]),
+      [
+        meetingType: sanitize_meeting_type(options[:meeting_type]),
         layout: layout_override_for_embed(options[:layout]),
-        maxWidth: sanitize_int_in_range(options[:max_width], 200, 2000)
-      }
+        locale: sanitize_locale(options[:locale]),
+        maxWidth: sanitize_int_in_range(options[:max_width], 200, 2000),
+        primaryColor: sanitize_primary_color(options[:primary_color]),
+        theme: sanitize_theme(options[:theme])
+      ]
       |> Enum.reject(fn {_k, v} -> v == nil || v == "" end)
       |> Enum.map(fn
         {k, v} when k == :maxWidth -> "#{k}: #{v}"
@@ -305,6 +309,14 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
 
     if valid, do: address, else: "invalid-username"
   end
+
+  # A meeting type's slug, emitted as an attribute and a JavaScript string:
+  # one segment that passes as `sanitize_username/1`'s slugs do, else a
+  # value that opens no page, never the overview the snippet was not for.
+  defp sanitize_meeting_type(nil), do: nil
+
+  defp sanitize_meeting_type(slug),
+    do: if(valid_segment?(slug, @slug_length), do: slug, else: "invalid-meeting-type")
 
   defp valid_segment?(segment, opts),
     do: match?({:ok, ^segment}, InputProcessor.validate_field(segment, :username, opts))

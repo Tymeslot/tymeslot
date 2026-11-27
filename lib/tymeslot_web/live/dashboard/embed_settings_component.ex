@@ -187,6 +187,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
             <OptionsGrid.options_grid
               selected_embed_type={@selected_embed_type}
               username={@username}
+              meeting_type={@meeting_type}
               base_url={@base_url}
               booking_url={@booking_url}
               embed_layout={@embed_layout}
@@ -209,7 +210,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
           <.embed_panel id="preview" active_tab={@active_tab}>
             <LivePreview.live_preview
               selected_embed_type={@selected_embed_type}
-              username={@username}
+              username={@address}
               base_url={@base_url}
               preview_token={@preview_token}
               embed_script_url={@embed_script_url}
@@ -450,16 +451,17 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
 
         socket
         |> assign(selected_type: type, selected_page_id: page && page.id)
-        |> assign_page_target(path)
+        |> assign_page_target({MeetingTypes.effective_slug(type), path})
     end
   end
 
-  # The snippet, link and preview follow the chosen page and type: the type's
-  # address, else the page's in place of the username, and the page's theme.
-  # A type's address is the one `BookingPages.meeting_type_homes/4` gives,
-  # never one joined by hand, which would redirect to it. Allowed embed
-  # domains stay the profile's.
-  defp assign_page_target(socket, type_path) do
+  # The snippet, link and preview follow the chosen page and type, and take
+  # the page's theme. The snippets name the page's address in place of the
+  # username and the type by its slug (`data-meeting-type`), as someone
+  # writing one by hand would; the link and the preview open the type's
+  # address, the one `BookingPages.meeting_type_homes/4` gives, which is
+  # that page's. Allowed embed domains stay the profile's.
+  defp assign_page_target(socket, type_target) do
     %{profile: profile, pages: pages, selected_page_id: page_id} = socket.assigns
 
     shown =
@@ -468,14 +470,16 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
         page -> BookingPages.apply_to_profile(profile, page)
       end
 
-    address =
-      case type_path do
-        "/" <> address -> address
-        nil -> BookingPages.public_address(shown)
+    page_address = BookingPages.public_address(shown)
+
+    {meeting_type, address} =
+      case type_target do
+        {slug, "/" <> address} -> {slug, address}
+        nil -> {nil, page_address}
       end
 
     socket
-    |> assign(:username, address)
+    |> assign(username: page_address, meeting_type: meeting_type, address: address)
     |> assign(:theme_id, shown.booking_theme || Catalog.default_id())
     |> assign(:booking_url, UrlBuilder.booking_url(address))
   end

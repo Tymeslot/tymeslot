@@ -25,9 +25,15 @@ defmodule TymeslotWeb.Dashboard.EmbedMeetingTypesTest do
     do:
       view |> form("#embed-meeting-type-picker") |> render_change(%{"type" => to_string(type.id)})
 
+  # The address the inline snippet's frame opens, as embed.js builds it: the
+  # snippet's `data-username`, then its `data-meeting-type` as one more segment.
   defp inline_address(html) do
     [_match, address] = Regex.run(~r/data-username=(?:&quot;|")([^&"]+)/, html)
-    address
+
+    case Regex.run(~r/data-meeting-type=(?:&quot;|")([^&"]+)/, html) do
+      [_match, slug] -> address <> "/" <> slug
+      nil -> address
+    end
   end
 
   describe "the meeting type picker" do
@@ -53,7 +59,9 @@ defmodule TymeslotWeb.Dashboard.EmbedMeetingTypesTest do
 
       # A two-letter slug, shorter than any username may be, still passes.
       assert inline_address(html) == "joern/ux"
-      assert html =~ "TymeslotBooking.open(&#39;joern/ux&#39;"
+      assert html =~ "data-username=&quot;joern&quot; data-meeting-type=&quot;ux&quot;"
+      assert html =~ "TymeslotBooking.open(&#39;joern&#39;, {meetingType: &#39;ux&#39;"
+      assert html =~ "TymeslotBooking.initFloating(&#39;joern&#39;, {meetingType: &#39;ux&#39;"
       assert html =~ ~r{href=&quot;[^&]*/joern/ux\?layout=column&quot;}
       assert_patch(view, ~p"/dashboard/embed?#{[type: type.id]}")
     end

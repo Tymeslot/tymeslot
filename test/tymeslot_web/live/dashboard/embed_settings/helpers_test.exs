@@ -167,6 +167,50 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.HelpersTest do
     end
   end
 
+  describe "embed_code/2 — a meeting type named by its slug" do
+    @type_target %{
+      username: "joern/coaching",
+      meeting_type: "deep-dive",
+      base_url: "https://x.test"
+    }
+
+    test "rides beside the page's address in the inline snippet" do
+      assert Helpers.embed_code("inline", @type_target) =~
+               ~s(data-username="joern/coaching" data-meeting-type="deep-dive")
+    end
+
+    test "leads the options of the popup and the floating button" do
+      assigns = Map.put(@type_target, :layout, "column")
+
+      assert Helpers.embed_code("popup", assigns) =~
+               "TymeslotBooking.open('joern/coaching', {meetingType: 'deep-dive', layout: 'column'})"
+
+      assert Helpers.embed_code("floating", assigns) =~
+               "TymeslotBooking.initFloating('joern/coaching', {meetingType: 'deep-dive', layout: 'column'})"
+    end
+
+    test "is left out of a snippet for a page's overview" do
+      code = Helpers.embed_code("inline", Map.delete(@type_target, :meeting_type))
+
+      refute code =~ "data-meeting-type"
+    end
+
+    for {slug, why} <- [
+          {String.duplicate("a", 81), "a slug too long"},
+          {"intro/call", "two segments"},
+          {"intro');alert(1);//", "a slug outside the slug characters"}
+        ] do
+      test "refuses #{why}" do
+        assigns = %{@type_target | meeting_type: unquote(slug)}
+
+        assert Helpers.embed_code("inline", assigns) =~
+                 ~s(data-meeting-type="invalid-meeting-type")
+
+        assert Helpers.embed_code("popup", assigns) =~ "meetingType: 'invalid-meeting-type'"
+      end
+    end
+  end
+
   describe "embed_code/2 — the link's visitor details" do
     @link %{booking_url: "https://x.test/alice"}
 

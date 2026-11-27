@@ -12,7 +12,9 @@
  * 3. Floating: TymeslotBooking.initFloating('sarah')
  *
  * A booking page of an organiser is addressed as `<username>/<page>`, e.g.
- * data-username="sarah/coaching".
+ * data-username="sarah/coaching". One meeting type opens straight on its
+ * scheduling step with its slug: data-meeting-type="intro-call", or the
+ * `meetingType` option of open, initFloating and embed.
  */
 
 (function() {
@@ -339,13 +341,30 @@
   /**
    * Create an iframe for embedding
    */
+  /**
+   * The path the frame opens: the username or `<username>/<page>`, then the
+   * meeting type's slug as one more segment. The booking page sends a type
+   * booked under another of the organiser's pages on to that page, so the
+   * slug alone is enough. Each segment is escaped on its own, so the slashes
+   * between them stay path separators.
+   */
+  function bookingPath(username, meetingType) {
+    const segments = String(username).split('/');
+    const slug = typeof meetingType === 'string' ? meetingType.trim() : '';
+
+    if (slug.includes('/')) {
+      console.error('Tymeslot: meetingType takes one meeting type slug, without "/":', slug);
+    } else if (slug) {
+      segments.push(slug);
+    }
+
+    return segments.map(encodeURIComponent).join('/');
+  }
+
   function createBookingIframe(username, options = {}) {
     const iframe = document.createElement('iframe');
     const base = BASE_URL.replace(/\/$/, '');
-    // A booking page's address is `<username>/<page>`: each segment is
-    // escaped on its own, so the slash between them stays a path separator.
-    const path = String(username).split('/').map(encodeURIComponent).join('/');
-    const url = new URL(`${base}/${path}`);
+    const url = new URL(`${base}/${bookingPath(username, options.meetingType)}`);
     
     // Build URL with customization params - STRICT ALLOWLIST
     const ALLOWED_PARAMS = ['theme', 'primaryColor', 'locale', 'layout', 'previewToken'];
@@ -759,6 +778,7 @@
         // placeholder.
         minHeight: container.getAttribute('data-min-height'),
         maxWidth: container.getAttribute('data-max-width'),
+        meetingType: container.getAttribute('data-meeting-type'),
         prefill: prefillFromAttributes(container)
       };
       
@@ -1031,6 +1051,9 @@
       }
       if (!options.maxWidth && container.getAttribute('data-max-width')) {
         options.maxWidth = container.getAttribute('data-max-width');
+      }
+      if (!options.meetingType && container.getAttribute('data-meeting-type')) {
+        options.meetingType = container.getAttribute('data-meeting-type');
       }
       if (!options.prefill) {
         options.prefill = prefillFromAttributes(container);

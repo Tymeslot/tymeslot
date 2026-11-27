@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
   """
   attr :selected_embed_type, :string, required: true
   attr :username, :string, required: true
+  attr :meeting_type, :string, default: nil
   attr :base_url, :string, required: true
   attr :booking_url, :string, required: true
   attr :embed_layout, :string, default: "column"

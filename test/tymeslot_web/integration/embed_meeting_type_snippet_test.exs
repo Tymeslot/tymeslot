@@ -4,8 +4,10 @@ defmodule TymeslotWeb.Integration.EmbedMeetingTypeSnippetTest do
   straight on that type's scheduling step, and an embed that hands over a
   visitor's details opens the booking form with them filled in.
 
-  The iframe address is built from the copied snippet's `data-username` the
-  way `embed.js` builds it (`?embed=1&parent-origin=`); the name and email
+  The iframe address is built from the copied snippet's `data-username` and
+  `data-meeting-type` the way `embed.js` builds it (the type's slug as one
+  more segment, then `?embed=1&parent-origin=`), and a snippet written by
+  hand may name the type under the username alone; the name and email
   `embed.js` puts in the iframe's fragment reach the LiveView as its
   `attendee_prefill` connect params, which is what the browser sends.
   """
@@ -58,12 +60,13 @@ defmodule TymeslotWeb.Integration.EmbedMeetingTypeSnippetTest do
     %{user: user, type: type}
   end
 
-  defp snippet_address(user, type) do
+  defp snippet_target(user, type) do
     owner = build_conn() |> init_test_session(%{}) |> fetch_session() |> log_in_user(user)
     {:ok, _view, html} = live(owner, ~p"/dashboard/embed?#{[type: type.id]}")
 
     [_match, address] = Regex.run(~r/data-username=&quot;([^&]+)&quot;/, html)
-    address
+    [_match, slug] = Regex.run(~r/data-meeting-type=&quot;([^&]+)&quot;/, html)
+    {address, slug}
   end
 
   defp visitor do
@@ -75,10 +78,10 @@ defmodule TymeslotWeb.Integration.EmbedMeetingTypeSnippetTest do
     user: user,
     type: type
   } do
-    address = snippet_address(user, type)
-    assert address == "snippethost/coaching/deep-dive"
+    assert snippet_target(user, type) == {"snippethost/coaching", "deep-dive"}
 
-    assert {:ok, view, _html} = live(visitor(), "/#{address}?#{@iframe_query}")
+    assert {:ok, view, _html} =
+             live(visitor(), "/snippethost/coaching/deep-dive?#{@iframe_query}")
 
     assert Page.assigns(view).embedded == true
     assert has_element?(view, "#schedule-step [data-fact='date']")
@@ -86,8 +89,23 @@ defmodule TymeslotWeb.Integration.EmbedMeetingTypeSnippetTest do
   end
 
   @tag :capture_log
+  test "a type named under the username alone opens embedded under its page" do
+    assert {:error, {:redirect, %{to: to}}} =
+             live(visitor(), "/snippethost/deep-dive?#{@iframe_query}")
+
+    assert %URI{path: "/snippethost/coaching/deep-dive", query: query} = URI.parse(to)
+    assert %{"embed" => "1", "parent-origin" => "https://embedder.test"} = URI.decode_query(query)
+
+    assert {:ok, view, _html} = live(visitor(), to)
+
+    assert Page.assigns(view).embedded == true
+    assert has_element?(view, "#schedule-step [data-fact='date']")
+  end
+
+  @tag :capture_log
   test "the embedded booking form opens with the visitor's details", %{user: user, type: type} do
-    address = snippet_address(user, type)
+    {page_address, slug} = snippet_target(user, type)
+    address = page_address <> "/" <> slug
 
     {:ok, view, _html} =
       visitor()
