@@ -61,8 +61,8 @@ jobs:
     env:
       MIX_ENV: test
       TEST_DB_POOL_SIZE: "10"
-      ELIXIR_VERSION: "1.20.4"
-      OTP_VERSION: "28.5.0.7"
+      ELIXIR_VERSION: "1.20.5"
+      OTP_VERSION: "28.5.0.9"
       # Empty on a scheduled run, so the nightly gets the default. One run of
       # this suite takes around 12 minutes on this 4-vCPU runner, so 12 runs
       # is a nightly of 1.5 to 2.5 hours, which has roughly a 70% chance of
