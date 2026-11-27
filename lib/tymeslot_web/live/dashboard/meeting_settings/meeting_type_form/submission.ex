@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
 
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.InputValidation
+  alias Tymeslot.MeetingTypes.RedirectUrl
   alias Tymeslot.Utils.SanitizeMerge
   alias Tymeslot.Validation.Constraints
   alias Tymeslot.Venues
@@ -61,6 +62,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
       "reminder_config" => Enum.map(assigns.reminders, &reminder_param/1)
     }
     |> Map.merge(gate_params(assigns))
+    |> Map.merge(redirect_params(assigns))
     |> Map.merge(booking_limit_params(assigns))
     |> Map.merge(Map.get(assigns, :scheduling_rules) || %{})
     |> maybe_put_custom_fields(assigns)
@@ -80,6 +82,36 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
       "approval_window_hours" => to_param(Map.get(assigns, :approval_window_hours))
     }
   end
+
+  # Where the booker goes after booking. An address the host is still typing
+  # that is not valid yet is not posted: the stored one is, so a save of
+  # another field neither fails on it nor clears the redirect. The input's
+  # own handler has already said what is wrong with it.
+  defp redirect_params(assigns) do
+    url =
+      case RedirectUrl.check(Map.get(assigns, :redirect_url)) do
+        {:ok, url} -> url
+        {:error, _error} -> stored_redirect_url(Map.get(assigns, :type))
+      end
+
+    %{
+      "redirect_url" => to_param(url),
+      "redirect_pass_details" => to_string(Map.get(assigns, :redirect_pass_details) == true)
+    }
+  end
+
+  defp stored_redirect_url(%{redirect_url: url}), do: url
+  defp stored_redirect_url(_type), do: nil
+
+  @doc """
+  Whether the redirect address in the input is one `RedirectUrl` refuses.
+  Auto-save then keeps the stored address, the error beside the input, and
+  the form marked unsaved until it is fixed or cleared, as for a pending
+  participant limit (`pending_group_limit_invalid?/2`).
+  """
+  @spec pending_redirect_url_invalid?(term()) :: boolean()
+  def pending_redirect_url_invalid?(redirect_url),
+    do: match?({:error, _error}, RedirectUrl.check(redirect_url))
 
   @doc """
   Validates and persists `params`, creating or updating depending on

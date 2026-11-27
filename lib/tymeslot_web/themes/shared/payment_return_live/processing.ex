@@ -14,7 +14,9 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.Processing do
   (`PaymentReturn.refresh/1`); the webhook, not this page, is the source of
   truth, and this page never mutates state. Paid does not always mean
   confirmed: a paid, approval-gated booking moves to `:awaiting_approval`,
-  which `PaymentReturn.outcome/3` reports as such.
+  which `PaymentReturn.outcome/3` reports as such. Once the booking stands,
+  a meeting type with a redirect address sends the attendee on to it
+  (`PaymentReturn.redirect_when_booked/1`).
   """
 
   use TymeslotWeb, :live_view
@@ -35,7 +37,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnLive.Processing do
 
   @impl Phoenix.LiveView
   def handle_info(message, socket) when message in [:paid, :expired] do
-    {:noreply, PaymentReturn.refresh(socket)}
+    {:noreply, socket |> PaymentReturn.refresh() |> PaymentReturn.redirect_when_booked()}
   end
 
   def handle_info(_message, socket), do: {:noreply, socket}

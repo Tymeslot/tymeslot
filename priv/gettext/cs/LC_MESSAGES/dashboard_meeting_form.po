@@ -941,3 +941,28 @@ msgstr "Každý, kdo rezervuje, zaplatí tuto částku za každé obsazené mís
 #, elixir-autogen, elixir-format
 msgid "Price per seat (%{currency})"
 msgstr "Cena za místo (%{currency})"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/redirect_section.ex
+#, elixir-autogen, elixir-format
+msgid "Include booking info like invitee name, email, and event time in the redirect URL"
+msgstr "Zahrnout do URL pro přesměrování údaje o rezervaci, jako je jméno a e-mail hosta a čas schůzky"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/redirect_section.ex
+#, elixir-autogen, elixir-format
+msgid "Pass event details to your redirected page"
+msgstr "Předávat podrobnosti schůzky na stránku přesměrování"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/redirect_section.ex
+#, elixir-autogen, elixir-format
+msgid "Redirect URL"
+msgstr "URL pro přesměrování"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/redirect_section.ex
+#, elixir-autogen, elixir-format
+msgid "Redirect after booking"
+msgstr "Přesměrování po rezervaci"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/redirect_section.ex
+#, elixir-autogen, elixir-format
+msgid "Send invitees to this page after they book instead of showing the confirmation. Leave blank to show the confirmation."
+msgstr "Po rezervaci přesměrujte hosty na tuto stránku místo zobrazení potvrzení. Ponechte prázdné, aby se zobrazilo potvrzení."

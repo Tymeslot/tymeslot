@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   alias Phoenix.LiveView
   alias Phoenix.PubSub
   alias Tymeslot.BookingPages
+  alias Tymeslot.Bookings.RedirectParams
   alias Tymeslot.BookingSeries
   alias Tymeslot.ContentTranslations
   alias Tymeslot.Demo
@@ -353,11 +354,12 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
         ) :: {:ok, LiveView.Socket.t()}
   def mount_payment_processing(%{"meeting_id" => meeting_id} = params, socket, theme_slug) do
     socket =
-      assign_language_switcher(
-        socket,
+      socket
+      |> assign_language_switcher(
         page_path(theme_slug, "payment-processing", meeting_id),
-        Map.take(params, ["session_id"])
+        Map.take(params, ["session_id", "from_embed"])
       )
+      |> Component.assign(:from_embed, params["from_embed"] == "1")
 
     if LiveView.connected?(socket) do
       PubSub.subscribe(Tymeslot.PubSub, Checkout.payment_topic(meeting_id))
@@ -371,6 +373,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
             |> Component.assign(loading: false, meeting: meeting, payment: payment)
             |> Component.assign(:series_count, BookingSeries.session_count(meeting))
             |> Component.assign(rebook(profile, meeting, true))
+            |> redirect_when_booked()
 
           {:ok, socket}
 
@@ -426,6 +429,66 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
 
     Component.assign(socket, :payment, payment)
   end
+
+  @doc """
+  Sends the attendee on to the meeting type's redirect address
+  (`redirect_url`) once the payment has gone through and the booking stands
+  (confirmed, or awaiting the organiser's approval), as the booking page
+  does for an unpaid booking (`Shared.BookingSuccess`). Any other state, or
+  a type with no address, leaves the page as it is.
+
+  Not for a checkout started inside an embed (`from_embed=1` on the success
+  URL, `MeetingPayments.CheckoutSessions`): the iframe waiting on the same
+  payment tells the embedding page, which navigates, so this tab, opened
+  from the iframe, stays put rather than redirect a second time. The marker
+  only ever suppresses the redirect, so forging it gains nothing.
+
+  Only the processing page calls this, after `authorize/3`: its visitor
+  proved, by the checkout session id, that they are the booking's attendee,
+  so the details a type passes along are their own. A paid type is never a
+  group type, so the meeting's attendee is the booker. The UTM tags are the
+  ones the booking stored, which it does only while booking analytics is
+  on: this page is reached from Stripe, and the visitor's own landing URL
+  is not in reach any more.
+  """
+  @spec redirect_when_booked(LiveView.Socket.t()) :: LiveView.Socket.t()
+  def redirect_when_booked(%{assigns: %{from_embed: true}} = socket), do: socket
+
+  def redirect_when_booked(%{assigns: %{meeting: %Meeting{} = meeting}} = socket) do
+    booked? =
+      outcome(socket.assigns.loading, socket.assigns.payment, meeting) in [
+        :confirmed,
+        :awaiting_approval
+      ]
+
+    case booked? && redirect_url(meeting) do
+      url when is_binary(url) -> LiveView.redirect(socket, external: url)
+      _stay -> socket
+    end
+  end
+
+  def redirect_when_booked(socket), do: socket
+
+  defp redirect_url(%Meeting{meeting_type_id: id, organizer_user_id: user_id} = meeting)
+       when is_integer(id) and is_integer(user_id) do
+    case MeetingTypes.get_meeting_type(id, user_id) do
+      %{} = meeting_type ->
+        RedirectParams.build(meeting_type, meeting, %{
+          name: meeting.attendee_name,
+          email: meeting.attendee_email,
+          timezone: meeting.attendee_timezone,
+          utm:
+            Map.take(meeting, [:utm_source, :utm_medium, :utm_campaign, :utm_content, :utm_term]),
+          custom_fields_snapshot: meeting.custom_fields_snapshot,
+          custom_field_answers: meeting.custom_field_answers
+        }).redirect_url
+
+      _missing ->
+        nil
+    end
+  end
+
+  defp redirect_url(_meeting), do: nil
 
   @typedoc "What the return page should tell the attendee right now."
   @type outcome ::

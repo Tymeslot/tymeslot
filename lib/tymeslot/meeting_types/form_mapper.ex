@@ -67,7 +67,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
         attrs
         |> Map.merge(toggles(params))
         |> Map.merge(optional_integers(params))
-        |> Map.merge(seat_display(params))
+        |> Map.merge(posted_settings(params))
         |> maybe_put_custom_fields(params)
         |> maybe_put_locations(params)
         |> maybe_put_extra_lengths(params)
@@ -91,25 +91,36 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
 
   defp maybe_put_fixed_dates(attrs, _params), do: attrs
 
-  # The booking page's spots display, and the guests one booking may bring.
-  # Only keys the form posted are set, so a caller that does not render these
-  # controls cannot reset them by omission. The threshold and the guest limit
-  # are posted blank when their option is off; the changeset validates their
-  # range.
-  defp seat_display(params) do
+  # The booking page's spots display, the guests one booking may bring, and
+  # where the booker goes after booking with whether the booking's details go
+  # with them. Only keys the form posted are set, so a caller that does not
+  # render these controls cannot reset them by omission. The threshold and
+  # the guest limit are posted blank when their option is off; the changeset
+  # validates their range. The redirect address is passed through as typed:
+  # the changeset trims it, stores a blank one as nil and refuses an invalid
+  # one (`Tymeslot.MeetingTypes.RedirectUrl`).
+  @posted_settings ~w(show_seat_availability last_spots_threshold max_guests_per_booking
+                      redirect_url redirect_pass_details)
+
+  defp posted_settings(params) do
     params
-    |> Map.take(["show_seat_availability", "last_spots_threshold", "max_guests_per_booking"])
-    |> Map.new(&seat_display_attr/1)
+    |> Map.take(@posted_settings)
+    |> Map.new(&posted_setting_attr/1)
   end
 
-  defp seat_display_attr({"show_seat_availability", value}),
+  defp posted_setting_attr({"show_seat_availability", value}),
     do: {:show_seat_availability, value != "false"}
 
-  defp seat_display_attr({"last_spots_threshold", value}),
+  defp posted_setting_attr({"last_spots_threshold", value}),
     do: {:last_spots_threshold, parse_threshold(value)}
 
-  defp seat_display_attr({"max_guests_per_booking", value}),
+  defp posted_setting_attr({"max_guests_per_booking", value}),
     do: {:max_guests_per_booking, parse_threshold(value)}
+
+  defp posted_setting_attr({"redirect_url", value}), do: {:redirect_url, value}
+
+  defp posted_setting_attr({"redirect_pass_details", value}),
+    do: {:redirect_pass_details, value == "true"}
 
   defp parse_threshold(value) when is_binary(value) do
     case Integer.parse(value) do

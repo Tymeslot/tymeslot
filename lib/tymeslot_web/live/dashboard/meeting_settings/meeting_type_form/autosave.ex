@@ -90,9 +90,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
   # not a fault. Genuine persistence failures (unexpected changeset errors,
   # unknown context errors) are logged and shown as :error.
   #
-  # A participant limit the host is still typing is not part of the save
-  # (`Submission` keeps the stored one), so its error and the "unsaved"
-  # state outlive a save of the other fields.
+  # A participant limit or a redirect address the host is still typing is
+  # not part of the save (`Submission` keeps the stored one), so its error
+  # and the "unsaved" state outlive a save of the other fields.
   defp apply_result({:ok, updated}, socket) do
     pending_limit? =
       Submission.pending_group_limit_invalid?(
@@ -100,11 +100,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
         socket.assigns.max_participants
       )
 
+    pending_redirect? = Submission.pending_redirect_url_invalid?(socket.assigns[:redirect_url])
+
     socket
     |> assign(:type, updated)
     |> follow_dropped_venues(updated)
-    |> assign(:form_errors, pending_limit_errors(socket.assigns.form_errors, pending_limit?))
-    |> assign(:save_status, if(pending_limit?, do: :unsaved, else: :saved))
+    |> assign(
+      :form_errors,
+      pending_errors(socket.assigns.form_errors, pending_limit?, pending_redirect?)
+    )
+    |> assign(:save_status, if(pending_limit? or pending_redirect?, do: :unsaved, else: :saved))
   end
 
   defp apply_result({:error, {:invalid_form, _errors}}, socket) do
@@ -178,10 +183,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
   defp price_blank?(price) when is_binary(price), do: String.trim(price) == ""
   defp price_blank?(_price), do: true
 
-  defp pending_limit_errors(form_errors, true = _pending_limit?),
-    do: Map.take(form_errors, [:max_participants])
-
-  defp pending_limit_errors(_form_errors, _pending_limit?), do: %{}
+  # The errors of the inputs whose value was left out of the save, which
+  # still stand after it.
+  defp pending_errors(form_errors, pending_limit?, pending_redirect?) do
+    Map.take(
+      form_errors,
+      if(pending_limit?, do: [:max_participants], else: []) ++
+        if(pending_redirect?, do: [:redirect_url], else: [])
+    )
+  end
 
   # A save can go through without venues the form still listed, when they
   # were deleted elsewhere meanwhile (see `Submission.persist/4`). The form

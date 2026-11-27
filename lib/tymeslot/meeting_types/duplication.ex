@@ -69,7 +69,9 @@ defmodule Tymeslot.MeetingTypes.Duplication do
     :buffer_before_minutes,
     :buffer_after_minutes,
     :min_advance_hours,
-    :advance_booking_days
+    :advance_booking_days,
+    :redirect_url,
+    :redirect_pass_details
   ]
 
   @copied_embeds [:custom_fields, :attachments, :locations]

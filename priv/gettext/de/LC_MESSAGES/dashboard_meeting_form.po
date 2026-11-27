@@ -935,3 +935,28 @@ msgstr "Die buchende Person zahlt diesen Betrag für jeden Platz, den sie belegt
 #, elixir-autogen, elixir-format
 msgid "Price per seat (%{currency})"
 msgstr "Preis pro Platz (%{currency})"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/redirect_section.ex
+#, elixir-autogen, elixir-format
+msgid "Include booking info like invitee name, email, and event time in the redirect URL"
+msgstr "Buchungsangaben wie Name und E-Mail-Adresse des Gastes sowie die Uhrzeit des Termins in die Weiterleitungs-URL aufnehmen"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/redirect_section.ex
+#, elixir-autogen, elixir-format
+msgid "Pass event details to your redirected page"
+msgstr "Termindetails an die Weiterleitungsseite übergeben"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/redirect_section.ex
+#, elixir-autogen, elixir-format
+msgid "Redirect URL"
+msgstr "Weiterleitungs-URL"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/redirect_section.ex
+#, elixir-autogen, elixir-format
+msgid "Redirect after booking"
+msgstr "Weiterleitung nach der Buchung"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/redirect_section.ex
+#, elixir-autogen, elixir-format
+msgid "Send invitees to this page after they book instead of showing the confirmation. Leave blank to show the confirmation."
+msgstr "Leiten Sie Gäste nach der Buchung auf diese Seite weiter, statt die Bestätigung anzuzeigen. Lassen Sie das Feld leer, um die Bestätigung anzuzeigen."

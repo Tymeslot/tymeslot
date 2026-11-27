@@ -37,7 +37,7 @@ defmodule TymeslotWeb.Themes.Shared.EventHandlers do
     path =
       socket
       |> path_handlers_module.build_path_with_locale(locale)
-      |> Tracking.tracking_path(socket.assigns[:tracking])
+      |> Tracking.tracking_path(carried_tracking(socket.assigns))
 
     {:noreply, LiveView.redirect(socket, external: path)}
   end
@@ -61,5 +61,16 @@ defmodule TymeslotWeb.Themes.Shared.EventHandlers do
       |> assign(:timezone_dropdown_open, true)
 
     {:noreply, socket}
+  end
+
+  # The tracking params a full reload has to carry so the new mount sees the
+  # visitor's first touch again: the analytics tracking map, and under it the
+  # UTM tags kept for a meeting type's redirect (`:redirect_utm`), which are
+  # captured with analytics off too. Nil when the page tracks neither.
+  defp carried_tracking(assigns) do
+    case {assigns[:redirect_utm], assigns[:tracking]} do
+      {utm, tracking} when utm in [nil, %{}] -> tracking
+      {utm, tracking} -> Map.merge(utm, tracking || %{}, fn _key, kept, ours -> ours || kept end)
+    end
   end
 end

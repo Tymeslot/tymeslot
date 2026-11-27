@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
   alias TymeslotWeb.Live.Scheduling.BookingConfig
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias TymeslotWeb.Themes.Shared.BookingLocation
+  alias TymeslotWeb.Themes.Shared.BookingSuccess
   alias TymeslotWeb.Themes.Shared.Journey.Facts.Series
   alias TymeslotWeb.Themes.Shared.Journey.Progress
 
@@ -60,8 +61,10 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
     socket = assign(socket, :submitting, true)
 
     case BookingSubmissionHandlerComponent.submit_booking(socket, booking_params) do
+      # The meeting type's redirect is dispatched after the transition, which
+      # may patch the URL: a patch put on the socket later would replace it.
       {:ok, socket} ->
-        {:noreply, transition_fun.(socket, :confirmation, %{})}
+        {:noreply, socket |> transition_fun.(:confirmation, %{}) |> BookingSuccess.dispatch()}
 
       {:redirect, socket} ->
         {:noreply, socket}

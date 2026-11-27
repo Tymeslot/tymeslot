@@ -54,6 +54,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias TymeslotWeb.Live.Scheduling.PreviewMode
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Themes.Shared.BookingLocation
+  alias TymeslotWeb.Themes.Shared.BookingSuccess
   alias TymeslotWeb.Themes.Shared.Journey.Facts.Series
   alias TymeslotWeb.Themes.Shared.VerificationResend
 
@@ -153,6 +154,12 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   # on phones and in embeds. A demo booking keeps one, because the
   # confirmation step says a confirmation email was sent and a demo sends
   # none.
+  #
+  # The redirect the meeting type asks for is prepared here, where the
+  # meeting is known, from the booker's own name and email: on a group
+  # session the meeting's `attendee_*` may be another seat's. The flow
+  # dispatches it once the confirmation is shown (`BookingSuccess`). A
+  # simulated booking stores no meeting, so it prepares none.
   @spec handle_booking_success(Phoenix.LiveView.Socket.t(), map(), map(), module()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
   defp handle_booking_success(socket, meeting, validated_data, orchestrator) do
@@ -169,10 +176,17 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       |> assign(:custom_fields_snapshot, Map.get(validated_data, "custom_fields_snapshot", []))
       |> assign(:custom_field_answers, Map.get(validated_data, "custom_field_answers", %{}))
       |> assign(:guest_emails, socket.assigns[:guest_emails] || [])
+      |> BookingSuccess.prepare(booked_meeting(meeting, orchestrator), %{
+        name: validated_data["name"],
+        email: validated_data["email"]
+      })
       |> put_demo_flash()
 
     {:ok, socket}
   end
+
+  defp booked_meeting(_meeting, DemoOrchestrator), do: nil
+  defp booked_meeting(meeting, _orchestrator), do: meeting
 
   defp put_demo_flash(socket) do
     if Demo.demo_mode?(socket) do
@@ -515,7 +529,11 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       location_phone: socket.assigns[:location_phone],
       location_video_integration_id: BookingLocation.submitted_video_id(socket.assigns),
       location_venue_id: BookingLocation.submitted_venue_id(socket.assigns),
-      invitation_id: invitation_id(socket.assigns[:invitation])
+      invitation_id: invitation_id(socket.assigns[:invitation]),
+      # A paid booking made in an embed waits for its payment in the iframe,
+      # which tells the embedding page (`BookingSuccess`); its Stripe tab
+      # must not redirect as well (`PaymentReturn.redirect_when_booked/1`).
+      checkout_from_embed: socket.assigns[:embedded] == true
     }
 
     put_series(params, Series.request(socket.assigns))

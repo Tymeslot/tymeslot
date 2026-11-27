@@ -40,11 +40,13 @@ defmodule Tymeslot.BookingSeries.Payment do
   @doc """
   Opens the series' checkout once its sessions are committed. On failure
   every session is released at once and `{:error, {:checkout_failed,
-  reason}}` returned.
+  reason}}` returned. `embedded: true` marks a series booked inside an embed
+  (`MeetingPayments.create_checkout_session_for_series/2`).
   """
-  @spec checkout(SeriesSchema.t()) :: {:ok, String.t()} | {:error, {:checkout_failed, term()}}
-  def checkout(%SeriesSchema{} = series) do
-    case Checkout.create_checkout_session_for_series(series) do
+  @spec checkout(SeriesSchema.t(), keyword()) ::
+          {:ok, String.t()} | {:error, {:checkout_failed, term()}}
+  def checkout(%SeriesSchema{} = series, opts \\ []) do
+    case Checkout.create_checkout_session_for_series(series, opts) do
       {:ok, %{checkout_url: url}} ->
         {:ok, url}
 

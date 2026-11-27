@@ -946,3 +946,8 @@ msgstr "kontroly účtu Stripe"
 #, elixir-autogen, elixir-format
 msgid "Paid group meeting types cannot be booked as a series."
 msgstr "Placené skupinové typy schůzek nelze rezervovat jako sérii."
+
+#: lib/tymeslot/meeting_types/redirect_url.ex
+#, elixir-autogen, elixir-format
+msgid "must be a full web address starting with http:// or https://"
+msgstr "musí být úplná webová adresa začínající http:// nebo https://"
