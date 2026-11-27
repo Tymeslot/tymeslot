@@ -6,6 +6,8 @@ defmodule Mix.Tasks.Precommit do
 
       $ mix precommit
       $ mix precommit --fail-fast
+      $ mix precommit --only credo,dialyzer   # named steps only
+      $ mix precommit --skip test,js          # all but these
       $ mix precommit --affected               # the working tree
       $ mix precommit --affected --base main   # the whole branch
 
@@ -14,6 +16,10 @@ defmodule Mix.Tasks.Precommit do
   rules. It is the everyday gate. The full gate, without it, runs for large or
   wide-reaching changes, on main and before a release, because the narrowed
   suite misses cross-domain coupling that only the whole suite catches.
+
+  `--only` and `--skip` pick steps by name, for a quick look at a few checks;
+  `Tymeslot.Precommit.StepFilter` has the rules. A run with either is not the
+  gate, since the steps it leaves out are exactly the ones it cannot vouch for.
 
   Every step remains individually runnable (`mix credo --strict`, `mix test`,
   and so on); this only removes the chance of applying the gate by halves.
@@ -81,6 +87,7 @@ defmodule Mix.Tasks.Precommit do
   alias Tymeslot.Precommit.Guard
   alias Tymeslot.Precommit.PassRecord
   alias Tymeslot.Precommit.Runner
+  alias Tymeslot.Precommit.StepFilter
   alias Tymeslot.Precommit.Timings
 
   @steps [
@@ -135,22 +142,25 @@ defmodule Mix.Tasks.Precommit do
     Guard.ensure_wrapped("--core", argv: argv)
 
     {opts, _rest} =
-      OptionParser.parse!(argv, strict: [fail_fast: :boolean, affected: :boolean, base: :string])
+      OptionParser.parse!(argv,
+        strict: [fail_fast: :boolean, affected: :boolean, base: :string] ++ StepFilter.switches()
+      )
 
     fail_fast? = Keyword.get(opts, :fail_fast, false)
+    {selected, left_out} = StepFilter.filter(@steps, opts)
 
     timings = Timings.start(argv)
     record = PassRecord.open()
 
     if opts[:affected] do
-      narrowed = Affected.narrow(@steps, base: opts[:base])
+      narrowed = Affected.narrow(selected, base: opts[:base])
       {steps, passed} = PassRecord.split(record, narrowed.steps)
 
       Runner.run(
         steps,
         fail_fast?,
         Timings.instrument(timings, steps,
-          skipped: passed ++ narrowed.skipped,
+          skipped: left_out ++ passed ++ narrowed.skipped,
           suite_plan: CpuBudget.planner(narrowed.suite),
           on_results: &PassRecord.save(record, steps, &1)
         )
@@ -159,11 +169,12 @@ defmodule Mix.Tasks.Precommit do
       if opts[:base], do: Mix.raise("--base only applies together with --affected")
 
       Runner.run(
-        @steps,
+        selected,
         fail_fast?,
-        Timings.instrument(timings, @steps,
+        Timings.instrument(timings, selected,
+          skipped: left_out,
           suite_plan: CpuBudget.planner(nil),
-          on_results: &PassRecord.save(record, @steps, &1)
+          on_results: &PassRecord.save(record, selected, &1)
         )
       )
     end
