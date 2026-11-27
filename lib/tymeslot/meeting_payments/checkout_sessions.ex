@@ -65,9 +65,20 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
           booking_payment: BookingPaymentSchema.t()
         }
 
-  @spec create_session_for_booking(Tymeslot.Meetings.MeetingSchema.t()) ::
+  @doc """
+  Opens the Stripe Checkout for a single paid booking.
+
+  `embedded: true` says the booking was made inside an embed: the booking
+  page then waits for the payment in its iframe and tells the embedding page
+  itself (`TymeslotWeb.Themes.Shared.BookingSuccess`), so the success URL
+  carries `from_embed=1` and the tab Stripe returns to does not redirect to
+  the meeting type's address a second time. The marker only ever suppresses
+  that redirect, so a visitor adding or dropping it gains nothing.
+  """
+  @spec create_session_for_booking(Tymeslot.Meetings.MeetingSchema.t(), keyword()) ::
           {:ok, create_result()} | {:error, term()}
-  def create_session_for_booking(meeting), do: create_session(for_meeting(meeting))
+  def create_session_for_booking(meeting, opts \\ []),
+    do: meeting |> for_meeting() |> from_embed(opts) |> create_session()
 
   @doc """
   Opens one Stripe Checkout for every session of a paid series: one line
@@ -77,16 +88,18 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
 
   The checkout returns to the first session's payment pages, which wait on
   that session's payment topic: every broadcast about the series goes there
-  (`HeldMeetings`).
+  (`HeldMeetings`). `embedded: true` as for `create_session_for_booking/2`.
   """
-  @spec create_session_for_series(SeriesSchema.t()) ::
+  @spec create_session_for_series(SeriesSchema.t(), keyword()) ::
           {:ok, create_result()} | {:error, term()}
-  def create_session_for_series(%SeriesSchema{} = series) do
+  def create_session_for_series(%SeriesSchema{} = series, opts \\ []) do
     case BookingSeries.meetings(series) do
       [] -> {:error, :series_without_sessions}
-      meetings -> create_session(for_series(series, meetings))
+      meetings -> series |> for_series(meetings) |> from_embed(opts) |> create_session()
     end
   end
+
+  defp from_embed(checkout, opts), do: Map.put(checkout, :embedded, opts[:embedded] == true)
 
   @doc """
   Opens a Stripe Checkout for the seats a booker holds on a paid group
@@ -406,13 +419,16 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
       customer_email: attendee.email,
       client_reference_id: checkout.reference,
       expires_at: session_expires_at(),
-      success_url: success_url <> "?session_id={CHECKOUT_SESSION_ID}",
+      success_url: success_url <> "?session_id={CHECKOUT_SESSION_ID}" <> embed_marker(checkout),
       cancel_url: cancel_url,
       locale: stripe_locale(attendee.locale)
     }
   end
 
   defp session_expires_at, do: DateTime.to_unix(Clock.utc_now()) + @session_expiry_seconds
+
+  defp embed_marker(%{embedded: true}), do: "&from_embed=1"
+  defp embed_marker(_checkout), do: ""
 
   # A series names how many sessions the one line item is for, in the
   # attendee's language, as the checkout is shown in it. A group seat's

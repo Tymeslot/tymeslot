@@ -8,6 +8,9 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Tracking do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Analytics
+  alias Tymeslot.Analytics.UtmExtractor
+
+  @utm_keys [:utm_source, :utm_medium, :utm_campaign, :utm_content, :utm_term]
 
   @doc """
   Captures UTM and arbitrary tracking params plus the referrer host from
@@ -21,9 +24,17 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Tracking do
   booking → confirmation) do not invoke `mount/3` again, so the tracking
   assign is never refreshed mid-session. The UTM and referrer values
   recorded here reflect the URL the visitor first arrived on.
+
+  The UTM tags alone are also assigned under `:redirect_utm`, whether or not
+  analytics is on, first-touch alike: a meeting type that passes the
+  booking's details to its redirect address (`Shared.BookingSuccess`) hands
+  them on to the host's own page. They are only ever carried in the
+  visitor's own browser and URL; with analytics off, nothing persists them.
   """
   @spec assign_tracking(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def assign_tracking(socket, params) do
+    socket = assign(socket, :redirect_utm, redirect_utm(params))
+
     if Analytics.enabled?() do
       referrer = raw_referrer_from_socket(socket)
 
@@ -36,6 +47,13 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers.Tracking do
     else
       assign(socket, :tracking, %{})
     end
+  end
+
+  defp redirect_utm(params) do
+    params
+    |> UtmExtractor.extract()
+    |> Map.take(@utm_keys)
+    |> Map.reject(fn {_key, value} -> value in [nil, ""] end)
   end
 
   # `PageViewHook` (an on_mount hook, so it runs before this mount/3 helper)

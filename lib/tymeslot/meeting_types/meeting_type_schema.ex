@@ -16,6 +16,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   alias Tymeslot.MeetingTypes.LocationSelection
   alias Tymeslot.MeetingTypes.MeetingTypeAttachment
   alias Tymeslot.MeetingTypes.PaymentValidation
+  alias Tymeslot.MeetingTypes.RedirectUrl
   alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.MeetingTypes.SeriesSettings
   alias Tymeslot.MeetingTypes.Slugs
@@ -64,6 +65,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           buffer_after_minutes: non_neg_integer() | nil,
           min_advance_hours: non_neg_integer() | nil,
           advance_booking_days: pos_integer() | nil,
+          redirect_url: String.t() | nil,
+          redirect_pass_details: boolean(),
           custom_fields: [FieldDefinition.t()],
           locations: [LocationOption.t()],
           attachments: [MeetingTypeAttachment.t()],
@@ -133,6 +136,10 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:buffer_after_minutes, :integer)
     field(:min_advance_hours, :integer)
     field(:advance_booking_days, :integer)
+
+    # After-booking redirect: `Tymeslot.MeetingTypes.RedirectUrl`, `Bookings.RedirectParams`.
+    field(:redirect_url, :string)
+    field(:redirect_pass_details, :boolean, default: false)
 
     belongs_to(:user, Tymeslot.Auth.UserSchema)
     belongs_to(:video_integration, Tymeslot.Integrations.Video.VideoIntegrationSchema)
@@ -265,7 +272,9 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :buffer_before_minutes,
       :buffer_after_minutes,
       :min_advance_hours,
-      :advance_booking_days
+      :advance_booking_days,
+      :redirect_url,
+      :redirect_pass_details
     ])
     |> cast_embed(:custom_fields, with: &FieldDefinition.changeset/2)
     |> cast_embed(:attachments, with: &MeetingTypeAttachment.changeset/2)
@@ -291,6 +300,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> EmailVerificationRule.validate_changeset()
     |> GroupValidation.validate_changeset()
     |> SeriesSettings.validate_changeset()
+    |> RedirectUrl.validate_changeset()
     |> check_constraint(:series_mode, name: :meeting_types_series_check)
     |> unique_constraint([:user_id, :name],
       error_key: :name,

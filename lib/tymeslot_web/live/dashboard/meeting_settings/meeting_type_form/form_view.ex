@@ -42,6 +42,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     LocationsSection,
     PaymentsSection,
     QuestionEditorComponent,
+    RedirectSection,
     SchedulingRulesSection,
     SeriesHandlers,
     SeriesSection,
@@ -65,6 +66,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   import SeriesSection, only: [series_section: 1]
   import ShowAsFreeSection, only: [show_as_free_section: 1]
   import PaymentsSection, only: [payments_section: 1]
+  import RedirectSection, only: [redirect_section: 1]
   import VisibilitySection, only: [visibility_section: 1]
   import TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents
   import TymeslotWeb.Components.Shared.ReminderPicker, only: [reminder_picker: 1]
@@ -340,6 +342,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
               if @recurring_bookings_allowed,
                 do: SeriesHandlers.limit_notes(@series, @booking_limits),
                 else: []
+            }
+            myself={@myself}
+          />
+
+          <.redirect_section
+            redirect_url={@redirect_url}
+            redirect_pass_details={@redirect_pass_details}
+            errors={
+              @form_errors
+              |> FormValidationHelpers.field_errors(:redirect_url)
+              |> Enum.map(&Helpers.format_errors/1)
             }
             myself={@myself}
           />

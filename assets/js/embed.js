@@ -13,6 +13,21 @@
  *
  * A booking page of an organiser is addressed as `<username>/<page>`, e.g.
  * data-username="sarah/coaching".
+ *
+ * After a confirmed booking (every mode), the host page can react to it:
+ *
+ *   <script>
+ *     window.tymeslotSettings = {
+ *       onSuccess: function(data) {
+ *         // data: eventTypeName, eventStartTime, eventEndTime, utm*, ...
+ *         // (invitee details only if the organiser shares them)
+ *         // Return a Promise to delay the redirect up to 2 s, e.g. for analytics.
+ *       }
+ *     };
+ *   </script>
+ *
+ * It may be defined before or after this script loads. If the organiser set a
+ * redirect URL, the page goes there once onSuccess has finished.
  */
 
 (function() {
@@ -313,6 +328,70 @@
   });
 
   /**
+   * Global message listener for confirmed bookings.
+   *
+   * Once a booking is confirmed, the embedded page (the BookingSuccess hook)
+   * posts {type: 'tymeslot-booking-success', data, redirectUrl}. Accepted only
+   * from Tymeslot's origin and from an iframe this script created. The page
+   * is answered with an ack, so it does not redirect the top window itself;
+   * then the host's `window.tymeslotSettings.onSuccess(data)` runs (a Promise
+   * it returns is awaited for up to SUCCESS_CALLBACK_TIMEOUT_MS, so analytics
+   * can fire), and then the browser goes to `redirectUrl` if the organiser set
+   * one.
+   */
+  var SUCCESS_CALLBACK_TIMEOUT_MS = 2000;
+
+  function isOwnIframe(source) {
+    var iframes = document.querySelectorAll('iframe[title="Booking Widget"]');
+    for (var i = 0; i < iframes.length; i++) {
+      if (iframes[i].contentWindow === source) return true;
+    }
+    return false;
+  }
+
+  function runSuccessCallback(data) {
+    var settings = window.tymeslotSettings;
+    if (!settings || typeof settings.onSuccess !== 'function') return Promise.resolve();
+    try {
+      var result = settings.onSuccess(data);
+      if (!result || typeof result.then !== 'function') return Promise.resolve();
+      return new Promise(function(resolve) {
+        var timer = setTimeout(resolve, SUCCESS_CALLBACK_TIMEOUT_MS);
+        Promise.resolve(result).then(done, done);
+        function done() {
+          clearTimeout(timer);
+          resolve();
+        }
+      });
+    } catch (err) {
+      console.error('Tymeslot: onSuccess callback failed:', err);
+      return Promise.resolve();
+    }
+  }
+
+  window.addEventListener('message', function(e) {
+    if (e.origin !== BASE_URL) return;
+    if (!e.data || typeof e.data !== 'object') return;
+    if (e.data.type !== 'tymeslot-booking-success') return;
+    if (!e.source || !isOwnIframe(e.source)) return;
+
+    try {
+      e.source.postMessage({ type: 'tymeslot-booking-success-ack' }, BASE_URL);
+    } catch (_) {
+      // Frame gone; it falls back to redirecting on its own.
+    }
+
+    var redirectUrl = e.data.redirectUrl;
+    runSuccessCallback(e.data.data).then(function() {
+      if (typeof redirectUrl === 'string' && /^https?:\/\//i.test(redirectUrl)) {
+        window.location.assign(redirectUrl);
+      }
+    });
+  });
+
+  var UTM_PARAMS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+
+  /**
    * Create an iframe for embedding
    */
   function createBookingIframe(username, options = {}) {
@@ -355,6 +434,15 @@
         url.searchParams.append('preview', 'true');
         url.searchParams.append('preview_token', val);
       }
+    });
+
+    // The host page's UTM tags, so a booking made in the embed is attributed
+    // to the campaign that brought the visitor (they reach onSuccess's data).
+    // Only these five, and only when the host page's URL carries them.
+    const hostParams = new URLSearchParams(window.location.search);
+    UTM_PARAMS.forEach(key => {
+      const val = hostParams.get(key);
+      if (val) url.searchParams.append(key, val);
     });
 
     // Signal embedded context to the server for token generation

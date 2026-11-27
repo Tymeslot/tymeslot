@@ -108,7 +108,10 @@ defmodule Tymeslot.Bookings.Create.Prepare do
       visitor_hash: Map.get(meeting_params, :visitor_hash),
       booking_page_id:
         BookingPages.existing_id(Map.get(meeting_params, :booking_page_id), organizer_user_id),
-      invitation_id: invitation_id(meeting_type, meeting_params)
+      invitation_id: invitation_id(meeting_type, meeting_params),
+      # Booked inside an embed: a paid booking's checkout returns marked so
+      # (`Tymeslot.MeetingPayments.CheckoutSessions`).
+      checkout_from_embed: Map.get(meeting_params, :checkout_from_embed) == true
     }
   end
 

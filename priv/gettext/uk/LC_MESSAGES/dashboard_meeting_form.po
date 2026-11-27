@@ -941,3 +941,28 @@ msgstr "Кожен, хто бронює, сплачує цю суму за ко�
 #, elixir-autogen, elixir-format
 msgid "Price per seat (%{currency})"
 msgstr "Ціна за місце (%{currency})"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/redirect_section.ex
+#, elixir-autogen, elixir-format
+msgid "Include booking info like invitee name, email, and event time in the redirect URL"
+msgstr "Додавати до URL для переспрямування дані бронювання, як-от ім’я та електронну адресу запрошеного й час зустрічі"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/redirect_section.ex
+#, elixir-autogen, elixir-format
+msgid "Pass event details to your redirected page"
+msgstr "Передавати деталі зустрічі на сторінку переспрямування"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/redirect_section.ex
+#, elixir-autogen, elixir-format
+msgid "Redirect URL"
+msgstr "URL для переспрямування"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/redirect_section.ex
+#, elixir-autogen, elixir-format
+msgid "Redirect after booking"
+msgstr "Переспрямування після бронювання"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/redirect_section.ex
+#, elixir-autogen, elixir-format
+msgid "Send invitees to this page after they book instead of showing the confirmation. Leave blank to show the confirmation."
+msgstr "Після бронювання переспрямовуйте запрошених на цю сторінку замість показу підтвердження. Залиште порожнім, щоб показати підтвердження."

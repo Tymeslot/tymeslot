@@ -1533,3 +1533,251 @@ describe('Escape relayed from the booking frame', () => {
     expect(() => escapeFrom(window)).not.toThrow()
   })
 })
+
+describe('booking success message', () => {
+  let iframe
+  let ackSpy
+  let assignSpy
+  let realLocation
+
+  function embedIframe() {
+    const container = document.createElement('div')
+    container.id = 'success-test'
+    document.body.appendChild(container)
+    window.TymeslotBooking.embed('#success-test', 'alice')
+    return document.querySelector('#success-test iframe[title="Booking Widget"]')
+  }
+
+  function postSuccess({ origin = window.location.origin, source, data, redirectUrl } = {}) {
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin,
+        source: source === undefined ? iframe.contentWindow : source,
+        data: { type: 'tymeslot-booking-success', data, redirectUrl }
+      })
+    )
+  }
+
+  // Lets the callback's Promise chain settle before asserting.
+  const flush = () => new Promise(resolve => setTimeout(resolve, 0))
+
+  beforeEach(() => {
+    iframe = embedIframe()
+    ackSpy = vi.spyOn(iframe.contentWindow, 'postMessage').mockImplementation(() => {})
+    // jsdom's location.assign cannot be spied on, so the whole location is
+    // stood in for once the iframe (which reads the real origin) exists.
+    realLocation = window.location
+    assignSpy = vi.fn()
+    vi.spyOn(window, 'location', 'get').mockReturnValue({
+      origin: realLocation.origin,
+      href: realLocation.href,
+      assign: assignSpy
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.useRealTimers()
+    delete window.tymeslotSettings
+  })
+
+  test('acks to the frame with the Tymeslot origin, calls onSuccess with the data, then redirects', async () => {
+    const onSuccess = vi.fn()
+    window.tymeslotSettings = { onSuccess }
+    const data = { eventTypeName: 'Intro', inviteeEmail: 'ada@example.com' }
+
+    postSuccess({ data, redirectUrl: 'https://host.example/thanks?x=1' })
+    await flush()
+
+    expect(ackSpy).toHaveBeenCalledWith({ type: 'tymeslot-booking-success-ack' }, realLocation.origin)
+    expect(onSuccess).toHaveBeenCalledWith(data)
+    expect(assignSpy).toHaveBeenCalledWith('https://host.example/thanks?x=1')
+  })
+
+  test('reads tymeslotSettings at message time, so it may be defined after the script loaded', async () => {
+    const onSuccess = vi.fn()
+    postSuccess({ data: { a: 1 }, redirectUrl: null })
+    await flush()
+    window.tymeslotSettings = { onSuccess }
+    postSuccess({ data: { a: 2 }, redirectUrl: null })
+    await flush()
+
+    expect(onSuccess).toHaveBeenCalledTimes(1)
+    expect(onSuccess).toHaveBeenCalledWith({ a: 2 })
+  })
+
+  test('works for a modal embed', async () => {
+    document.body.innerHTML = ''
+    window.TymeslotBooking.open('alice')
+    const modalIframe = document.querySelector('#tymeslot-modal iframe')
+    const modalAck = vi.spyOn(modalIframe.contentWindow, 'postMessage').mockImplementation(() => {})
+    const onSuccess = vi.fn()
+    window.tymeslotSettings = { onSuccess }
+
+    postSuccess({ source: modalIframe.contentWindow, data: { m: 1 }, redirectUrl: null })
+    await flush()
+
+    expect(modalAck).toHaveBeenCalledTimes(1)
+    expect(onSuccess).toHaveBeenCalledWith({ m: 1 })
+  })
+
+  test('ignores a message from another origin', async () => {
+    const onSuccess = vi.fn()
+    window.tymeslotSettings = { onSuccess }
+
+    postSuccess({ origin: 'https://evil.example', data: {}, redirectUrl: 'https://host.example/' })
+    await flush()
+
+    expect(ackSpy).not.toHaveBeenCalled()
+    expect(onSuccess).not.toHaveBeenCalled()
+    expect(assignSpy).not.toHaveBeenCalled()
+  })
+
+  test('ignores a message from a frame this script did not create', async () => {
+    const foreign = document.createElement('iframe')
+    document.body.appendChild(foreign)
+    const onSuccess = vi.fn()
+    window.tymeslotSettings = { onSuccess }
+
+    postSuccess({ source: foreign.contentWindow, data: {}, redirectUrl: 'https://host.example/' })
+    await flush()
+
+    expect(ackSpy).not.toHaveBeenCalled()
+    expect(onSuccess).not.toHaveBeenCalled()
+    expect(assignSpy).not.toHaveBeenCalled()
+  })
+
+  test('waits for a Promise from onSuccess before redirecting', async () => {
+    let resolveCallback
+    window.tymeslotSettings = {
+      onSuccess: () => new Promise(resolve => { resolveCallback = resolve })
+    }
+
+    postSuccess({ data: {}, redirectUrl: 'https://host.example/thanks' })
+    await flush()
+    expect(assignSpy).not.toHaveBeenCalled()
+
+    resolveCallback()
+    await flush()
+    expect(assignSpy).toHaveBeenCalledWith('https://host.example/thanks')
+  })
+
+  test('redirects after 2 s when the Promise from onSuccess never settles', async () => {
+    vi.useFakeTimers()
+    window.tymeslotSettings = { onSuccess: () => new Promise(() => {}) }
+
+    postSuccess({ data: {}, redirectUrl: 'https://host.example/thanks' })
+    await vi.advanceTimersByTimeAsync(1999)
+    expect(assignSpy).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(assignSpy).toHaveBeenCalledWith('https://host.example/thanks')
+  })
+
+  test('still redirects when onSuccess throws or its Promise rejects', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    window.tymeslotSettings = { onSuccess: () => { throw new Error('boom') } }
+    postSuccess({ data: {}, redirectUrl: 'https://host.example/a' })
+    await flush()
+    expect(assignSpy).toHaveBeenCalledWith('https://host.example/a')
+    expect(consoleSpy).toHaveBeenCalled()
+
+    window.tymeslotSettings = { onSuccess: () => Promise.reject(new Error('nope')) }
+    postSuccess({ data: {}, redirectUrl: 'https://host.example/b' })
+    await flush()
+    expect(assignSpy).toHaveBeenCalledWith('https://host.example/b')
+  })
+
+  test('does not navigate when redirectUrl is null', async () => {
+    const onSuccess = vi.fn()
+    window.tymeslotSettings = { onSuccess }
+
+    postSuccess({ data: { a: 1 }, redirectUrl: null })
+    await flush()
+
+    expect(ackSpy).toHaveBeenCalledTimes(1)
+    expect(onSuccess).toHaveBeenCalledTimes(1)
+    expect(assignSpy).not.toHaveBeenCalled()
+  })
+
+  test('refuses a redirectUrl without an http(s) scheme', async () => {
+    postSuccess({ data: {}, redirectUrl: 'javascript:alert(1)' })
+    postSuccess({ data: {}, redirectUrl: 'data:text/html,hi' })
+    postSuccess({ data: {}, redirectUrl: '//host.example/thanks' })
+    await flush()
+
+    expect(assignSpy).not.toHaveBeenCalled()
+  })
+})
+
+describe('UTM tags of the host page', () => {
+  const UTM = {
+    utm_source: 'newsletter',
+    utm_medium: 'email',
+    utm_campaign: 'autumn sale',
+    utm_content: 'hero&cta',
+    utm_term: 'booking'
+  }
+
+  function setHostQuery(query) {
+    window.history.replaceState({}, '', '/host-page' + query)
+  }
+
+  function iframeParams(selector) {
+    return new URL(document.querySelector(selector).src).searchParams
+  }
+
+  afterEach(() => {
+    window.history.replaceState({}, '', '/')
+  })
+
+  test('forwards all five utm params into an inline embed', () => {
+    setHostQuery('?' + new URLSearchParams(UTM).toString())
+    const container = document.createElement('div')
+    container.id = 'utm-inline'
+    document.body.appendChild(container)
+    window.TymeslotBooking.embed('#utm-inline', 'alice')
+
+    const params = iframeParams('#utm-inline iframe')
+    Object.entries(UTM).forEach(([key, value]) => {
+      expect(params.get(key)).toBe(value)
+    })
+    expect(params.get('embed')).toBe('1')
+  })
+
+  test('forwards utm params into a modal embed', () => {
+    setHostQuery('?utm_source=ads&utm_campaign=q4')
+    window.TymeslotBooking.open('alice')
+
+    const params = iframeParams('#tymeslot-modal iframe')
+    expect(params.get('utm_source')).toBe('ads')
+    expect(params.get('utm_campaign')).toBe('q4')
+  })
+
+  test('forwards utm params into the modal a floating button opens', () => {
+    setHostQuery('?utm_medium=cpc')
+    window.TymeslotBooking.initFloating('alice')
+    document.getElementById('tymeslot-floating-button').click()
+
+    expect(iframeParams('#tymeslot-modal iframe').get('utm_medium')).toBe('cpc')
+  })
+
+  test('forwards only the five utm params, and only those present', () => {
+    setHostQuery('?utm_source=ads&utm_id=7&gclid=abc&ref=x&utm_term=')
+    window.TymeslotBooking.open('alice')
+
+    const params = iframeParams('#tymeslot-modal iframe')
+    expect(params.get('utm_source')).toBe('ads')
+    ;['utm_id', 'gclid', 'ref', 'utm_term', 'utm_medium', 'utm_campaign', 'utm_content'].forEach(key => {
+      expect(params.has(key)).toBe(false)
+    })
+  })
+
+  test('adds no utm params when the host page has none', () => {
+    setHostQuery('')
+    window.TymeslotBooking.open('alice')
+
+    const keys = Array.from(iframeParams('#tymeslot-modal iframe').keys())
+    expect(keys.filter(key => key.startsWith('utm_'))).toEqual([])
+  })
+})

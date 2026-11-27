@@ -65,7 +65,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   end
 
   # How a booking against this meeting type is admitted: guests, approval,
-  # free/busy visibility, and the limits and rules on when it may be booked.
+  # free/busy visibility, and the limits and rules on when it may be booked;
+  # and where its booker is sent once it is made.
   @spec assign_booking_rules(Phoenix.LiveView.Socket.t(), map() | nil) ::
           Phoenix.LiveView.Socket.t()
   defp assign_booking_rules(socket, type) do
@@ -76,6 +77,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
       requires_email_verification: get_requires_email_verification(type),
       approval_window_hours: get_approval_window_hours(type),
       show_as_free: get_show_as_free(type),
+      redirect_url: Map.get(type || %{}, :redirect_url) || "",
+      redirect_pass_details: Map.get(type || %{}, :redirect_pass_details) == true,
       booking_limits: get_booking_limits(type),
       scheduling_rules: get_scheduling_rules(type)
     )

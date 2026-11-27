@@ -29,7 +29,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormTabs do
       :series_interval,
       :series_min_occurrences,
       :series_max_occurrences,
-      :series_required
+      :series_required,
+      :redirect_url
     ],
     "reminders" => [:reminder_config]
   }

@@ -419,7 +419,7 @@ defmodule Tymeslot.BookingSeries.Create do
   # committed, is paid; a checkout that cannot be opened releases it.
   defp booked_result(series, meetings, seats, booking_data) do
     if Prepare.paid?(booking_data) do
-      case Payment.checkout(series) do
+      case Payment.checkout(series, embedded: Map.get(booking_data, :checkout_from_embed) == true) do
         {:ok, url} ->
           {:ok,
            {:ok, :payment_required,

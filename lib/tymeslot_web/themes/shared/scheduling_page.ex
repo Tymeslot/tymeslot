@@ -24,6 +24,12 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingPage do
   On a demo page the shared theme switcher (`Components.DemoThemeSwitcher`)
   leads the content, above the moments, so every theme carries it without a
   wrapper of its own changing.
+
+  Ahead of every state's content sits the hidden `BookingSuccess` hook
+  element, so it is mounted when a booking turns to `:confirmation` and the
+  page pushes `booking_success` in that same render. On an embedded page it
+  carries the token's verified parent origin (`EmbedAuthHook`), the only
+  origin the hook posts the booking to.
   """
 
   use Phoenix.Component
@@ -62,6 +68,13 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingPage do
       legal_links={assigns[:legal_links]}
       {Map.take(assigns, [:demo_mode])}
     >
+      <div
+        id="booking-success-hook"
+        phx-hook="BookingSuccess"
+        hidden
+        data-parent-origin={assigns[:embedded] && assigns[:embed_parent_origin]}
+      >
+      </div>
       <DemoThemeSwitcher.switcher
         :if={assigns[:demo_theme_switcher]}
         theme_id={assigns[:theme_id]}

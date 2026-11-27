@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.ApprovalWindow
+  alias Tymeslot.MeetingTypes.RedirectUrl
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ReminderHandlers
 
@@ -32,6 +33,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     Validation
   }
 
+  alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.Live.Shared.Flash
 
@@ -110,6 +112,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
        requires_email_verification: false,
        approval_window_hours: nil,
        show_as_free: false,
+       redirect_url: "",
+       redirect_pass_details: false,
        group_bookings_enabled: false,
        max_participants: to_string(Init.default_group_limit()),
        show_seat_availability: true,
@@ -422,6 +426,39 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     {:noreply,
      socket
      |> assign(:show_as_free, !socket.assigns.show_as_free)
+     |> Autosave.maybe_run()}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_redirect_url", params, socket) do
+    # The input sits inside the meeting-type form, so the event carries the
+    # whole form's params under "meeting_type". What was typed is kept, so
+    # the input keeps showing it; an address that is not valid is not saved
+    # (`Submission` posts the stored one meanwhile) and stays marked unsaved
+    # until it is fixed or cleared, as the approval window does.
+    raw = params |> Map.get("meeting_type", %{}) |> Map.get("redirect_url", "")
+    socket = assign(socket, :redirect_url, raw)
+
+    case RedirectUrl.check(raw) do
+      {:ok, _url} ->
+        {:noreply, socket |> Validation.clear_error(:redirect_url) |> Autosave.maybe_run()}
+
+      {:error, error} ->
+        {:noreply,
+         socket
+         |> assign(:save_status, :unsaved)
+         |> assign(
+           :form_errors,
+           Map.put(socket.assigns.form_errors, :redirect_url, Forms.translate_error(error))
+         )}
+    end
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("toggle_redirect_pass_details", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:redirect_pass_details, !socket.assigns.redirect_pass_details)
      |> Autosave.maybe_run()}
   end
 

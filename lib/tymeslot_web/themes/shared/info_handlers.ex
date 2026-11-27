@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   alias TymeslotWeb.Live.Scheduling.WeekSlots
   alias TymeslotWeb.Themes.Shared.BookingFlow
   alias TymeslotWeb.Themes.Shared.BookingLocation
+  alias TymeslotWeb.Themes.Shared.BookingSuccess
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.Journey
   alias TymeslotWeb.Themes.Shared.Journey.Navigators.Reveal
@@ -401,7 +402,9 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   The booker iframe subscribed to `meeting_payment:<meeting_id>` when it
   pushed Stripe Checkout to a new tab; when the webhook confirms the
   payment we flip the iframe directly to the theme's `:confirmation`
-  view so the attendee never sees Stripe inside the host's page.
+  view so the attendee never sees Stripe inside the host's page, and tell
+  the embedding page about the booking (`BookingSuccess`). A paid type is
+  never a group type, so the meeting's attendee is the booker.
   """
   @spec handle_payment_paid(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -422,8 +425,13 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
           |> assign(:email, meeting.attendee_email)
           |> assign(:paid_payment, paid_payment(meeting))
           |> Runtime.forget_payment_wait()
+          |> BookingSuccess.prepare(meeting, %{
+            name: meeting.attendee_name,
+            email: meeting.attendee_email
+          })
 
-        {:noreply, Runtime.transition_to(socket, :confirmation, %{})}
+        {:noreply,
+         socket |> Runtime.transition_to(:confirmation, %{}) |> BookingSuccess.dispatch()}
 
       # Only the wait ends on a payment: a broadcast repeated once the page
       # has moved on (the confirmation, a booking started again) moves

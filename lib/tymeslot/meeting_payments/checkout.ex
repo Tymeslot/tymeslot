@@ -46,10 +46,12 @@ defmodule Tymeslot.MeetingPayments.Checkout do
   Creates a Stripe Checkout Session for an `awaiting_payment` meeting.
 
   Returns the Stripe-hosted checkout URL and the persisted `booking_payment` row.
+  `embedded: true` marks a booking made inside an embed
+  (`CheckoutSessions.create_session_for_booking/2`).
   """
-  @spec create_checkout_session(MeetingSchema.t()) ::
+  @spec create_checkout_session(MeetingSchema.t(), keyword()) ::
           {:ok, CheckoutSessions.create_result()} | {:error, term()}
-  defdelegate create_checkout_session(meeting),
+  defdelegate create_checkout_session(meeting, opts \\ []),
     to: CheckoutSessions,
     as: :create_session_for_booking
 
@@ -80,9 +82,9 @@ defmodule Tymeslot.MeetingPayments.Checkout do
   `awaiting_payment`, at the series' unit price times its sessions. See
   `CheckoutSessions.create_session_for_series/1`.
   """
-  @spec create_checkout_session_for_series(Tymeslot.BookingSeries.SeriesSchema.t()) ::
+  @spec create_checkout_session_for_series(Tymeslot.BookingSeries.SeriesSchema.t(), keyword()) ::
           {:ok, CheckoutSessions.create_result()} | {:error, term()}
-  defdelegate create_checkout_session_for_series(series),
+  defdelegate create_checkout_session_for_series(series, opts \\ []),
     to: CheckoutSessions,
     as: :create_session_for_series
 

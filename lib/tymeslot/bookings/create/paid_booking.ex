@@ -63,7 +63,7 @@ defmodule Tymeslot.Bookings.Create.PaidBooking do
 
     with {:ok, meeting} <- create_meeting.(paid_attrs),
          {:ok, _guests} <- guests_or_expire(meeting, booking_data, create_guests),
-         {:ok, %{checkout_url: url}} <- checkout_or_expire(meeting) do
+         {:ok, %{checkout_url: url}} <- checkout_or_expire(meeting, booking_data) do
       on_created.()
       {:ok, :payment_required, %{meeting: meeting, checkout_url: url}}
     else
@@ -82,8 +82,12 @@ defmodule Tymeslot.Bookings.Create.PaidBooking do
     end
   end
 
-  defp checkout_or_expire(meeting) do
-    case Checkout.create_checkout_session(meeting) do
+  # A booking made inside an embed returns from Stripe marked as such
+  # (`Checkout.create_checkout_session/2`).
+  defp checkout_or_expire(meeting, booking_data) do
+    opts = [embedded: Map.get(booking_data, :checkout_from_embed) == true]
+
+    case Checkout.create_checkout_session(meeting, opts) do
       {:ok, result} ->
         {:ok, result}
 

@@ -935,3 +935,28 @@ msgstr "Quem agenda paga este valor por cada vaga que ocupar, incluindo as dos c
 #, elixir-autogen, elixir-format
 msgid "Price per seat (%{currency})"
 msgstr "Preço por vaga (%{currency})"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/redirect_section.ex
+#, elixir-autogen, elixir-format
+msgid "Include booking info like invitee name, email, and event time in the redirect URL"
+msgstr "Incluir na URL de redirecionamento informações do agendamento, como nome e e-mail de quem agendou e horário do compromisso"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/redirect_section.ex
+#, elixir-autogen, elixir-format
+msgid "Pass event details to your redirected page"
+msgstr "Enviar os detalhes do compromisso para a página de redirecionamento"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/redirect_section.ex
+#, elixir-autogen, elixir-format
+msgid "Redirect URL"
+msgstr "URL de redirecionamento"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/redirect_section.ex
+#, elixir-autogen, elixir-format
+msgid "Redirect after booking"
+msgstr "Redirecionamento após o agendamento"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/redirect_section.ex
+#, elixir-autogen, elixir-format
+msgid "Send invitees to this page after they book instead of showing the confirmation. Leave blank to show the confirmation."
+msgstr "Depois do agendamento, envie quem agendou para esta página em vez de mostrar a confirmação. Deixe em branco para mostrar a confirmação."
