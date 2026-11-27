@@ -132,14 +132,15 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
                 label={dgettext("dashboard_embed", "Meeting type")}
                 value={if(@selected_type, do: to_string(@selected_type.id), else: "overview")}
                 options={meeting_type_options(assigns)}
-              >
-                <:description :if={@invitation_only_types?}>
-                  {dgettext(
-                    "dashboard_embed",
-                    "Invitation-only types are shared from their invitations."
-                  )}
-                </:description>
-              </.select>
+              />
+              <%!-- Below the field, not in its description slot, so the two
+                   pickers' fields stay level. --%>
+              <p :if={@invitation_only_types?} class="mt-2 text-token-xs text-tymeslot-600">
+                {dgettext(
+                  "dashboard_embed",
+                  "Invitation-only types are shared from their invitations."
+                )}
+              </p>
               <div
                 :if={@selected_type && @selected_type.is_private}
                 id="embed-private-type-note"
