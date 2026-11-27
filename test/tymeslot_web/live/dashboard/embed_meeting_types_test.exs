@@ -1,7 +1,8 @@
 defmodule TymeslotWeb.Dashboard.EmbedMeetingTypesTest do
   @moduledoc """
   Embed & Share opens a snippet or link on one meeting type, at the one
-  address the type is booked at.
+  address the type is booked at, and lets the direct link carry a visitor's
+  name and email.
   """
   use TymeslotWeb.LiveCase, async: true
 
@@ -177,6 +178,58 @@ defmodule TymeslotWeb.Dashboard.EmbedMeetingTypesTest do
 
       assert inline_address(html) == "joern/intro"
       assert has_element?(view, "#embed-meeting-type-select option[value='#{type.id}'][selected]")
+    end
+  end
+
+  describe "the direct link's visitor details" do
+    test "carry a name and email in the link's fragment", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/embed")
+
+      html =
+        view
+        |> form("#embed-link-prefill-form")
+        |> render_change(%{"prefill" => %{"name" => "Ann Lee", "email" => "ann+crm@example.com"}})
+
+      assert html =~ "/joern?layout=column#name=Ann%20Lee&amp;email=ann%2Bcrm%40example.com&quot;"
+      refute html =~ "embed-prefill-email-error"
+    end
+
+    test "leave out an address the booking form would refuse, and say so", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/embed")
+
+      html =
+        view
+        |> form("#embed-link-prefill-form")
+        |> render_change(%{"prefill" => %{"name" => "Ann Lee", "email" => "not-an-address"}})
+
+      assert html =~ "/joern?layout=column#name=Ann%20Lee&quot;"
+      refute html =~ "not-an-address&quot;"
+      assert has_element?(view, "#embed-link-prefill-form", "would not accept this")
+    end
+
+    test "stay out of the embed snippets", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/embed")
+
+      html =
+        view
+        |> form("#embed-link-prefill-form")
+        |> render_change(%{"prefill" => %{"name" => "Ann Lee", "email" => "ann@example.com"}})
+
+      assert [_only_the_link] = Regex.scan(~r/#name=/, html)
+      assert inline_address(html) == "joern"
+    end
+
+    test "copying the link copies the details with it", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/embed")
+
+      view
+      |> form("#embed-link-prefill-form")
+      |> render_change(%{"prefill" => %{"name" => "Ann", "email" => "ann@example.com"}})
+
+      view |> element("button[phx-value-type='link']", "Copy") |> render_click()
+
+      assert_push_event(view, "copy-to-clipboard", %{text: text})
+      assert text =~ ~s(/joern?layout=column#name=Ann&email=ann%40example.com">)
     end
   end
 end

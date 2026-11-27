@@ -473,6 +473,26 @@ msgstr "Os tipos só com convite são compartilhados pelos próprios convites."
 msgid "Meeting type"
 msgstr "Tipo de reunião"
 
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
+#, elixir-autogen, elixir-format
+msgid "The booking form would not accept this, so the link leaves it out."
+msgstr "O formulário de agendamento não aceitaria este valor, por isso ele fica fora do link."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
+#, elixir-autogen, elixir-format
+msgid "Visitor's email (optional)"
+msgstr "E-mail de quem visita (opcional)"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
+#, elixir-autogen, elixir-format
+msgid "Visitor's name (optional)"
+msgstr "Nome de quem visita (opcional)"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
+#, elixir-autogen, elixir-format
+msgid "The booking form opens with these filled in, and the visitor can still change them. That makes the link personal: send it only to this person. The details sit after the # in the link, which browsers never send to a server, but anyone who has the link can read them."
+msgstr "O formulário de agendamento abre com esses dados já preenchidos, e quem visita ainda pode alterá-los. Isso torna o link pessoal: envie-o só para essa pessoa. Os dados ficam depois do # no link, parte que os navegadores nunca enviam a um servidor, mas qualquer pessoa que tenha o link consegue lê-los."
+
 #: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} (unlisted)"

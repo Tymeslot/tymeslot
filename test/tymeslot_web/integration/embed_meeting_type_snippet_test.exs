@@ -1,10 +1,13 @@
 defmodule TymeslotWeb.Integration.EmbedMeetingTypeSnippetTest do
   @moduledoc """
   A snippet generated in Embed & Share for one meeting type opens, embedded,
-  straight on that type's scheduling step.
+  straight on that type's scheduling step, and an embed that hands over a
+  visitor's details opens the booking form with them filled in.
 
   The iframe address is built from the copied snippet's `data-username` the
-  way `embed.js` builds it (`?embed=1&parent-origin=`).
+  way `embed.js` builds it (`?embed=1&parent-origin=`); the name and email
+  `embed.js` puts in the iframe's fragment reach the LiveView as its
+  `attendee_prefill` connect params, which is what the browser sends.
   """
   use TymeslotWeb.LiveCase, async: false
 
@@ -80,5 +83,30 @@ defmodule TymeslotWeb.Integration.EmbedMeetingTypeSnippetTest do
     assert Page.assigns(view).embedded == true
     assert has_element?(view, "#schedule-step [data-fact='date']")
     refute has_element?(view, "[data-fact='meeting_type']")
+  end
+
+  @tag :capture_log
+  test "the embedded booking form opens with the visitor's details", %{user: user, type: type} do
+    address = snippet_address(user, type)
+
+    {:ok, view, _html} =
+      visitor()
+      |> put_connect_params(%{
+        "attendee_prefill" => %{"name" => "Ann Lee", "email" => "ann@example.com"}
+      })
+      |> live("/#{address}?#{@iframe_query}")
+
+    view = BookingTestHelpers.walk_from_schedule_to_booking_form(view, @timezone)
+
+    assert input_value(view, "#booking-form input[name='booking[name]']") == "Ann Lee"
+    assert input_value(view, "#booking-form input[name='booking[email]']") == "ann@example.com"
+  end
+
+  defp input_value(view, selector) do
+    view
+    |> render()
+    |> Floki.parse_document!()
+    |> Floki.attribute(selector, "value")
+    |> List.first()
   end
 end

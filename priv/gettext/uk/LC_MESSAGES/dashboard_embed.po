@@ -473,6 +473,26 @@ msgstr "Типи зустрічей лише за запрошенням пош�
 msgid "Meeting type"
 msgstr "Тип зустрічі"
 
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
+#, elixir-autogen, elixir-format
+msgid "The booking form would not accept this, so the link leaves it out."
+msgstr "Форма бронювання не прийме це значення, тому посилання його не міститиме."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
+#, elixir-autogen, elixir-format
+msgid "Visitor's email (optional)"
+msgstr "Електронна пошта відвідувача (необов'язково)"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
+#, elixir-autogen, elixir-format
+msgid "Visitor's name (optional)"
+msgstr "Ім'я відвідувача (необов'язково)"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
+#, elixir-autogen, elixir-format
+msgid "The booking form opens with these filled in, and the visitor can still change them. That makes the link personal: send it only to this person. The details sit after the # in the link, which browsers never send to a server, but anyone who has the link can read them."
+msgstr "Форма бронювання відкриється з уже заповненими даними, і відвідувач зможе їх змінити. Тож посилання стає особистим: надсилайте його лише цій людині. Дані розміщено в посиланні після символу #; цю частину браузери ніколи не надсилають на сервер, але прочитати її може кожен, хто має посилання."
+
 #: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} (unlisted)"

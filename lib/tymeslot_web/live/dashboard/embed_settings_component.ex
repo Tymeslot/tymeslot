@@ -70,6 +70,8 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
       |> assign_new(:embed_locale, fn -> "" end)
       |> assign_new(:initial_height, fn -> nil end)
       |> assign_new(:max_width, fn -> nil end)
+      |> assign_new(:prefill_name, fn -> "" end)
+      |> assign_new(:prefill_email, fn -> "" end)
       # Minted once per mounted component, not per update: the hook re-creates
       # the iframe whenever a dataset value it watches changes, so a token that
       # churned would throw the organiser back to step one mid-preview. It
@@ -190,6 +192,8 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
               embed_locale={@embed_locale}
               initial_height={@initial_height}
               max_width={@max_width}
+              prefill_name={@prefill_name}
+              prefill_email={@prefill_email}
               myself={@myself}
             />
           </.embed_panel>
@@ -307,6 +311,20 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
 
   def handle_event("update_customisation", _params, socket),
     do: reject_invalid_event("update_customisation", socket)
+
+  # The visitor details the link snippet carries. Kept as typed, so the fields
+  # show what the organiser entered; `Helpers.link_prefill/1` decides what
+  # reaches the link.
+  def handle_event("update_link_prefill", %{"prefill" => %{} = params}, socket) do
+    {:noreply,
+     assign(socket,
+       prefill_name: typed_text(params["name"]),
+       prefill_email: typed_text(params["email"])
+     )}
+  end
+
+  def handle_event("update_link_prefill", _params, socket),
+    do: reject_invalid_event("update_link_prefill", socket)
 
   def handle_event("save_embed_domains", %{"allowed_domains" => domains_str}, socket) do
     case Profiles.add_embed_domains(socket.assigns.profile, domains_str) do
@@ -499,6 +517,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     do: dgettext("dashboard_embed", "%{name} (unlisted)", name: name)
 
   defp meeting_type_label(%{name: name}), do: name
+
+  defp typed_text(value) when is_binary(value), do: value
+  defp typed_text(_value), do: ""
 
   defp reject_invalid_event(event_name, socket) do
     Logger.warning("handle_event received invalid or missing parameter", event: event_name)

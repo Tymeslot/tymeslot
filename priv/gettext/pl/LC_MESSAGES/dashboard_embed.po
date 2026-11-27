@@ -470,6 +470,26 @@ msgstr "Typy spotkań dostępne tylko z zaproszeniem udostępniasz przez ich zap
 msgid "Meeting type"
 msgstr "Typ spotkania"
 
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
+#, elixir-autogen, elixir-format
+msgid "The booking form would not accept this, so the link leaves it out."
+msgstr "Formularz rezerwacji nie przyjąłby tej wartości, więc link jej nie zawiera."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
+#, elixir-autogen, elixir-format
+msgid "Visitor's email (optional)"
+msgstr "E-mail gościa (opcjonalnie)"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
+#, elixir-autogen, elixir-format
+msgid "Visitor's name (optional)"
+msgstr "Imię i nazwisko gościa (opcjonalnie)"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
+#, elixir-autogen, elixir-format
+msgid "The booking form opens with these filled in, and the visitor can still change them. That makes the link personal: send it only to this person. The details sit after the # in the link, which browsers never send to a server, but anyone who has the link can read them."
+msgstr "Formularz rezerwacji otworzy się z tymi danymi już wpisanymi, a gość nadal może je zmienić. Dzięki temu link jest osobisty: wyślij go tylko tej osobie. Dane są zapisane w linku po znaku #, a tej części przeglądarki nigdy nie wysyłają do serwera. Każdy, kto ma link, może je jednak odczytać."
+
 #: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} (unlisted)"

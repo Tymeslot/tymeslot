@@ -473,6 +473,26 @@ msgstr "Termintypen nur mit Einladung werden über ihre Einladungslinks geteilt.
 msgid "Meeting type"
 msgstr "Termintyp"
 
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
+#, elixir-autogen, elixir-format
+msgid "The booking form would not accept this, so the link leaves it out."
+msgstr "Das Buchungsformular würde diese Angabe nicht akzeptieren, daher lässt der Link sie weg."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
+#, elixir-autogen, elixir-format
+msgid "Visitor's email (optional)"
+msgstr "E-Mail-Adresse des Besuchers (optional)"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
+#, elixir-autogen, elixir-format
+msgid "Visitor's name (optional)"
+msgstr "Name des Besuchers (optional)"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
+#, elixir-autogen, elixir-format
+msgid "The booking form opens with these filled in, and the visitor can still change them. That makes the link personal: send it only to this person. The details sit after the # in the link, which browsers never send to a server, but anyone who has the link can read them."
+msgstr "Das Buchungsformular öffnet sich mit diesen Angaben bereits ausgefüllt, und der Besucher kann sie weiterhin ändern. Dadurch wird der Link persönlich: Senden Sie ihn nur an diese Person. Die Angaben stehen im Link hinter dem #; diesen Teil senden Browser nie an einen Server, aber jeder, der den Link hat, kann sie lesen."
+
 #: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} (unlisted)"

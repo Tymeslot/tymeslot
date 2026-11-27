@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
 
   alias Phoenix.HTML
   alias Tymeslot.Locales
+  alias Tymeslot.Scheduling.ThemeFlow
   alias Tymeslot.Security.InputProcessor
   alias Tymeslot.Utils.Colour
   alias TymeslotWeb.Themes.Core.Context, as: ThemeContext
@@ -40,8 +41,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
   Builds the options map expected by `embed_code/2` from socket assigns.
 
   Remaps `:embed_layout` → `:layout` and collects `:initial_height`,
-  `:max_width`, `:username`, `:base_url`, and `:booking_url` in one place
-  so both the on-screen snippet renderer and the copy handler stay in sync.
+  `:max_width`, `:username`, `:base_url`, `:booking_url` and the link's
+  `:prefill_name` and `:prefill_email` in one place so both the on-screen
+  snippet renderer and the copy handler stay in sync.
   """
   @spec snippet_options(map()) :: map()
   def snippet_options(assigns) do
@@ -52,9 +54,25 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
       layout: assigns[:embed_layout],
       locale: assigns[:embed_locale],
       initial_height: assigns[:initial_height],
-      max_width: assigns[:max_width]
+      max_width: assigns[:max_width],
+      prefill_name: assigns[:prefill_name],
+      prefill_email: assigns[:prefill_email]
     }
   end
+
+  @doc """
+  The visitor details the link snippet carries, keyed `"name"` and `"email"`:
+  only those the booking page will put in its form
+  (`ThemeFlow.attendee_prefill/1`), so a value it would ignore is left out of
+  the link rather than shipped in it.
+  """
+  @spec link_prefill(map()) :: %{optional(String.t()) => String.t()}
+  def link_prefill(options),
+    do:
+      ThemeFlow.attendee_prefill(%{
+        "name" => options[:prefill_name],
+        "email" => options[:prefill_email]
+      })
 
   @doc """
   The text a visitor sees on the popup button or the link snippet, in the
@@ -119,11 +137,12 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
   def embed_code("link", %{booking_url: booking_url} = options) do
     booking_url = escape(booking_url)
     query = link_query(options)
+    fragment = link_fragment(options)
 
     label = escape(snippet_label("link", options))
 
     String.trim("""
-    <a href="#{booking_url}#{query}">#{label}</a>
+    <a href="#{booking_url}#{query}#{fragment}">#{label}</a>
     """)
   end
 
@@ -195,6 +214,23 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
       [] -> ""
       list -> "?" <> Enum.map_join(list, "&", fn {key, value} -> "#{key}=#{value}" end)
     end
+  end
+
+  # The visitor's name and email ride in the fragment, where the booking page
+  # reads them (`ThemeUtils.assign_attendee_prefill/1`): a browser never sends
+  # a fragment to a server, so they stay out of its access logs. Each value is
+  # percent-encoded down to the unreserved characters, as the page decodes
+  # them with `decodeURIComponent`, which also leaves nothing to escape in the
+  # `href`.
+  defp link_fragment(options) do
+    prefill = link_prefill(options)
+
+    pairs =
+      for key <- ~w(name email),
+          value = prefill[key],
+          do: "#{key}=#{URI.encode(value, &URI.char_unreserved?/1)}"
+
+    if pairs == [], do: "", else: "#" <> Enum.join(pairs, "&")
   end
 
   defp layout_query_value(options) do

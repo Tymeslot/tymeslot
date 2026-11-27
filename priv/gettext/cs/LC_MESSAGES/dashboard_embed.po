@@ -473,6 +473,26 @@ msgstr "Typy schůzek jen na pozvání se sdílejí přes odkazy na pozvání."
 msgid "Meeting type"
 msgstr "Typ schůzky"
 
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
+#, elixir-autogen, elixir-format
+msgid "The booking form would not accept this, so the link leaves it out."
+msgstr "Rezervační formulář by tuto hodnotu nepřijal, proto ji odkaz vynechá."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
+#, elixir-autogen, elixir-format
+msgid "Visitor's email (optional)"
+msgstr "E-mail návštěvníka (nepovinné)"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
+#, elixir-autogen, elixir-format
+msgid "Visitor's name (optional)"
+msgstr "Jméno návštěvníka (nepovinné)"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex
+#, elixir-autogen, elixir-format
+msgid "The booking form opens with these filled in, and the visitor can still change them. That makes the link personal: send it only to this person. The details sit after the # in the link, which browsers never send to a server, but anyone who has the link can read them."
+msgstr "Rezervační formulář se otevře s již vyplněnými údaji, které návštěvník může ještě změnit. Odkaz se tak stává osobním: posílejte ho jen této osobě. Údaje jsou v části odkazu za znakem #, kterou prohlížeče nikdy neodesílají na server, přečíst si je ale může každý, kdo odkaz má."
+
 #: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} (unlisted)"

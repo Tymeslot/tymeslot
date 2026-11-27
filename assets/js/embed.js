@@ -312,6 +312,30 @@
     });
   });
 
+  // The visitor details a host site already holds, for the booking form to
+  // start from: only `name` and `email`, never any other key of
+  // `options.prefill`. They go in the fragment, where the booking page reads
+  // and then removes them (attendee_prefill.js), because a browser never sends
+  // a fragment to a server, so they stay out of every access log. The form
+  // keeps them editable.
+  const PREFILL_KEYS = ['name', 'email'];
+
+  function prefillFragment(prefill) {
+    if (!prefill || typeof prefill !== 'object') return '';
+
+    return PREFILL_KEYS
+      .filter(key => typeof prefill[key] === 'string' && prefill[key].trim() !== '')
+      .map(key => `${key}=${encodeURIComponent(prefill[key].trim())}`)
+      .join('&');
+  }
+
+  function prefillFromAttributes(container) {
+    return {
+      name: container.getAttribute('data-prefill-name'),
+      email: container.getAttribute('data-prefill-email')
+    };
+  }
+
   /**
    * Create an iframe for embedding
    */
@@ -363,6 +387,9 @@
     // Pass parent origin so iframe_embed.js can post resize messages
     // even when the embedding page strips the Referrer header.
     url.searchParams.append('parent-origin', window.location.origin);
+
+    const fragment = prefillFragment(options.prefill);
+    if (fragment) url.hash = fragment;
 
     iframe.src = url.toString();
     // display: block, as an inline iframe sits on a line box whose descender
@@ -731,7 +758,8 @@
         // embeds it doubles as a persistent height floor, not just the initial
         // placeholder.
         minHeight: container.getAttribute('data-min-height'),
-        maxWidth: container.getAttribute('data-max-width')
+        maxWidth: container.getAttribute('data-max-width'),
+        prefill: prefillFromAttributes(container)
       };
       
       const wrapper = createBookingIframe(username, options);
@@ -1003,6 +1031,9 @@
       }
       if (!options.maxWidth && container.getAttribute('data-max-width')) {
         options.maxWidth = container.getAttribute('data-max-width');
+      }
+      if (!options.prefill) {
+        options.prefill = prefillFromAttributes(container);
       }
 
       const wrapper = createBookingIframe(username, options);

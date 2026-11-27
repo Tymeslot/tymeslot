@@ -19,6 +19,8 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
   attr :embed_locale, :string, default: ""
   attr :initial_height, :any, default: nil
   attr :max_width, :any, default: nil
+  attr :prefill_name, :string, default: ""
+  attr :prefill_email, :string, default: ""
   attr :myself, :any, required: true
 
   @spec options_grid(map()) :: Phoenix.LiveView.Rendered.t()
@@ -145,6 +147,14 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
             </div>
           </div>
         </:preview>
+        <:settings>
+          <.link_prefill_form
+            snippet_options={@snippet_options}
+            prefill_name={@prefill_name}
+            prefill_email={@prefill_email}
+            myself={@myself}
+          />
+        </:settings>
         <:code>
           {Helpers.embed_code("link", @snippet_options)}
         </:code>
@@ -372,8 +382,80 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
     """
   end
 
+  # The visitor details the direct link opens with. A value the booking form
+  # would refuse is left out of the link (`Helpers.link_prefill/1`), and the
+  # field says so rather than let the organiser send a link that silently
+  # drops it.
+  attr :snippet_options, :map, required: true
+  attr :prefill_name, :string, required: true
+  attr :prefill_email, :string, required: true
+  attr :myself, :any, required: true
+
+  defp link_prefill_form(assigns) do
+    carried = Helpers.link_prefill(assigns.snippet_options)
+
+    assigns =
+      assign(assigns,
+        name_errors: prefill_errors(assigns.prefill_name, carried["name"]),
+        email_errors: prefill_errors(assigns.prefill_email, carried["email"])
+      )
+
+    ~H"""
+    <.form
+      for={%{}}
+      as={:prefill}
+      id="embed-link-prefill-form"
+      phx-change="update_link_prefill"
+      phx-target={@myself}
+      class="mb-4 space-y-3"
+      novalidate
+    >
+      <.input
+        type="text"
+        id="embed-prefill-name"
+        name="prefill[name]"
+        label={dgettext("dashboard_embed", "Visitor's name (optional)")}
+        value={@prefill_name}
+        errors={@name_errors}
+        maxlength="100"
+        autocomplete="off"
+        phx-debounce="300"
+      />
+      <.input
+        type="email"
+        id="embed-prefill-email"
+        name="prefill[email]"
+        label={dgettext("dashboard_embed", "Visitor's email (optional)")}
+        value={@prefill_email}
+        errors={@email_errors}
+        maxlength="254"
+        autocomplete="off"
+        phx-debounce="300"
+      />
+      <p class="text-token-xs text-tymeslot-600">
+        {dgettext(
+          "dashboard_embed",
+          "The booking form opens with these filled in, and the visitor can still change them. That makes the link personal: send it only to this person. The details sit after the # in the link, which browsers never send to a server, but anyone who has the link can read them."
+        )}
+      </p>
+    </.form>
+    """
+  end
+
+  defp prefill_errors(typed, carried) do
+    if String.trim(typed) == "" or carried,
+      do: [],
+      else: [
+        dgettext(
+          "dashboard_embed",
+          "The booking form would not accept this, so the link leaves it out."
+        )
+      ]
+  end
+
   # Internal component for an individual embed option card.
   slot :preview, required: true
+  slot :settings, doc: "controls of this option's own, shown above its snippet"
   slot :code, required: true
   slot :footer_info, required: true
   attr :type, :string, required: true
@@ -415,6 +497,8 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         <div class="mb-4 bg-tymeslot-50 rounded-token-lg p-4 border-2 border-tymeslot-200">
           {render_slot(@preview)}
         </div>
+
+        {render_slot(@settings)}
 
         <%!-- Code Snippet: lines keep their shape and scroll sideways inside
               the block rather than breaking mid-token. --%>

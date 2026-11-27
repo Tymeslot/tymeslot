@@ -167,6 +167,44 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.HelpersTest do
     end
   end
 
+  describe "embed_code/2 — the link's visitor details" do
+    @link %{booking_url: "https://x.test/alice"}
+
+    test "ride in the fragment, each value percent-encoded" do
+      code =
+        Helpers.embed_code(
+          "link",
+          Map.merge(@link, %{prefill_name: " Zoë O'Neil ", prefill_email: "zoe+crm@example.com"})
+        )
+
+      assert code =~
+               ~s(href="https://x.test/alice#name=Zo%C3%AB%20O%27Neil&email=zoe%2Bcrm%40example.com")
+    end
+
+    test "follow the query" do
+      code =
+        Helpers.embed_code("link", Map.merge(@link, %{layout: "column", prefill_name: "Ann"}))
+
+      assert code =~ ~s(href="https://x.test/alice?layout=column#name=Ann")
+    end
+
+    test "leave out a value the booking form would refuse" do
+      code =
+        Helpers.embed_code(
+          "link",
+          Map.merge(@link, %{prefill_name: "Ann", prefill_email: "nope"})
+        )
+
+      assert code =~ ~s(href="https://x.test/alice#name=Ann")
+    end
+
+    test "leave no fragment when there are none" do
+      code = Helpers.embed_code("link", Map.merge(@link, %{prefill_name: " ", prefill_email: ""}))
+
+      assert code =~ ~s(href="https://x.test/alice")
+    end
+  end
+
   describe "embed_code/2 — customisation knobs" do
     test "inline snippet emits data-layout=column to opt into the wide canvas" do
       # Back-compat: the server now defaults every embed to the centred
