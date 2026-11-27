@@ -397,6 +397,21 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorkerTest do
                "Could not reach the calendar feed. Check the URL and try again."
     end
 
+    test "discards without retrying, as an expected outcome, when the feed's address is private",
+         %{integration: integration} do
+      enforce_ssrf_guard(fn _url, _opts ->
+        {:error, "URL resolves to a private or local network address"}
+      end)
+
+      assert {:discard, reason} =
+               perform_job(SyncIcsCalendarWorker, %{"calendar_integration_id" => integration.id})
+
+      assert SyncIcsCalendarWorker.expected_outcome?(reason)
+
+      {:ok, failed} = CalendarIntegrationQueries.get(integration.id)
+      assert failed.sync_error == "That URL points at a blocked address and cannot be reached."
+    end
+
     test "discards when the integration no longer exists" do
       assert {:discard, _reason} =
                perform_job(SyncIcsCalendarWorker, %{"calendar_integration_id" => 0})

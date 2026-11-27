@@ -6,8 +6,9 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
 
   A 401 or 403 means the feed URL has been revoked or rotated, which no
   amount of retrying will fix: the integration is flagged `needs_reauth` and
-  the job discarded so the user is prompted to paste a fresh link. Everything
-  else records a sync error and retries.
+  the job discarded so the user is prompted to paste a fresh link. A feed
+  address the SSRF guard refuses is just as final: the error is recorded and
+  the job discarded. Everything else records a sync error and retries.
   """
 
   use Oban.Worker,
@@ -43,13 +44,15 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
 
   @behaviour ExpectedJobOutcome
 
-  # The integration is gone, or only its owner can fix it by reconnecting.
+  # The integration is gone, or only its owner can fix it: by reconnecting,
+  # or by replacing a feed URL that points at a private or local address.
   # A subscription without a feed URL is recorded.
   @integration_gone "Integration not found"
+  @blocked_url "Subscription URL blocked by SSRF protection"
 
   @impl ExpectedJobOutcome
   def expected_outcome?(reason),
-    do: reason in [@integration_gone] or reason == ReauthHandling.discard_reason()
+    do: reason in [@integration_gone, @blocked_url] or reason == ReauthHandling.discard_reason()
 
   @impl Oban.Worker
   def perform(%Oban.Job{} = job), do: CalendarSyncJob.run(job, &sync/1)
@@ -68,6 +71,11 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
         )
 
         {:discard, "Subscription has no feed URL"}
+
+      # The HTTP client has already logged the refusal.
+      {:error, {:blocked, _reason} = blocked} ->
+        CalendarIntegrationQueries.mark_sync_error(integration, Feed.sync_error_message(blocked))
+        {:discard, @blocked_url}
 
       {:error, reason} ->
         record_failure(integration, reason)
