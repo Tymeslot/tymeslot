@@ -297,9 +297,13 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
         novalidate
       >
+        <%!-- Each field fills its grid cell and its description takes the
+        spare height, so the controls line up whichever description runs
+        longest in the dashboard's language. --%>
         <%!-- Layout --%>
         <.select
           id="embed-layout"
+          class="flex flex-col [&>p]:grow"
           name="customise[layout]"
           label={dgettext("dashboard_embed", "Layout")}
           options={[
@@ -321,6 +325,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         <%!-- Language --%>
         <.select
           id="embed-language"
+          class="flex flex-col [&>p]:grow"
           name="customise[locale]"
           label={dgettext("dashboard_embed", "Language")}
           options={[
@@ -345,6 +350,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         <.input
           type="number"
           id="embed-initial-height"
+          class="flex flex-col [&>p]:grow"
           name="customise[initial_height]"
           label={dgettext("dashboard_embed", "Initial height (px)")}
           min="200"
@@ -365,6 +371,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         <.input
           type="number"
           id="embed-max-width"
+          class="flex flex-col [&>p]:grow"
           name="customise[max_width]"
           label={dgettext("dashboard_embed", "Max width (px)")}
           min="200"
