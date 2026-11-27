@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   alias Ecto.Changeset
   alias Tymeslot.BookingPages
   alias Tymeslot.Locales
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias Tymeslot.Security.RateLimiter
@@ -75,8 +76,8 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
       # outliving the component is the failure we want — an hour-old preview
       # says so plainly rather than silently booking for real.
       |> assign_new(:preview_token, fn -> PreviewToken.sign(assigns.current_user.id) end)
-      |> assign(:pages, BookingPages.list(profile.id))
-      |> select_page(assigns[:params]["page"])
+      |> assign_targets(profile)
+      |> select_target(assigns[:params] || %{})
 
     {:ok, socket}
   end
@@ -94,22 +95,66 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
         </p>
 
         <div class="space-y-6">
-          <.form
-            :if={@pages != []}
-            for={to_form(%{}, as: :embed_page)}
-            id="embed-page-picker"
-            phx-change="select_page"
-            phx-target={@myself}
-            novalidate
+          <div
+            :if={@pages != [] or @meeting_types != []}
+            class="grid grid-cols-1 md:grid-cols-2 gap-4"
           >
-            <.select
-              id="embed-page-select"
-              name="page"
-              label={dgettext("dashboard_embed", "Booking page")}
-              value={if(@selected_page_id, do: to_string(@selected_page_id), else: "profile")}
-              options={page_options(@profile, @pages)}
-            />
-          </.form>
+            <.form
+              :if={@pages != []}
+              for={to_form(%{}, as: :embed_page)}
+              id="embed-page-picker"
+              phx-change="select_page"
+              phx-target={@myself}
+              novalidate
+            >
+              <.select
+                id="embed-page-select"
+                name="page"
+                label={dgettext("dashboard_embed", "Booking page")}
+                value={if(@selected_page_id, do: to_string(@selected_page_id), else: "profile")}
+                options={page_options(@profile, @pages)}
+              />
+            </.form>
+
+            <.form
+              :if={@meeting_types != []}
+              for={to_form(%{}, as: :embed_meeting_type)}
+              id="embed-meeting-type-picker"
+              phx-change="select_meeting_type"
+              phx-target={@myself}
+              novalidate
+            >
+              <.select
+                id="embed-meeting-type-select"
+                name="type"
+                label={dgettext("dashboard_embed", "Meeting type")}
+                value={if(@selected_type, do: to_string(@selected_type.id), else: "overview")}
+                options={meeting_type_options(assigns)}
+              >
+                <:description :if={@invitation_only_types?}>
+                  {dgettext(
+                    "dashboard_embed",
+                    "Invitation-only types are shared from their invitations."
+                  )}
+                </:description>
+              </.select>
+              <div
+                :if={@selected_type && @selected_type.is_private}
+                id="embed-private-type-note"
+                class="mt-2 flex items-start gap-2 text-token-xs text-tymeslot-700"
+              >
+                <.pill tone={:neutral} size={:sm} uppercase>
+                  {dgettext("dashboard_embed", "Unlisted")}
+                </.pill>
+                <span>
+                  {dgettext(
+                    "dashboard_embed",
+                    "Hidden from your booking pages, but anyone with this snippet or link can book it."
+                  )}
+                </span>
+              </div>
+            </.form>
+          </div>
 
           <.tab_bar
             id="embed-settings-tabs"
@@ -315,34 +360,87 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     )
   end
 
-  # The choice goes into the URL (`?page=<id>`), so a reload keeps it; the
-  # patch comes back through `update/2`.
+  # The choice goes into the URL (`?page=<id>`, or `?type=<id>` for a meeting
+  # type), so a reload keeps it; the patch comes back through `update/2`. A
+  # page chosen here opens on its overview, whatever type was chosen before.
   def handle_event("select_page", %{"page" => "profile"}, socket),
     do: {:noreply, push_patch(socket, to: ~p"/dashboard/embed")}
 
   def handle_event("select_page", %{"page" => id}, socket) when is_binary(id) do
-    case Enum.find_value(socket.assigns.pages, &(to_string(&1.id) == id && &1.id)) do
+    case find_by_id(socket.assigns.pages, id) do
       nil -> reject_invalid_event("select_page", socket)
-      page_id -> {:noreply, push_patch(socket, to: ~p"/dashboard/embed?#{[page: page_id]}")}
+      page -> {:noreply, push_patch(socket, to: ~p"/dashboard/embed?#{[page: page.id]}")}
     end
   end
 
   def handle_event("select_page", _params, socket),
     do: reject_invalid_event("select_page", socket)
 
-  # A `page` the profile does not have (deleted since the link was copied)
-  # shows the main page.
-  defp select_page(socket, page_param) do
-    page_id = Enum.find_value(socket.assigns.pages, &(to_string(&1.id) == page_param && &1.id))
-
-    socket
-    |> assign(:selected_page_id, page_id)
-    |> assign_page_target()
+  # The overview keeps the page the chosen type lived on.
+  def handle_event("select_meeting_type", %{"type" => "overview"}, socket) do
+    query = if page_id = socket.assigns.selected_page_id, do: [page: page_id], else: []
+    {:noreply, push_patch(socket, to: ~p"/dashboard/embed?#{query}")}
   end
 
-  # The snippet, link and preview follow the chosen page: its address in place
-  # of the username, and its theme. Allowed embed domains stay the profile's.
-  defp assign_page_target(socket) do
+  def handle_event("select_meeting_type", %{"type" => id}, socket) when is_binary(id) do
+    case find_by_id(socket.assigns.meeting_types, id) do
+      nil -> reject_invalid_event("select_meeting_type", socket)
+      type -> {:noreply, push_patch(socket, to: ~p"/dashboard/embed?#{[type: type.id]}")}
+    end
+  end
+
+  def handle_event("select_meeting_type", _params, socket),
+    do: reject_invalid_event("select_meeting_type", socket)
+
+  # What a snippet can open on: the profile's pages, and every meeting type
+  # with a public address with the page that address lives under. An
+  # invitation-only type has none, so it is not offered.
+  defp assign_targets(socket, profile) do
+    pages = BookingPages.list(profile.id)
+
+    {invitation_only, types} =
+      profile.user_id
+      |> MeetingTypes.get_bookable_meeting_types()
+      |> Enum.split_with(& &1.invitation_only)
+
+    homes =
+      BookingPages.meeting_type_homes(profile, types, pages, BookingPages.memberships(profile.id))
+
+    assign(socket,
+      pages: pages,
+      meeting_types: types,
+      type_homes: homes,
+      invitation_only_types?: invitation_only != []
+    )
+  end
+
+  # A chosen type decides the page, its home, so the two pickers never
+  # disagree. A `type` or `page` the profile does not have (deleted since the
+  # link was copied) shows the main page's overview.
+  defp select_target(socket, params) do
+    case find_by_id(socket.assigns.meeting_types, params["type"]) do
+      nil ->
+        page = find_by_id(socket.assigns.pages, params["page"])
+
+        socket
+        |> assign(selected_type: nil, selected_page_id: page && page.id)
+        |> assign_page_target(nil)
+
+      type ->
+        %{page: page, path: path} = Map.fetch!(socket.assigns.type_homes, type.id)
+
+        socket
+        |> assign(selected_type: type, selected_page_id: page && page.id)
+        |> assign_page_target(path)
+    end
+  end
+
+  # The snippet, link and preview follow the chosen page and type: the type's
+  # address, else the page's in place of the username, and the page's theme.
+  # A type's address is the one `BookingPages.meeting_type_homes/4` gives,
+  # never one joined by hand, which would redirect to it. Allowed embed
+  # domains stay the profile's.
+  defp assign_page_target(socket, type_path) do
     %{profile: profile, pages: pages, selected_page_id: page_id} = socket.assigns
 
     shown =
@@ -351,7 +449,11 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
         page -> BookingPages.apply_to_profile(profile, page)
       end
 
-    address = BookingPages.public_address(shown)
+    address =
+      case type_path do
+        "/" <> address -> address
+        nil -> BookingPages.public_address(shown)
+      end
 
     socket
     |> assign(:username, address)
@@ -359,12 +461,44 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     |> assign(:booking_url, UrlBuilder.booking_url(address))
   end
 
+  defp find_by_id(records, id) when is_binary(id),
+    do: Enum.find(records, &(to_string(&1.id) == id))
+
+  defp find_by_id(_records, _id), do: nil
+
   defp page_options(profile, pages) do
     [
       {"/" <> (profile.username || ""), "profile"}
       | Enum.map(pages, &{BookingPages.name_and_address(&1, profile.username), to_string(&1.id)})
     ]
   end
+
+  # The overview first, then each type under the page its address lives on,
+  # the profile's own page first and the rest in `page_options/2`'s order.
+  defp meeting_type_options(%{profile: profile, pages: pages} = assigns) do
+    by_page =
+      Enum.group_by(assigns.meeting_types, fn type ->
+        case assigns.type_homes[type.id].page do
+          nil -> nil
+          page -> page.id
+        end
+      end)
+
+    groups =
+      for {label, page_id} <- [
+            {"/" <> (profile.username || ""), nil}
+            | Enum.map(pages, &{BookingPages.name_and_address(&1, profile.username), &1.id})
+          ],
+          types = by_page[page_id],
+          do: {label, Enum.map(types, &{meeting_type_label(&1), to_string(&1.id)})}
+
+    [{dgettext("dashboard_embed", "All meeting types (overview)"), "overview"} | groups]
+  end
+
+  defp meeting_type_label(%{is_private: true, name: name}),
+    do: dgettext("dashboard_embed", "%{name} (unlisted)", name: name)
+
+  defp meeting_type_label(%{name: name}), do: name
 
   defp reject_invalid_event(event_name, socket) do
     Logger.warning("handle_event received invalid or missing parameter", event: event_name)

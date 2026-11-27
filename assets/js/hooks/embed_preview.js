@@ -2,6 +2,13 @@
 // container, translated server-side by `EmbedSettings.LivePreview`: the snippet
 // labels (`popupLabel`, `linkLabel`) in the embed's chosen language, the rest in
 // the dashboard's. Nothing user-facing is written here.
+
+// An address is `<username>`, then a booking page's slug, a meeting type's,
+// or both: each segment is escaped on its own, as embed.js does, so the
+// slashes between them stay path separators.
+const addressPath = (username) =>
+  '/' + String(username).split('/').map(encodeURIComponent).join('/');
+
 export const EmbedPreview = {
   mounted() {
     this._cachedDataset = {};
@@ -206,7 +213,7 @@ export const EmbedPreview = {
     button.textContent = this.el.dataset.linkLabel || '';
     button.className = 'text-turquoise-600 underline font-medium hover:text-turquoise-700 transition-colors cursor-pointer bg-transparent border-0 p-0';
     button.onclick = () => {
-      const linkUrl = new URL(`/${encodeURIComponent(username)}`, baseUrl);
+      const linkUrl = new URL(addressPath(username), baseUrl);
       linkUrl.searchParams.set('preview', 'true');
       if (options.previewToken) {
         linkUrl.searchParams.set('preview_token', options.previewToken);
@@ -271,7 +278,7 @@ export const EmbedPreview = {
 
   createIframe(username, baseUrl, options = {}) {
     const iframe = document.createElement('iframe');
-    const url = new URL(`/${encodeURIComponent(username)}`, baseUrl);
+    const url = new URL(addressPath(username), baseUrl);
     url.searchParams.set('preview', 'true');
     // `?preview=true` is only the display claim; on its own it fails a
     // submission closed as "Preview session expired". The signed, owner-bound

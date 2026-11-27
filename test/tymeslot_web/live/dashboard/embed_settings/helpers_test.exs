@@ -138,6 +138,35 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.HelpersTest do
     end
   end
 
+  describe "embed_code/2 — a meeting type's address" do
+    # `<username>/<page>/<type>`, and a type slug may be as short as one
+    # character or as long as 80, where a username runs from 3 to 30.
+    for address <- ["joern/coaching/deep-dive", "joern/ux", "joern/" <> String.duplicate("a", 80)] do
+      test "keeps #{address} in every snippet that names it" do
+        assigns = %{username: unquote(address), base_url: "https://tymeslot.com"}
+
+        assert Helpers.embed_code("inline", assigns) =~ ~s(data-username="#{unquote(address)}")
+
+        assert Helpers.embed_code("popup", assigns) =~
+                 "TymeslotBooking.open('#{unquote(address)}'"
+      end
+    end
+
+    for {address, why} <- [
+          {"joern/coaching/deep-dive/more", "four segments"},
+          {"jo/intro", "a username too short"},
+          {"joern/" <> String.duplicate("a", 81), "a slug too long"},
+          {"joern//intro", "an empty segment"},
+          {"joern/intro');alert(1);//", "a slug outside the slug characters"}
+        ] do
+      test "refuses #{why}" do
+        assigns = %{username: unquote(address), base_url: "https://tymeslot.com"}
+
+        assert Helpers.embed_code("inline", assigns) =~ ~s(data-username="invalid-username")
+      end
+    end
+  end
+
   describe "embed_code/2 — customisation knobs" do
     test "inline snippet emits data-layout=column to opt into the wide canvas" do
       # Back-compat: the server now defaults every embed to the centred

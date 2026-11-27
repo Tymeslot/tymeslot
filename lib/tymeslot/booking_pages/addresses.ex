@@ -57,11 +57,24 @@ defmodule Tymeslot.BookingPages.Addresses do
   """
   @spec meeting_type_paths(map(), [map()], [BookingPageSchema.t()], map()) ::
           %{optional(integer()) => String.t()}
-  def meeting_type_paths(%{username: username}, meeting_types, pages, memberships) do
+  def meeting_type_paths(profile, meeting_types, pages, memberships) do
+    profile
+    |> meeting_type_homes(meeting_types, pages, memberships)
+    |> Map.new(fn {id, %{path: path}} -> {id, path} end)
+  end
+
+  @doc """
+  Where each of `meeting_types` is booked, by id: its `meeting_type_path/2`
+  and the page that path lives under, nil for an address on the profile's own
+  page. From the pages and memberships `meeting_type_paths/4` takes.
+  """
+  @spec meeting_type_homes(map(), [map()], [BookingPageSchema.t()], map()) ::
+          %{optional(integer()) => %{page: BookingPageSchema.t() | nil, path: String.t()}}
+  def meeting_type_homes(%{username: username}, meeting_types, pages, memberships) do
     Map.new(meeting_types, fn type ->
       listed_on = Map.get(memberships, type.id, MapSet.new())
       home = if has_page_home?(type), do: Enum.find(pages, &MapSet.member?(listed_on, &1.id))
-      {type.id, path_under(username, home, type)}
+      {type.id, %{page: home, path: path_under(username, home, type)}}
     end)
   end
 

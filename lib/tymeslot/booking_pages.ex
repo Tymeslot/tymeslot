@@ -182,6 +182,11 @@ defmodule Tymeslot.BookingPages do
           %{optional(integer()) => String.t()}
   defdelegate meeting_type_paths(profile, meeting_types, pages, memberships), to: Addresses
 
+  @doc "Each meeting type's path and the page it lives under (`Addresses.meeting_type_homes/4`)."
+  @spec meeting_type_homes(map(), [map()], [page()], map()) ::
+          %{optional(integer()) => %{page: page() | nil, path: String.t()}}
+  defdelegate meeting_type_homes(profile, meeting_types, pages, memberships), to: Addresses
+
   @doc "The page `meeting_type` belongs to, or nil (`Addresses.home_page/1`)."
   @spec home_page(map()) :: page() | nil
   defdelegate home_page(meeting_type), to: Addresses

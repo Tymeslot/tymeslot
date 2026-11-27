@@ -98,4 +98,30 @@ defmodule Tymeslot.BookingPages.PageChangesTest do
           do: assert(paths[type.id] == BookingPages.meeting_type_path(profile, type))
     end
   end
+
+  describe "meeting_type_homes/4" do
+    test "names the page each path lives under", %{user: user, profile: profile, page: page} do
+      later = insert(:booking_page, profile: profile, slug: "talks")
+      on_main = insert(:meeting_type, user: user, slug: "intro", is_private: false)
+      on_pages = insert(:meeting_type, user: user, slug: "audit", is_private: true)
+      nowhere = insert(:meeting_type, user: user, slug: "secret", is_private: true)
+
+      :ok = BookingPages.set_meeting_type(later, on_pages.id, true)
+      :ok = BookingPages.set_meeting_type(page, on_pages.id, true)
+      :ok = BookingPages.set_meeting_type(later, on_main.id, true)
+
+      homes =
+        BookingPages.meeting_type_homes(
+          profile,
+          [on_main, on_pages, nowhere],
+          BookingPages.list(profile.id),
+          BookingPages.memberships(profile.id)
+        )
+
+      assert %{page: nil, path: "/joern/intro"} = homes[on_main.id]
+      assert %{page: %{id: page_id}, path: "/joern/audits/audit"} = homes[on_pages.id]
+      assert page_id == page.id
+      assert %{page: nil, path: "/joern/secret"} = homes[nowhere.id]
+    end
+  end
 end

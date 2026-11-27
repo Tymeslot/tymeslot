@@ -11,6 +11,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
   alias Tymeslot.Utils.Colour
   alias TymeslotWeb.Themes.Core.Context, as: ThemeContext
 
+  # A slug segment of a snippet's address (`sanitize_username/1`).
+  @slug_length [min_length: 1, max_length: 80]
+
   @doc "Returns the list of valid embed type strings."
   @spec valid_embed_types() :: [String.t()]
   def valid_embed_types, do: ~w(inline popup link floating)
@@ -251,19 +254,24 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
   defp escape(nil), do: ""
   defp escape(val), do: val |> HTML.html_escape() |> HTML.safe_to_string()
 
-  # The address (a username, or `<username>/<page>` for a booking page) is
-  # interpolated into HTML and JavaScript, so only one whose every segment the
-  # username rules accept is emitted. It is never rewritten: a shortened
-  # username can be another organiser's booking page.
+  # The address (a username, then optionally a booking page's slug, a meeting
+  # type's, or both) is interpolated into HTML and JavaScript, so only one
+  # whose every segment passes is emitted. The username takes the username
+  # rules; a slug takes the same characters at a meeting type slug's length,
+  # since those run from 1 to 80 characters where a username stops at 30. It
+  # is never rewritten: a shortened address can be another organiser's page.
   defp sanitize_username(address) do
-    segments = String.split(address || "", "/")
+    [username | slugs] = String.split(address || "", "/")
 
     valid =
-      length(segments) <= 2 and
-        Enum.all?(segments, &match?({:ok, &1}, InputProcessor.validate_field(&1, :username)))
+      length(slugs) <= 2 and valid_segment?(username, []) and
+        Enum.all?(slugs, &valid_segment?(&1, @slug_length))
 
     if valid, do: address, else: "invalid-username"
   end
+
+  defp valid_segment?(segment, opts),
+    do: match?({:ok, ^segment}, InputProcessor.validate_field(segment, :username, opts))
 
   defp sanitize_theme(nil), do: nil
 

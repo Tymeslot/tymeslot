@@ -452,3 +452,33 @@ msgstr "Potřebujete pomoct? Podrobný postup, tipy pro jednotlivé platformy a�
 #, elixir-autogen, elixir-format
 msgid "Booking page"
 msgstr "Rezervační stránka"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "All meeting types (overview)"
+msgstr "Všechny typy schůzek (přehled)"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Hidden from your booking pages, but anyone with this snippet or link can book it."
+msgstr "Skryto na vašich rezervačních stránkách, ale kdokoli, kdo má tento úryvek kódu nebo odkaz, si ho může zarezervovat."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation-only types are shared from their invitations."
+msgstr "Typy schůzek jen na pozvání se sdílejí přes odkazy na pozvání."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type"
+msgstr "Typ schůzky"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} (unlisted)"
+msgstr "%{name} (neveřejný)"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Unlisted"
+msgstr "Neveřejné"

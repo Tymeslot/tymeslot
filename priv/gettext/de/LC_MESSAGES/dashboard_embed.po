@@ -452,3 +452,33 @@ msgstr "Brauchen Sie Hilfe? In der %{guide} finden Sie eine Schritt-für-Schritt
 #, elixir-autogen, elixir-format
 msgid "Booking page"
 msgstr "Buchungsseite"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "All meeting types (overview)"
+msgstr "Alle Termintypen (Übersicht)"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Hidden from your booking pages, but anyone with this snippet or link can book it."
+msgstr "Auf Ihren Buchungsseiten ausgeblendet, aber jeder, der dieses Snippet oder diesen Link hat, kann ihn buchen."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Invitation-only types are shared from their invitations."
+msgstr "Termintypen nur mit Einladung werden über ihre Einladungslinks geteilt."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting type"
+msgstr "Termintyp"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} (unlisted)"
+msgstr "%{name} (nicht gelistet)"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Unlisted"
+msgstr "Nicht gelistet"

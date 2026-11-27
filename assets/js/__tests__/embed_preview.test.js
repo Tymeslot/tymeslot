@@ -57,6 +57,23 @@ describe('EmbedPreview', () => {
     expect(url.searchParams.get('preview_token')).toBe(TOKEN);
   });
 
+  test('Inline previews a meeting type at its three-part address, and follows a change of it', () => {
+    const hook = mountHook('inline', { username: 'joern/coaching/deep-dive' });
+    expect(new URL(hook.el.querySelector('iframe').src).pathname).toBe('/joern/coaching/deep-dive');
+
+    hook.el.dataset.username = 'joern/intro';
+    hook.updated();
+
+    expect(new URL(hook.el.querySelector('iframe').src).pathname).toBe('/joern/intro');
+  });
+
+  test('Link opens a meeting type at its three-part address', () => {
+    const hook = mountHook('link', { username: 'joern/coaching/deep-dive' });
+    hook.el.querySelector('button').click();
+
+    expect(new URL(windowOpen.mock.calls[0][0]).pathname).toBe('/joern/coaching/deep-dive');
+  });
+
   test('Inline rebuilds the preview when a re-render empties the container', () => {
     // LiveView patches the server-rendered (empty) children back in when the
     // surrounding component re-renders, e.g. on switching to the preview tab,
