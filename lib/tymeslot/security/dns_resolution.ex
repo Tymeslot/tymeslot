@@ -2,9 +2,19 @@ defmodule Tymeslot.Security.DnsResolutionBehaviour do
   @moduledoc """
   Behaviour for DNS-based SSRF protection, allowing the resolver to be
   substituted in tests.
+
+  Every check fails closed, but a hostname that resolves to no address at all
+  is reported as `{:error, {:unresolved, reason}}` rather than as a refusal.
+  With no address there was nothing to judge, typically because DNS is down
+  or the name is mistyped, so callers report it as the connection failure the
+  request would otherwise have hit, and retry it as one.
   """
 
-  @callback check_private_ip(String.t(), keyword()) :: :ok | {:error, String.t()}
+  @typedoc "No address resolved; `reason` is the resolver's, such as `:nxdomain`."
+  @type unresolved :: {:unresolved, term()}
+
+  @callback check_private_ip(String.t(), keyword()) ::
+              :ok | {:error, String.t() | unresolved()}
 
   @doc """
   Same check as `check_private_ip/2`, but returns the addresses it approved so
@@ -15,7 +25,7 @@ defmodule Tymeslot.Security.DnsResolutionBehaviour do
   the expected case.
   """
   @callback resolve_public(String.t(), keyword()) ::
-              {:ok, [:inet.ip_address()]} | {:error, String.t()}
+              {:ok, [:inet.ip_address()]} | {:error, String.t() | unresolved()}
 
   @doc """
   The inverse check, for a request that is only allowed because its host is
@@ -27,7 +37,7 @@ defmodule Tymeslot.Security.DnsResolutionBehaviour do
   is internal, so the requests that depend on the confirmation are refused.
   """
   @callback resolve_internal(String.t(), keyword()) ::
-              {:ok, [:inet.ip_address()]} | {:error, String.t()}
+              {:ok, [:inet.ip_address()]} | {:error, String.t() | unresolved()}
 
   @optional_callbacks resolve_public: 2, resolve_internal: 2
 end
@@ -42,6 +52,9 @@ defmodule Tymeslot.Security.DnsResolution do
   closes the multi-record variant of DNS-based SSRF: an attacker cannot hide a
   private address behind a round-robin set that includes a public address.
 
+  A hostname that resolves to nothing is `{:error, {:unresolved, reason}}`,
+  not a refusal; see `Tymeslot.Security.DnsResolutionBehaviour`.
+
   `resolve_public/2` returns the approved addresses so a caller can connect to
   one of them directly rather than letting Finch resolve the hostname a second
   time. That second resolution is the DNS-rebinding window: a short-TTL record
@@ -55,17 +68,18 @@ defmodule Tymeslot.Security.DnsResolution do
 
   @behaviour Tymeslot.Security.DnsResolutionBehaviour
 
-  alias Tymeslot.Security.{PrivateIPv4, PrivateIPv6}
+  alias Tymeslot.Security.{DnsResolutionBehaviour, PrivateIPv4, PrivateIPv6}
 
   @default_error "URL resolves to a private or local network address"
   @public_address_error "Plain http to an internal name must resolve to a private network address"
 
-  @impl Tymeslot.Security.DnsResolutionBehaviour
-  @spec check_private_ip(String.t(), keyword()) :: :ok | {:error, String.t()}
+  @impl DnsResolutionBehaviour
+  @spec check_private_ip(String.t(), keyword()) ::
+          :ok | {:error, String.t() | DnsResolutionBehaviour.unresolved()}
   def check_private_ip(url, opts) do
     case resolve_public(url, opts) do
       {:ok, _addresses} -> :ok
-      {:error, message} -> {:error, message}
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -78,9 +92,9 @@ defmodule Tymeslot.Security.DnsResolution do
   connecting there is what makes the check binding; resolving twice only makes
   it advisory.
   """
-  @impl Tymeslot.Security.DnsResolutionBehaviour
+  @impl DnsResolutionBehaviour
   @spec resolve_public(String.t(), keyword()) ::
-          {:ok, [:inet.ip_address()]} | {:error, String.t()}
+          {:ok, [:inet.ip_address()]} | {:error, String.t() | DnsResolutionBehaviour.unresolved()}
   def resolve_public(url, opts) do
     error_message = Keyword.get(opts, :error_message, @default_error)
 
@@ -101,54 +115,51 @@ defmodule Tymeslot.Security.DnsResolution do
   clear text, so it may only go ahead when the name really stays on the
   private network.
   """
-  @impl Tymeslot.Security.DnsResolutionBehaviour
+  @impl DnsResolutionBehaviour
   @spec resolve_internal(String.t(), keyword()) ::
-          {:ok, [:inet.ip_address()]} | {:error, String.t()}
+          {:ok, [:inet.ip_address()]} | {:error, String.t() | DnsResolutionBehaviour.unresolved()}
   def resolve_internal(url, opts) do
     error_message = Keyword.get(opts, :error_message, @public_address_error)
 
     with host when is_binary(host) and host != "" <- URI.parse(url).host,
-         host_charlist = to_charlist(host),
-         ipv4_addrs = getaddrs(host_charlist, :inet),
-         ipv6_addrs = getaddrs(host_charlist, :inet6),
-         addresses when addresses != [] <- ipv4_addrs ++ ipv6_addrs,
+         {:ok, ipv4_addrs, ipv6_addrs} <- lookup(to_charlist(host)),
          true <-
            Enum.all?(ipv4_addrs, &PrivateIPv4.private?/1) and
              Enum.all?(ipv6_addrs, &PrivateIPv6.private?/1) do
-      {:ok, addresses}
+      {:ok, ipv4_addrs ++ ipv6_addrs}
     else
-      _public_or_unresolved -> {:error, error_message}
+      {:error, {:unresolved, _reason}} = unresolved -> unresolved
+      _public_or_no_host -> {:error, error_message}
     end
   end
 
-  # Resolve via both families and reject if any returned address is private.
-  # Using getaddrs/2 (plural) ensures all A/AAAA records are inspected —
-  # a single getaddr/2 call only returns one record and could miss a private
-  # address hidden in a multi-record response.
   defp resolve_and_check(host_charlist, error_message) do
-    ipv4_addrs = getaddrs(host_charlist, :inet)
-    ipv6_addrs = getaddrs(host_charlist, :inet6)
-
-    cond do
-      Enum.any?(ipv4_addrs, &PrivateIPv4.private?/1) ->
-        {:error, error_message}
-
-      Enum.any?(ipv6_addrs, &PrivateIPv6.private?/1) ->
-        {:error, error_message}
-
-      ipv4_addrs == [] and ipv6_addrs == [] ->
-        {:error, error_message}
-
-      true ->
-        {:ok, ipv4_addrs ++ ipv6_addrs}
+    with {:ok, ipv4_addrs, ipv6_addrs} <- lookup(host_charlist) do
+      if Enum.any?(ipv4_addrs, &PrivateIPv4.private?/1) or
+           Enum.any?(ipv6_addrs, &PrivateIPv6.private?/1),
+         do: {:error, error_message},
+         else: {:ok, ipv4_addrs ++ ipv6_addrs}
     end
   end
 
-  # Returns all resolved addresses for the given family, or [] on failure.
-  defp getaddrs(host_charlist, family) do
-    case :inet.getaddrs(host_charlist, family) do
-      {:ok, addrs} -> addrs
-      {:error, _reason} -> []
+  # Every A and AAAA record, or why the name gave neither. getaddrs/2 (plural)
+  # returns all records of a family; getaddr/2 returns one and could miss a
+  # private address hidden in a multi-record response. One family failing is
+  # normal (a host with no AAAA record), so only both failing is a failed
+  # lookup, reported with the IPv4 reason.
+  defp lookup(host_charlist) do
+    ipv4 = :inet.getaddrs(host_charlist, :inet)
+    ipv6 = :inet.getaddrs(host_charlist, :inet6)
+
+    case {addresses(ipv4), addresses(ipv6)} do
+      {[], []} -> {:error, {:unresolved, failure_reason(ipv4)}}
+      {ipv4_addrs, ipv6_addrs} -> {:ok, ipv4_addrs, ipv6_addrs}
     end
   end
+
+  defp addresses({:ok, addrs}), do: addrs
+  defp addresses({:error, _reason}), do: []
+
+  defp failure_reason({:error, reason}), do: reason
+  defp failure_reason({:ok, []}), do: :nxdomain
 end

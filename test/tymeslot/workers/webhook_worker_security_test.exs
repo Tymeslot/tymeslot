@@ -321,6 +321,61 @@ defmodule Tymeslot.Workers.WebhookWorkerSecurityTest do
     end
   end
 
+  # A failed lookup has no address to judge: it is a connection failure,
+  # retried, never the permanent SSRF discard a private address earns.
+  describe "perform/1 when a host does not resolve" do
+    setup do
+      with_config(:tymeslot, environment: :prod)
+      with_config(:tymeslot, :dns_resolver_module, Tymeslot.DnsResolverMock)
+      %{meeting: insert(:meeting), webhook: insert(:webhook, url: "https://example.com/webhook")}
+    end
+
+    test "retries a delivery whose webhook host does not resolve, without sending it", %{
+      meeting: meeting,
+      webhook: webhook
+    } do
+      stub(Tymeslot.DnsResolverMock, :resolve_public, fn _url, _opts ->
+        {:error, {:unresolved, :nxdomain}}
+      end)
+
+      expect(Tymeslot.HTTPClientMock, :post, 0, fn _url, _body, _headers, _opts -> :unused end)
+
+      assert {:error, :nxdomain} =
+               perform_job(WebhookWorker, %{
+                 "webhook_id" => webhook.id,
+                 "event_type" => "meeting.created",
+                 "meeting_id" => meeting.id
+               })
+    end
+
+    test "retries a delivery redirected to a host that does not resolve", %{
+      meeting: meeting,
+      webhook: webhook
+    } do
+      stub(Tymeslot.DnsResolverMock, :resolve_public, fn url, _opts ->
+        if String.contains?(url, "moved.example.com"),
+          do: {:error, {:unresolved, :nxdomain}},
+          else: {:ok, [{93, 184, 216, 34}]}
+      end)
+
+      expect(Tymeslot.HTTPClientMock, :post, 1, fn _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 307,
+           body: "",
+           headers: %{"location" => ["https://moved.example.com/webhook"]}
+         }}
+      end)
+
+      assert {:error, :nxdomain} =
+               perform_job(WebhookWorker, %{
+                 "webhook_id" => webhook.id,
+                 "event_type" => "meeting.created",
+                 "meeting_id" => meeting.id
+               })
+    end
+  end
+
   # Production mode resolves the webhook's hostname before the first POST, so
   # without a resolver double these tests depend on live DNS for example.com
   # and fail with :blocked_by_ssrf whenever the lookup does. Approving every

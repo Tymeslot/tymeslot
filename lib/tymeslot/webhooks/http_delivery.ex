@@ -49,6 +49,9 @@ defmodule Tymeslot.Webhooks.HttpDelivery do
         {:ok, addresses} ->
           deliver_with_redirects(url, addresses, :post, body, headers, @max_redirects)
 
+        {:error, {:unresolved, reason}} ->
+          {:error, reason}
+
         {:error, _reason} ->
           {:error, :blocked_by_ssrf}
       end
@@ -99,6 +102,10 @@ defmodule Tymeslot.Webhooks.HttpDelivery do
       {:error, :missing_location} ->
         Logger.warning("Webhook redirect missing Location header", from_url: from_url)
         {:error, :redirect_missing_location}
+
+      # The target did not resolve: a failed connection, retried as one.
+      {:error, {:unresolved, reason}} ->
+        {:error, reason}
 
       # Either an unfollowable Location (a non-HTTP scheme) or a hop the SSRF
       # re-check refused. Both are a redirect we will not chase.

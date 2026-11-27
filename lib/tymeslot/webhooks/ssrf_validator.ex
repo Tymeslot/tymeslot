@@ -24,9 +24,10 @@ defmodule Tymeslot.Webhooks.SsrfValidator do
   apply and the request still travels by hostname.
   """
 
-  alias Tymeslot.Security.{DnsResolution, UrlValidation}
+  alias Tymeslot.Security.{DnsResolution, DnsResolutionBehaviour, UrlValidation}
 
-  @spec check(String.t()) :: :ok | {:error, atom() | String.t()}
+  @spec check(String.t()) ::
+          :ok | {:error, atom() | String.t() | DnsResolutionBehaviour.unresolved()}
   def check(url) do
     case check_pinned(url) do
       {:ok, _addresses} -> :ok
@@ -41,8 +42,12 @@ defmodule Tymeslot.Webhooks.SsrfValidator do
   `Tymeslot.Webhooks.HttpDelivery` uses this for both the initial URL and every
   redirect hop. An empty list means the URL was permitted on syntax alone
   (non-production, or the operator opt-out) and there is nothing to pin to.
+  A host that resolves to nothing is `{:error, {:unresolved, reason}}`, a
+  failed lookup rather than a refusal (`Tymeslot.Security.DnsResolutionBehaviour`).
   """
-  @spec check_pinned(String.t()) :: {:ok, [:inet.ip_address()]} | {:error, atom() | String.t()}
+  @spec check_pinned(String.t()) ::
+          {:ok, [:inet.ip_address()]}
+          | {:error, atom() | String.t() | DnsResolutionBehaviour.unresolved()}
   def check_pinned(url) do
     if enforce?() do
       with :ok <-
@@ -62,7 +67,8 @@ defmodule Tymeslot.Webhooks.SsrfValidator do
   # `Code.ensure_loaded?/1` first: `function_exported?/3` answers false for a
   # module the VM has not loaded yet, which in dev and test is most of them.
   @spec resolve_public(module(), String.t()) ::
-          {:ok, [:inet.ip_address()]} | {:error, atom() | String.t()}
+          {:ok, [:inet.ip_address()]}
+          | {:error, atom() | String.t() | DnsResolutionBehaviour.unresolved()}
   defp resolve_public(resolver, url) do
     if Code.ensure_loaded?(resolver) and function_exported?(resolver, :resolve_public, 2) do
       resolver.resolve_public(url, [])

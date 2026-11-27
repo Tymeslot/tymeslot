@@ -33,8 +33,8 @@ defmodule Tymeslot.Security.DnsResolutionTest do
       assert {:error, _msg} = DnsResolution.check_private_ip("https:///path", [])
     end
 
-    test "returns error when DNS resolution fails" do
-      assert {:error, _msg} =
+    test "reports a name that does not resolve as unresolved, not as private" do
+      assert {:error, {:unresolved, :nxdomain}} =
                DnsResolution.check_private_ip(
                  "https://this-host-definitely-does-not-exist.invalid/hook",
                  []
@@ -60,8 +60,8 @@ defmodule Tymeslot.Security.DnsResolutionTest do
       assert message =~ "private network address"
     end
 
-    test "refuses a name that does not resolve" do
-      assert {:error, _message} =
+    test "reports a name that does not resolve as unresolved" do
+      assert {:error, {:unresolved, :nxdomain}} =
                DnsResolution.resolve_internal(
                  "http://this-host-definitely-does-not-exist.invalid/dav",
                  []

@@ -262,11 +262,18 @@ defmodule Tymeslot.Webhooks do
   """
   @spec test_webhook_connection(String.t(), String.t() | nil) :: :ok | {:error, String.t()}
   def test_webhook_connection(url, token \\ nil) do
-    with {:ok, addresses} <- SsrfValidator.check_pinned(url) do
-      body = Jason.encode!(PayloadBuilder.build_test_payload())
-      headers = build_headers(body, token)
+    case SsrfValidator.check_pinned(url) do
+      {:ok, addresses} ->
+        body = Jason.encode!(PayloadBuilder.build_test_payload())
+        headers = build_headers(body, token)
 
-      run_bounded_test_connection(url, addresses, body, headers)
+        run_bounded_test_connection(url, addresses, body, headers)
+
+      {:error, {:unresolved, _reason}} = unresolved ->
+        map_test_connection_result(unresolved)
+
+      {:error, _message} = refused ->
+        refused
     end
   end
 

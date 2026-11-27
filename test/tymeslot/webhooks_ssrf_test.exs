@@ -105,6 +105,17 @@ defmodule Tymeslot.WebhooksSsrfTest do
       assert message =~ "redirected to a private or restricted address"
     end
 
+    test "reports a host that does not resolve as a failed connection, not as restricted" do
+      stub(Tymeslot.DnsResolverMock, :resolve_public, fn _url, _opts ->
+        {:error, {:unresolved, :nxdomain}}
+      end)
+
+      expect(Tymeslot.HTTPClientMock, :post, 0, fn _url, _body, _headers, _opts -> :unused end)
+
+      assert {:error, "Connection failed"} =
+               Webhooks.test_webhook_connection("https://example.com/webhook")
+    end
+
     test "blocks a redirect to a hostname that DNS-resolves to the cloud metadata address" do
       stub(Tymeslot.DnsResolverMock, :resolve_public, fn url, _opts ->
         if String.contains?(url, "metadata.example.com") do

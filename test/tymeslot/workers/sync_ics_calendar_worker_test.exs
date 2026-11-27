@@ -8,6 +8,7 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorkerTest do
   use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
 
+  import Mox
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
 
@@ -62,6 +63,19 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorkerTest do
       conn
       |> Conn.put_resp_header("content-type", "text/calendar")
       |> Conn.send_resp(status, body)
+    end)
+  end
+
+  # The request-time guard only runs in production; `resolve_public` answers
+  # for the feed's host, and nothing may reach the network either way.
+  defp enforce_ssrf_guard(resolve_public) do
+    with_config(:tymeslot, :environment, :prod)
+    with_config(:tymeslot, :allow_private_ips_for_calendar, false)
+    with_config(:tymeslot, :dns_resolver_module, Tymeslot.DnsResolverMock)
+    stub(Tymeslot.DnsResolverMock, :resolve_public, resolve_public)
+
+    ReqTest.stub(:tymeslot_http, fn _conn ->
+      flunk("the feed must not be fetched when the guard refuses its host")
     end)
   end
 
@@ -367,6 +381,20 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorkerTest do
 
       # An unreachable publisher must not empty the organiser's diary.
       assert cached_uids(integration) == ["known-good"]
+    end
+
+    test "retries as unreachable, not as blocked, when the feed's host does not resolve", %{
+      integration: integration
+    } do
+      enforce_ssrf_guard(fn _url, _opts -> {:error, {:unresolved, :nxdomain}} end)
+
+      assert {:error, {:transport, %Req.TransportError{reason: :nxdomain}}} =
+               perform_job(SyncIcsCalendarWorker, %{"calendar_integration_id" => integration.id})
+
+      {:ok, failed} = CalendarIntegrationQueries.get(integration.id)
+
+      assert failed.sync_error ==
+               "Could not reach the calendar feed. Check the URL and try again."
     end
 
     test "discards when the integration no longer exists" do

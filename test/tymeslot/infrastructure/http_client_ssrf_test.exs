@@ -53,6 +53,19 @@ defmodule Tymeslot.Infrastructure.HTTPClientSsrfTest do
              HTTPClient.request(:get, "https://rebind.example.com/", "", [], ssrf_protect: true)
   end
 
+  test "reports a host that does not resolve as a transport error, without sending anything" do
+    Application.put_env(:tymeslot, :dns_resolver_module, HttpClientUnresolvedResolver)
+
+    ReqTest.stub(:tymeslot_http, fn _conn ->
+      flunk("network request must not be made for a host that did not resolve")
+    end)
+
+    assert {:error, %Req.TransportError{reason: :nxdomain}} =
+             HTTPClient.request(:get, "https://feeds.example.com/cal.ics", "", [],
+               ssrf_protect: true
+             )
+  end
+
   test "permits an SSRF-protected request to a public host" do
     Application.put_env(:tymeslot, :dns_resolver_module, HttpClientOkResolver)
 
@@ -185,6 +198,14 @@ defmodule HttpClientPrivateResolver do
   @impl Tymeslot.Security.DnsResolutionBehaviour
   def check_private_ip(_url, _opts),
     do: {:error, "URL resolves to a private or local network address"}
+end
+
+defmodule HttpClientUnresolvedResolver do
+  @moduledoc false
+  @behaviour Tymeslot.Security.DnsResolutionBehaviour
+
+  @impl Tymeslot.Security.DnsResolutionBehaviour
+  def check_private_ip(_url, _opts), do: {:error, {:unresolved, :nxdomain}}
 end
 
 defmodule HttpClientInternalResolver do

@@ -342,6 +342,12 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
 
         do_request(method, pinned_url, body, headers, pinned_options)
 
+      # The host resolved to nothing, so there was no address to judge and
+      # nothing was sent. That is the transport error the connect would have
+      # returned, and callers retry and trip their breakers on it as one.
+      {:error, {:unresolved, reason}} ->
+        {:error, %Req.TransportError{reason: reason}}
+
       {:error, reason} ->
         Logger.warning("Blocked outbound request by SSRF protection",
           url: log_safe_origin(url),

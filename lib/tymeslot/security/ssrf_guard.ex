@@ -78,7 +78,7 @@ defmodule Tymeslot.Security.SsrfGuard do
   and address literals are unaffected.
   """
 
-  alias Tymeslot.Security.{DnsResolution, UrlValidation}
+  alias Tymeslot.Security.{DnsResolution, DnsResolutionBehaviour, UrlValidation}
 
   @doc """
   Validates that `url` does not resolve to a private/local network address.
@@ -91,7 +91,8 @@ defmodule Tymeslot.Security.SsrfGuard do
   `allow_private: allow_private_for_video?()` so the two subsystems can be
   relaxed independently.
   """
-  @spec validate(String.t(), keyword()) :: :ok | {:error, atom() | String.t()}
+  @spec validate(String.t(), keyword()) ::
+          :ok | {:error, atom() | String.t() | DnsResolutionBehaviour.unresolved()}
   def validate(url, opts \\ []) do
     case validate_pinned(url, opts) do
       {:ok, _addresses} -> :ok
@@ -111,9 +112,13 @@ defmodule Tymeslot.Security.SsrfGuard do
   environment or an operator opt-out permitted the request on syntax alone),
   and there is correspondingly nothing to pin to. The one exception to the
   opt-out is plain http to an internal name, described in the moduledoc.
+
+  A host that resolves to nothing is `{:error, {:unresolved, reason}}`, a
+  failed lookup rather than a refusal (`Tymeslot.Security.DnsResolutionBehaviour`).
   """
   @spec validate_pinned(String.t(), keyword()) ::
-          {:ok, [:inet.ip_address()]} | {:error, atom() | String.t()}
+          {:ok, [:inet.ip_address()]}
+          | {:error, atom() | String.t() | DnsResolutionBehaviour.unresolved()}
   def validate_pinned(url, opts \\ []) do
     cond do
       not production?() ->
@@ -142,7 +147,8 @@ defmodule Tymeslot.Security.SsrfGuard do
   # `Code.ensure_loaded?/1` first: `function_exported?/3` answers false for a
   # module the VM has not loaded yet, which in dev and test is most of them.
   @spec resolve_public(module(), String.t()) ::
-          {:ok, [:inet.ip_address()]} | {:error, atom() | String.t()}
+          {:ok, [:inet.ip_address()]}
+          | {:error, atom() | String.t() | DnsResolutionBehaviour.unresolved()}
   defp resolve_public(resolver, url) do
     if Code.ensure_loaded?(resolver) and function_exported?(resolver, :resolve_public, 2) do
       resolver.resolve_public(url, [])
@@ -154,7 +160,8 @@ defmodule Tymeslot.Security.SsrfGuard do
   # Fails closed: a resolver that cannot confirm the name is internal leaves
   # nothing to vouch for sending credentials over plain http.
   @spec resolve_internal(module(), String.t()) ::
-          {:ok, [:inet.ip_address()]} | {:error, atom() | String.t()}
+          {:ok, [:inet.ip_address()]}
+          | {:error, atom() | String.t() | DnsResolutionBehaviour.unresolved()}
   defp resolve_internal(resolver, url) do
     if Code.ensure_loaded?(resolver) and function_exported?(resolver, :resolve_internal, 2) do
       resolver.resolve_internal(url, [])
