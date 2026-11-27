@@ -165,3 +165,19 @@ msgid_plural "Your seats were released"
 msgstr[0] "Twoje miejsce zostało zwolnione"
 msgstr[1] "Twoje miejsca zostały zwolnione"
 msgstr[2] "Twoje miejsca zostały zwolnione"
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "This session was moved to another time before your payment arrived, so the seat held for you was released. Your payment is being refunded."
+msgid_plural "This session was moved to another time before your payment arrived, so the seats held for you were released. Your payment is being refunded."
+msgstr[0] "Ta sesja została przeniesiona na inny termin, zanim dotarła twoja płatność, więc zarezerwowane dla ciebie miejsce zostało zwolnione. Zwrot płatności jest w toku."
+msgstr[1] "Ta sesja została przeniesiona na inny termin, zanim dotarła twoja płatność, więc zarezerwowane dla ciebie miejsca zostały zwolnione. Zwrot płatności jest w toku."
+msgstr[2] "Ta sesja została przeniesiona na inny termin, zanim dotarła twoja płatność, więc zarezerwowane dla ciebie miejsca zostały zwolnione. Zwrot płatności jest w toku."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "This session was moved to another time, so the seat held for you was released. You can return and book again."
+msgid_plural "This session was moved to another time, so the seats held for you were released. You can return and book again."
+msgstr[0] "Ta sesja została przeniesiona na inny termin, więc zarezerwowane dla ciebie miejsce zostało zwolnione. Możesz wrócić i zarezerwować termin ponownie."
+msgstr[1] "Ta sesja została przeniesiona na inny termin, więc zarezerwowane dla ciebie miejsca zostały zwolnione. Możesz wrócić i zarezerwować termin ponownie."
+msgstr[2] "Ta sesja została przeniesiona na inny termin, więc zarezerwowane dla ciebie miejsca zostały zwolnione. Możesz wrócić i zarezerwować termin ponownie."

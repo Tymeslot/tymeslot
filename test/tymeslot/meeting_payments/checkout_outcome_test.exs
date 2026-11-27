@@ -252,6 +252,13 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcomeTest do
                :cancelled
     end
 
+    test "a hold released because its session moved is moved, paid or not" do
+      moved = %{status: :released, released_reason: :session_moved}
+
+      assert seat_outcome(moved, %{status: :failed, paid_at: nil}) == :moved
+      assert seat_outcome(moved, paid()) == :moved
+    end
+
     test "a hold released because its payment failed is failed" do
       assert seat_outcome(%{status: :released, released_reason: :failed}, %{
                status: :failed,

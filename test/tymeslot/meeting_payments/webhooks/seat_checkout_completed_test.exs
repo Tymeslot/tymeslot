@@ -6,6 +6,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
   @moduletag :integration
 
   import ExUnit.CaptureLog
+  import Swoosh.TestAssertions
   import Tymeslot.Factory
   import Tymeslot.StripeConnectTestHelpers, only: [enable_meeting_payments: 1]
 
@@ -14,15 +15,22 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
   alias Tymeslot.MeetingPayments.RefundQueries
   alias Tymeslot.MeetingPayments.RefundSchema
   alias Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted
+  alias Tymeslot.MeetingPayments.Workers.ExecuteRefund
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Meetings.PlannedSessions
   alias Tymeslot.Meetings.SeatHolds
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
+  alias Tymeslot.StripeStubResponses
   alias Tymeslot.StripeWebhookFixtures
   alias Tymeslot.Test.ClockHelpers
   alias Tymeslot.Test.EnqueuedJobs
+  alias Tymeslot.TestMocks
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
+  alias Tymeslot.Workers.SendBookingPaymentRefunded
   alias Tymeslot.Workers.WebhookWorker
 
   @account "acct_SEAT_HOST"
@@ -547,6 +555,66 @@ defmodule Tymeslot.MeetingPayments.Webhooks.SeatCheckoutCompletedTest do
     assert paid.status == :paid
     assert [_one] = refunds_for(paid)
     assert %{status: :released, released_reason: :failed} = SeatHolds.get(hold.id)
+  end
+
+  # The journey the move-release exists for: a booker opens Checkout for a
+  # planned session, the host moves it, and the booker pays anyway. They are
+  # seated nowhere, refunded in full and emailed the refund.
+  test "a payment completing after its session moved is refunded, and the booker told", ctx do
+    Application.put_env(:swoosh, :shared_test_process, self())
+    on_exit(fn -> Application.delete_env(:swoosh, :shared_test_process) end)
+    TestMocks.setup_calendar_mocks()
+
+    fixed_type =
+      insert(:meeting_type,
+        user: ctx.user,
+        name: "Planned Class",
+        max_participants: 4,
+        fixed_dates: true,
+        payment_required: true,
+        price_cents: @seat_price
+      )
+
+    {:ok, session} = PlannedSessions.add(fixed_type, ctx.user.id, ctx.start_time)
+
+    {hold, payment} =
+      held_seat(ctx, session, [email: "payer@example.com", start_time: session.start_time],
+        attendee_name: "Pat Payer",
+        attendee_email: "payer@example.com",
+        stripe_charge_id: "ch_MOVED"
+      )
+
+    StripeStub.stub(:expire_checkout_session, StripeFixtures.object("checkout_session_expired"))
+
+    assert {:ok, moved} =
+             PlannedSessions.move(
+               session,
+               ctx.user.id,
+               DateTime.add(ctx.start_time, 2, :day),
+               nil
+             )
+
+    assert :ok = CheckoutSessionCompleted.handle(completed_event("evt_after_move", payment))
+
+    paid = Repo.reload!(payment)
+    assert paid.status == :paid
+    assert paid.participant_id == nil
+    assert ParticipantQueries.list_live_for_meeting(moved.id) == []
+    assert %{status: :released, released_reason: :session_moved} = SeatHolds.get(hold.id)
+
+    assert [refund] = refunds_for(paid)
+    assert refund.amount_cents == @seat_price
+    StripeStub.expect(:create_refund, StripeStubResponses.refund("re_MOVED"))
+    assert :ok = perform_job(ExecuteRefund, %{refund_id: refund.id})
+    assert Repo.reload!(payment).status == :refunded
+
+    assert :ok =
+             perform_job(SendBookingPaymentRefunded, %{"booking_payment_id" => payment.id})
+
+    assert_email_sent(fn email ->
+      assert email.to == [{"Pat Payer", "payer@example.com"}]
+      assert email.subject =~ "Refund Issued"
+    end)
   end
 
   test "a lapsed hold on a fixed-date type is refunded, not booked on a new session", ctx do

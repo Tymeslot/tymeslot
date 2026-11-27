@@ -29,6 +29,8 @@ defmodule Tymeslot.Meetings.SessionMoveTest do
   alias Tymeslot.Meetings.Workers.EmailVerificationExpiryWorker
   alias Tymeslot.Notifications.EmailHandlers
   alias Tymeslot.Repo
+  alias Tymeslot.StripeFixtures
+  alias Tymeslot.StripeStub
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
@@ -99,12 +101,23 @@ defmodule Tymeslot.Meetings.SessionMoveTest do
     assert_enqueued(worker: EmailWorker, args: seat_job_args(ctx.session, ada))
   end
 
-  # A hold converting after the move must find the slot its session is at
-  # now; a hold already settled keeps the time it was settled at.
-  test "moves the open seat holds with the session", ctx do
+  # A booker paying for a seat picked the old time, so their hold is not
+  # carried to the new one; a hold already settled is left as it was.
+  test "releases the open seat holds and expires their checkouts", ctx do
     held = insert(:seat_hold, meeting: ctx.session, email: "paying@example.com")
+    session_id = "cs_open_#{held.id}"
 
-    released =
+    insert(:booking_payment,
+      meeting_id: ctx.session.id,
+      seat_hold_id: held.id,
+      seat_payment: true,
+      seats: 1,
+      host_user_id: ctx.user.id,
+      stripe_account_id: "acct_MOVED",
+      stripe_checkout_session_id: session_id
+    )
+
+    settled =
       insert(:seat_hold,
         meeting: ctx.session,
         email: "gone@example.com",
@@ -112,11 +125,35 @@ defmodule Tymeslot.Meetings.SessionMoveTest do
         released_reason: :expired
       )
 
-    assert {:ok, moved} =
+    Phoenix.PubSub.subscribe(Tymeslot.PubSub, SeatHolds.topic(held.id))
+
+    StripeStub.expect(
+      :expire_checkout_session,
+      StripeFixtures.object("checkout_session_expired", %{"id" => session_id})
+    )
+
+    assert {:ok, _moved} =
              PlannedSessions.move(ctx.session, ctx.user.id, at(12, ~T[09:30:00]), nil)
 
-    assert SeatHolds.get(held.id).start_time == moved.start_time
-    assert SeatHolds.get(released.id).start_time == ctx.session.start_time
+    assert %{status: :released, released_reason: :session_moved} = SeatHolds.get(held.id)
+    assert SeatHolds.get(held.id).start_time == ctx.session.start_time
+    assert SeatHolds.seats_held(ctx.session.id) == 0
+    assert_receive :expired
+
+    assert [%{path: path, headers: headers}] = StripeStub.requests(:expire_checkout_session)
+    assert path =~ session_id
+    assert headers["stripe-account"] == "acct_MOVED"
+
+    assert %{released_reason: :expired} = SeatHolds.get(settled.id)
+  end
+
+  test "a refused move keeps the open seat holds", ctx do
+    held = insert(:seat_hold, meeting: ctx.session, email: "paying@example.com")
+
+    assert {:error, :start_in_past} =
+             PlannedSessions.move(ctx.session, ctx.user.id, at(-1, ~T[09:00:00]), nil)
+
+    assert SeatHolds.get(held.id).status == :held
   end
 
   test "releases a seat awaiting verification silently, with its expiry job", ctx do

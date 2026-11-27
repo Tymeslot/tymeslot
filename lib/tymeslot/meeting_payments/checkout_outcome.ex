@@ -39,9 +39,10 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcome do
 
   @typedoc """
   The outcomes a held seat's checkout can have: a seat never waits for the
-  host's approval, so never `:awaiting_approval` or `:declined`.
+  host's approval, so never `:awaiting_approval` or `:declined`; and only a
+  seat's checkout can be overtaken by its session moving (`:moved`).
   """
-  @type seat :: :processing | :failed | :expired | :confirmed | :cancelled
+  @type seat :: :processing | :failed | :expired | :confirmed | :cancelled | :moved
 
   # A booking in one of these is on, whatever else happened to it since.
   @live_statuses [:confirmed, :completed, :reschedule_requested]
@@ -76,13 +77,17 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcome do
 
   @doc """
   Classifies a held group seat's checkout for its booker, from the hold and
-  the payment opened for it, in the vocabulary `classify/2` uses:
+  the payment opened for it, in the vocabulary `classify/2` uses, plus
+  `:moved`:
 
     * `:processing` while the hold is held with its payment still pending,
       and when there is no hold to judge;
     * `:confirmed` once the hold became a seat, even one cancelled since;
     * `:cancelled` when the hold was released because its session was
       cancelled;
+    * `:moved` when the hold was released because its host moved the
+      planned session to another time, paid or not: a payment that
+      completed after the move is refunded;
     * `:failed` when the payment failed, unpaid;
     * `:expired` for any other release: the checkout lapsed or was left, or
       a payment that came too late found no room and is refunded.
@@ -96,6 +101,12 @@ defmodule Tymeslot.MeetingPayments.CheckoutOutcome do
         _payment
       ),
       do: :cancelled
+
+  def classify_seat(
+        %SeatHoldSchema{status: :released, released_reason: :session_moved},
+        _payment
+      ),
+      do: :moved
 
   # A payment that completed after its hold was released found no room, and
   # is refunded: the seats lapsed, whatever the release's reason.

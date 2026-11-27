@@ -28,7 +28,7 @@ defmodule Tymeslot.Meetings.SeatHoldConversion do
   the payment row) and takes the locks in the order every writer of a hold
   takes them: the organiser's schedule lock, the hold's meeting row, then
   the hold. The meeting is found by the hold's `meeting_id`, never by the
-  slot the hold snapshotted, as a planned session can move without its holds.
+  slot the hold snapshotted.
 
     * A hold still held, or released on its expiry or a failure, converts
       while a slot has room for all its seats: its own meeting while that
@@ -40,10 +40,12 @@ defmodule Tymeslot.Meetings.SeatHoldConversion do
       nothing and respects the close like any other booking. Decided by the
       hold's state, never its `expires_at`: a delayed webhook or a sweeper
       replay can arrive after the expiry for a payment made inside it.
-    * A hold already converted, released because its meeting was cancelled,
-      or whose meeting its host has since cancelled is refused as
-      `:hold_not_convertible`; its payment is always refunded. A meeting
-      cancelled because its last participant left is no host's decision:
+    * A hold already converted, released because its meeting was cancelled
+      or its planned session moved, or whose meeting its host has since
+      cancelled is refused as `:hold_not_convertible`; its payment is always
+      refunded. A hold released by a move snapshotted a time its session no
+      longer has, so it never falls back to another meeting at that slot. A
+      meeting cancelled because its last participant left is no host's decision:
       the hold converts onto its slot as a hold whose meeting lapsed does.
     * No room for the hold's seats, a closed registration it did not
       reserve against, or no meeting to join on a type that takes no new
@@ -121,8 +123,9 @@ defmodule Tymeslot.Meetings.SeatHoldConversion do
   defp convertible(%SeatHoldSchema{status: :converted}, _own),
     do: {:refused, :hold_not_convertible}
 
-  defp convertible(%SeatHoldSchema{released_reason: :meeting_cancelled}, _own),
-    do: {:refused, :hold_not_convertible}
+  defp convertible(%SeatHoldSchema{released_reason: reason}, _own)
+       when reason in [:meeting_cancelled, :session_moved],
+       do: {:refused, :hold_not_convertible}
 
   defp convertible(%SeatHoldSchema{} = hold, %Meeting{status: :cancelled} = own) do
     if cancelled_by_host?(own, hold), do: {:refused, :hold_not_convertible}, else: :ok

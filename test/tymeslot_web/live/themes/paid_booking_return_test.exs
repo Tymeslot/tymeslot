@@ -316,6 +316,38 @@ defmodule TymeslotWeb.Live.Themes.PaidBookingReturnTest do
              )
     end
 
+    test "a hold released by its session's move says the session moved",
+         %{conn: conn, user: user} do
+      view =
+        seat_return_page(conn, user, %{status: :released, released_reason: :session_moved}, %{
+          status: :failed
+        })
+
+      assert has_element?(view, "h1", "Your seat was released")
+
+      assert has_element?(
+               view,
+               "p",
+               "This session was moved to another time, so the seat held for you was released. You can return and book again."
+             )
+
+      assert has_element?(view, "a[href='/paid-seat/group-class']", "Return to booking")
+    end
+
+    test "a payment that came after the session moved is refunded", %{conn: conn, user: user} do
+      view =
+        seat_return_page(conn, user, %{status: :released, released_reason: :session_moved}, %{
+          status: :refunded,
+          paid_at: DateTime.utc_now(:second)
+        })
+
+      assert has_element?(
+               view,
+               "p",
+               "This session was moved to another time before your payment arrived, so the seat held for you was released. Your payment is being refunded."
+             )
+    end
+
     test "a hold whose payment failed reads as not completed", %{conn: conn, user: user} do
       view =
         seat_return_page(conn, user, %{status: :released, released_reason: :failed}, %{

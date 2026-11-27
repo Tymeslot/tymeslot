@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn.Seat do
           profile: ProfileSchema.t()
         }
 
-  @type outcome :: :loading | :confirmed | :expired | :cancelled | :failed
+  @type outcome :: :loading | :confirmed | :expired | :cancelled | :failed | :moved
 
   @doc """
   The hold `seat_hold_id`, its meeting, its payment and the organiser's

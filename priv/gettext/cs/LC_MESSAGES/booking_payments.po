@@ -165,3 +165,19 @@ msgid_plural "Your seats were released"
 msgstr[0] "Vaše místo bylo uvolněno"
 msgstr[1] "Vaše místa byla uvolněna"
 msgstr[2] "Vaše místa byla uvolněna"
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "This session was moved to another time before your payment arrived, so the seat held for you was released. Your payment is being refunded."
+msgid_plural "This session was moved to another time before your payment arrived, so the seats held for you were released. Your payment is being refunded."
+msgstr[0] "Toto setkání bylo přesunuto na jiný termín dřív, než dorazila vaše platba, místo držené pro vás proto bylo uvolněno. Platba se vám vrací."
+msgstr[1] "Toto setkání bylo přesunuto na jiný termín dřív, než dorazila vaše platba, místa držená pro vás proto byla uvolněna. Platba se vám vrací."
+msgstr[2] "Toto setkání bylo přesunuto na jiný termín dřív, než dorazila vaše platba, místa držená pro vás proto byla uvolněna. Platba se vám vrací."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "This session was moved to another time, so the seat held for you was released. You can return and book again."
+msgid_plural "This session was moved to another time, so the seats held for you were released. You can return and book again."
+msgstr[0] "Toto setkání bylo přesunuto na jiný termín, místo držené pro vás proto bylo uvolněno. Můžete se vrátit a rezervovat znovu."
+msgstr[1] "Toto setkání bylo přesunuto na jiný termín, místa držená pro vás proto byla uvolněna. Můžete se vrátit a rezervovat znovu."
+msgstr[2] "Toto setkání bylo přesunuto na jiný termín, místa držená pro vás proto byla uvolněna. Můžete se vrátit a rezervovat znovu."

@@ -41,10 +41,11 @@ defmodule Tymeslot.Meetings.SeatHoldSchema do
   @foreign_key_type :binary_id
 
   @statuses [:held, :converted, :released]
-  @release_reasons [:expired, :failed, :abandoned, :meeting_cancelled]
+  @release_reasons [:expired, :failed, :abandoned, :meeting_cancelled, :session_moved]
 
   @type status :: :held | :converted | :released
-  @type release_reason :: :expired | :failed | :abandoned | :meeting_cancelled
+  @type release_reason ::
+          :expired | :failed | :abandoned | :meeting_cancelled | :session_moved
 
   @type t :: %__MODULE__{
           id: Ecto.UUID.t() | nil,

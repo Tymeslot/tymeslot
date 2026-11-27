@@ -121,16 +121,6 @@ defmodule Tymeslot.Meetings.SeatHolds do
     as: :release_held_for_meeting
 
   @doc """
-  Moves the holds still `held` on the meeting `meeting_id` to its new
-  `start_time`, so a hold converting later finds the slot its meeting is
-  now at. Inside the transaction moving the meeting.
-  """
-  @spec follow_moved_meeting(binary(), DateTime.t()) :: non_neg_integer()
-  defdelegate follow_moved_meeting(meeting_id, start_time),
-    to: SeatHoldQueries,
-    as: :restamp_held_for_meeting
-
-  @doc """
   Deletes the holds that settled (converted or released) more than `days`
   days ago, with the booker's details they snapshot, returning
   `{deleted_count, nil}`. A hold still `held` is never deleted by age.

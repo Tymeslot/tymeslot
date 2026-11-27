@@ -22,6 +22,13 @@ defmodule Tymeslot.Meetings.SessionMove do
   (`Tymeslot.Notifications.Email.GroupMeetingEmails`). Guests'
   answers applied to the old time and are reset, except a decline, which
   stands until the guest answers again.
+
+  Whoever had not finished booking picked the old time and is not moved to
+  the new one: a seat still awaiting email verification is released
+  silently, and a seat hold still open for its payment is released as
+  `:session_moved`, with its Stripe Checkout expired once the move has
+  committed. A payment that completes anyway is refunded in full, never
+  converted (`Tymeslot.Meetings.SeatHoldConversion`).
   """
 
   require Logger
@@ -30,6 +37,7 @@ defmodule Tymeslot.Meetings.SessionMove do
   alias Tymeslot.Clock
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.MeetingPayments.Checkout
   alias Tymeslot.Meetings.EmailVerification
 
   alias Tymeslot.Meetings.{
@@ -77,8 +85,8 @@ defmodule Tymeslot.Meetings.SessionMove do
     closes_at = closes_at && DateTime.truncate(closes_at, :second)
 
     with :ok <- check(session, starts_at, closes_at, now),
-         {:ok, moved} <- write(session, starts_at, closes_at) do
-      after_move(moved, session)
+         {:ok, {moved, released_holds}} <- write(session, starts_at, closes_at) do
+      after_move(moved, session, released_holds)
       {:ok, moved}
     end
   end
@@ -103,12 +111,13 @@ defmodule Tymeslot.Meetings.SessionMove do
 
   # The time, the reset reminder tracking and the next calendar revision land
   # in one write, conflict-checked against the host's other meetings as a
-  # planned session is when it is added. The seats' revisions, the open
-  # seat holds' snapshotted start and the calendar job go in the same
-  # transaction, so a refused move changes nothing. A seat still awaiting
-  # email verification is released silently with its expiry job: its booker
-  # picked the old time, and must not later confirm into one they never
-  # chose.
+  # planned session is when it is added. The seats' revisions, the
+  # releases and the calendar job go in the same transaction, so a refused
+  # move changes nothing. A seat still awaiting email verification is
+  # released silently with its expiry job, and an open seat hold is released
+  # after the meeting row is locked (the lock order of `SeatHolds.release/2`):
+  # their bookers picked the old time, and must not later confirm or pay
+  # into one they never chose.
   defp write(session, starts_at, closes_at) do
     length = DateTime.diff(session.end_time, session.start_time)
 
@@ -134,9 +143,9 @@ defmodule Tymeslot.Meetings.SessionMove do
            :ok = EmailVerification.release_all_held(moved.id),
            _seats = ParticipantQueries.bump_ical_sequence_for_meeting(moved.id),
            _guests = GuestQueries.reset_for_moved_session(moved.id),
-           _holds = SeatHolds.follow_moved_meeting(moved.id, moved.start_time),
+           released_holds = SeatHolds.release_open_for_meeting(moved.id, :session_moved),
            {:ok, _job} <- CalendarJobs.schedule_job(moved, "update") do
-        moved
+        {moved, released_holds}
       else
         {:error, {:refused, reason}} -> Repo.rollback(reason)
         {:error, reason} -> Repo.rollback(reason)
@@ -152,7 +161,8 @@ defmodule Tymeslot.Meetings.SessionMove do
 
   defp still_planned(_current), do: {:error, :not_found}
 
-  defp after_move(moved, original) do
+  defp after_move(moved, original, released_holds) do
+    Checkout.abandon_released_seat_holds(released_holds)
     SeatEffects.broadcast_and_invalidate(moved)
     :ok = EmailScheduler.reschedule_registration_closed(original, moved)
     sync_video_room(moved)

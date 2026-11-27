@@ -349,6 +349,39 @@ defmodule Tymeslot.Meetings.GroupSchedulingConvertHoldTest do
     assert Repo.aggregate(MeetingSchema, :count) == 1
   end
 
+  # The hold snapshotted the time its session had before the move, so
+  # neither the session at its new time nor another meeting at the old time
+  # is what the booker paid for.
+  test "a hold released by its session's move is never converted", ctx do
+    moved_to = DateTime.add(ctx.start_time, 2, :day)
+
+    moved =
+      slot(ctx,
+        status: :confirmed,
+        planned: true,
+        start_time: moved_to,
+        end_time: DateTime.add(moved_to, 30, :minute)
+      )
+
+    at_old_time = slot(ctx, status: :confirmed)
+
+    hold =
+      insert(:seat_hold,
+        meeting: moved,
+        start_time: ctx.start_time,
+        email: "payer@example.com",
+        status: :released,
+        released_reason: :session_moved
+      )
+
+    assert {:ok, {:refused, :hold_not_convertible}} =
+             Repo.transaction(fn -> CreateGroup.complete_paid_hold(hold.id) end)
+
+    assert ParticipantQueries.list_live_for_meeting(moved.id) == []
+    assert ParticipantQueries.list_live_for_meeting(at_old_time.id) == []
+    assert Repo.aggregate(MeetingSchema, :count) == 2
+  end
+
   test "a converted hold is not converted again", ctx do
     meeting = slot(ctx, status: :awaiting_payment)
     hold = insert(:seat_hold, meeting: meeting, email: "payer@example.com")

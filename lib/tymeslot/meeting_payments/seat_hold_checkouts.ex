@@ -2,7 +2,7 @@ defmodule Tymeslot.MeetingPayments.SeatHoldCheckouts do
   @moduledoc """
   What becomes of a seat hold's checkout when the hold ends without being
   paid for: its open Stripe Checkout expired once the hold is released for a
-  cancelled meeting, and its pending payment failed when the checkout could
+  cancelled meeting or a moved planned session, and its pending payment failed when the checkout could
   never be opened. Opening and abandoning a checkout is
   `Tymeslot.MeetingPayments.CheckoutSessions`.
   """
@@ -18,11 +18,11 @@ defmodule Tymeslot.MeetingPayments.SeatHoldCheckouts do
   alias Tymeslot.Meetings.SeatHoldSchema
 
   @doc """
-  After the transaction that released `holds` for a cancelled meeting has
-  committed: expires each hold's open checkout (`CheckoutSessions.abandon_seat_checkout/1`)
+  After the transaction that released `holds` for a cancelled meeting or a
+  moved planned session has committed: expires each hold's open checkout (`CheckoutSessions.abandon_seat_checkout/1`)
   and tells its booker's payment page it expired. Best effort: a checkout
   Stripe completes anyway is refunded in full, its hold having been
-  released for a cancelled meeting, so a failure to expire one is logged
+  released for good (`Tymeslot.Meetings.SeatHoldConversion`), so a failure to expire one is logged
   and the rest go on.
   """
   @spec abandon_released_seat_holds([SeatHoldSchema.t()]) :: :ok
@@ -33,7 +33,7 @@ defmodule Tymeslot.MeetingPayments.SeatHoldCheckouts do
           :ok
 
         {:error, reason} ->
-          Logger.warning("Could not expire the checkout of a seat hold on a cancelled meeting",
+          Logger.warning("Could not expire the checkout of a released seat hold",
             seat_hold_id: hold.id,
             reason: LogFormat.reason(reason)
           )

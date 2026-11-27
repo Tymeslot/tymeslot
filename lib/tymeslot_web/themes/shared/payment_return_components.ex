@@ -40,7 +40,8 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
 
   @doc """
   The processing page body: one of the seven outcomes of
-  `PaymentReturn.outcome/3`, or the `outcome` the page passes.
+  `PaymentReturn.outcome/3`, or the `outcome` the page passes (a seat's may
+  also be `:moved`).
   """
   @spec processing_body(map()) :: Phoenix.LiveView.Rendered.t()
   def processing_body(assigns) do
@@ -141,6 +142,8 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
               )}
             <% end %>
           </p>
+        <% :moved -> %>
+          <.moved seat_hold={@seat_hold} payment={@payment} rebook_path={@rebook_path} />
         <% :expired -> %>
           <.expired
             seat_hold={@seat_hold}
@@ -232,6 +235,45 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturnComponents do
         {dgettext("booking_payments", "Return to booking")}
       </a>
     <% end %>
+    """
+  end
+
+  attr :seat_hold, :any, required: true
+  attr :payment, :any, required: true
+  attr :rebook_path, :string, default: nil
+
+  # A seat hold released because its host moved the session to another
+  # time before the booker paid; a payment that came anyway is refunded.
+  defp moved(assigns) do
+    ~H"""
+    <h1 class="payment-page-heading">
+      {dngettext(
+        "booking_payments",
+        "Your seat was released",
+        "Your seats were released",
+        @seat_hold.seats
+      )}
+    </h1>
+    <p class="payment-page-body">
+      <%= if match?(%{paid_at: %DateTime{}}, @payment) do %>
+        {dngettext(
+          "booking_payments",
+          "This session was moved to another time before your payment arrived, so the seat held for you was released. Your payment is being refunded.",
+          "This session was moved to another time before your payment arrived, so the seats held for you were released. Your payment is being refunded.",
+          @seat_hold.seats
+        )}
+      <% else %>
+        {dngettext(
+          "booking_payments",
+          "This session was moved to another time, so the seat held for you was released. You can return and book again.",
+          "This session was moved to another time, so the seats held for you were released. You can return and book again.",
+          @seat_hold.seats
+        )}
+      <% end %>
+    </p>
+    <a :if={@rebook_path} href={@rebook_path} class="payment-page-link">
+      {dgettext("booking_payments", "Return to booking")}
+    </a>
     """
   end
 

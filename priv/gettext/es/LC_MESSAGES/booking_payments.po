@@ -160,3 +160,17 @@ msgid "Your seat was released"
 msgid_plural "Your seats were released"
 msgstr[0] "Tu lugar se liberó"
 msgstr[1] "Tus lugares se liberaron"
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "This session was moved to another time before your payment arrived, so the seat held for you was released. Your payment is being refunded."
+msgid_plural "This session was moved to another time before your payment arrived, so the seats held for you were released. Your payment is being refunded."
+msgstr[0] "Esta sesión se cambió a otro horario antes de que llegara tu pago, así que se liberó el lugar que se te había reservado. Te estamos reembolsando el pago."
+msgstr[1] "Esta sesión se cambió a otro horario antes de que llegara tu pago, así que se liberaron los lugares que se te habían reservado. Te estamos reembolsando el pago."
+
+#: lib/tymeslot_web/themes/shared/payment_return_components.ex
+#, elixir-autogen, elixir-format
+msgid "This session was moved to another time, so the seat held for you was released. You can return and book again."
+msgid_plural "This session was moved to another time, so the seats held for you were released. You can return and book again."
+msgstr[0] "Esta sesión se cambió a otro horario, así que se liberó el lugar que se te había reservado. Puedes volver y reservar de nuevo."
+msgstr[1] "Esta sesión se cambió a otro horario, así que se liberaron los lugares que se te habían reservado. Puedes volver y reservar de nuevo."

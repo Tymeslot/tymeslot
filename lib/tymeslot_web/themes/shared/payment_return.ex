@@ -437,6 +437,12 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
           | :confirmed
           | :cancelled
 
+  @typedoc """
+  What a processing page shows: a meeting's `outcome/0`, or a seat's
+  (`PaymentReturn.Seat.outcome/3`), which may also be `:moved`.
+  """
+  @type page_outcome :: outcome() | :moved
+
   @doc """
   Classifies the return page's state for a themed `render/1` `case`.
 
@@ -459,7 +465,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   The outcome a processing page's assigns show: the `:outcome` a seat's page
   assigns (`PaymentReturn.Seat.outcome/3`), else the meeting's (`outcome/3`).
   """
-  @spec page_outcome(map()) :: outcome()
+  @spec page_outcome(map()) :: page_outcome()
   def page_outcome(%{outcome: outcome}) when outcome != nil, do: outcome
 
   def page_outcome(assigns), do: outcome(assigns.loading, assigns.payment, assigns.meeting)
@@ -469,7 +475,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   waiting (on the payment, or on the organiser's approval), confirmed, or
   ended (it will not go ahead).
   """
-  @spec progress(outcome()) :: :waiting | :confirmed | :ended
+  @spec progress(page_outcome()) :: :waiting | :confirmed | :ended
   def progress(outcome) when outcome in [:loading, :awaiting_approval], do: :waiting
   def progress(:confirmed), do: :confirmed
   def progress(_failed_or_ended), do: :ended
