@@ -147,7 +147,7 @@ defmodule TymeslotWeb.OAuthController do
             provider: provider_name(provider_atom)
           )
         )
-        |> redirect(to: ~p"/?auth=login")
+        |> redirect(to: ~p"/auth/login?error=oauth")
 
       {:error, :unsupported_oauth_provider} ->
         unsupported_provider(conn, provider, get_login_path(conn))
@@ -565,7 +565,7 @@ defmodule TymeslotWeb.OAuthController do
     success_path =
       RedirectPath.sanitize(conn.params["success_path"], configured_success_path)
 
-    login_path = ~p"/?auth=login"
+    login_path = ~p"/auth/login?error=oauth"
 
     [success_path: success_path, login_path: login_path]
   end

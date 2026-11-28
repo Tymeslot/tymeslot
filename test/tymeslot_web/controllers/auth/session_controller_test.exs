@@ -331,7 +331,7 @@ defmodule TymeslotWeb.SessionControllerTest do
       user = Factory.insert(:user)
       conn = conn |> AuthTestHelpers.log_in_user(user) |> delete(~p"/auth/logout")
 
-      assert redirected_to(conn) == "/"
+      assert redirected_to(conn) == "/auth/login?signed_out=1"
       assert Flash.get(conn.assigns.flash, :info) =~ "Logged out successfully"
       refute get_session(conn, :user_token)
     end
@@ -349,7 +349,7 @@ defmodule TymeslotWeb.SessionControllerTest do
         |> put_private(:plug_skip_csrf_protection, false)
         |> delete(~p"/auth/logout", %{"_csrf_token" => "stale-token"})
 
-      assert redirected_to(conn) == "/"
+      assert redirected_to(conn) == "/auth/login?signed_out=1"
       assert Flash.get(conn.assigns.flash, :info) =~ "Logged out successfully"
       refute get_session(conn, :user_token)
       refute UserSessionQueries.get_user_by_session_token(token)

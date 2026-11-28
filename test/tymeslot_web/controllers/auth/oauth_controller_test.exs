@@ -160,7 +160,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
     test "invalid state: puts security error flash and redirects to login", %{conn: conn} do
       conn = get(conn, ~p"/auth/github/callback", %{"code" => "code", "state" => "state"})
 
-      assert redirected_to(conn) == "/?auth=login"
+      assert redirected_to(conn) == "/auth/login?error=oauth"
 
       assert Flash.get(conn.assigns.flash, :error) ==
                "Security validation failed. Please try again."
@@ -171,7 +171,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
       conn = sign_in(conn, "google")
 
-      assert redirected_to(conn) == "/?auth=login"
+      assert redirected_to(conn) == "/auth/login?error=oauth"
       assert Flash.get(conn.assigns.flash, :error) == "Failed to authenticate with Google."
     end
 
@@ -182,7 +182,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
       conn = sign_in(conn, "github")
 
-      assert redirected_to(conn) == "/?auth=login"
+      assert redirected_to(conn) == "/auth/login?error=oauth"
 
       assert Flash.get(conn.assigns.flash, :error) ==
                "An error occurred during GitHub authentication."
@@ -199,7 +199,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
       conn = sign_in(conn, "github")
 
-      assert redirected_to(conn) == "/?auth=login"
+      assert redirected_to(conn) == "/auth/login?error=oauth"
       assert Flash.get(conn.assigns.flash, :error) =~ "session creation failed"
     end
 
@@ -219,7 +219,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
     test "rejects OAuth callback without authorization code", %{conn: conn} do
       conn = get(conn, ~p"/auth/google/callback", %{"state" => "some_state"})
 
-      assert redirected_to(conn) == "/?auth=login"
+      assert redirected_to(conn) == "/auth/login?error=oauth"
 
       assert Flash.get(conn.assigns.flash, :error) =~
                "Google authentication failed - missing authorisation code"
@@ -232,7 +232,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
           "error_description" => "User denied access"
         })
 
-      assert redirected_to(conn) == "/?auth=login"
+      assert redirected_to(conn) == "/auth/login?error=oauth"
 
       assert Flash.get(conn.assigns.flash, :error) =~
                "Google authentication failed - missing authorisation code"
@@ -263,7 +263,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
       conn = sign_in(conn, "github")
 
-      assert redirected_to(conn) == "/?auth=login"
+      assert redirected_to(conn) == "/auth/login?error=oauth"
       assert Flash.get(conn.assigns.flash, :info) =~ "Registration is currently disabled"
     end
 
@@ -277,7 +277,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
       conn = sign_in(conn, "github")
 
-      assert redirected_to(conn) == "/?auth=login"
+      assert redirected_to(conn) == "/auth/login?error=oauth"
 
       assert Flash.get(conn.assigns.flash, :error) =~
                "Sign in with your password or with the service you originally signed up with"
@@ -332,7 +332,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
     test "generic oauth callback without code redirects with error", %{conn: conn} do
       conn = get(conn, ~p"/auth/oauth/callback", %{"state" => "some_state"})
 
-      assert redirected_to(conn) == "/?auth=login"
+      assert redirected_to(conn) == "/auth/login?error=oauth"
       assert Flash.get(conn.assigns.flash, :error) =~ "SSO authentication failed"
     end
   end

@@ -110,7 +110,7 @@ defmodule TymeslotWeb.AccountDeletion.FrozenAccountTest do
       pending = freeze(user)
       conn = conn |> log_in_user(pending) |> delete(~p"/auth/logout")
 
-      assert redirected_to(conn) == "/"
+      assert redirected_to(conn) == "/auth/login?signed_out=1"
       assert Repo.get(UserSchema, user.id).deletion_scheduled_at
     end
   end
