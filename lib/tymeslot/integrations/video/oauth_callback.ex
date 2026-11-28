@@ -13,6 +13,7 @@ defmodule Tymeslot.Integrations.Video.OAuthCallback do
 
   require Logger
 
+  alias Tymeslot.Integrations.Shared.GoogleConfig
   alias Tymeslot.Integrations.Shared.OAuth.AccountMatch
   alias Tymeslot.Integrations.Shared.OAuth.GoogleOAuthHelper
   alias Tymeslot.Integrations.Shared.OAuth.PendingFlow
@@ -44,7 +45,8 @@ defmodule Tymeslot.Integrations.Video.OAuthCallback do
 
   Besides the helpers' own errors, fails with
   `:missing_teams_fields` or `:missing_zoom_account_id` when a Teams or Zoom
-  grant lacks the account details the provider's API calls need.
+  grant lacks the account details the provider's API calls need, and
+  `:meet_scope_missing` when a Google grant leaves out the Meet scope.
   """
   @spec complete(OAuth.provider(), String.t(), String.t(), pos_integer()) ::
           {:ok, VideoIntegrationSchema.t()} | {:error, term()}
@@ -81,7 +83,22 @@ defmodule Tymeslot.Integrations.Video.OAuthCallback do
     do: :ok
 
   defp validate_tokens(:zoom, _tokens), do: {:error, :missing_zoom_account_id}
-  defp validate_tokens(:google_meet, _tokens), do: :ok
+  # Google's consent screen lets the account owner untick the Meet scope,
+  # which would leave an integration that can never create a room.
+  defp validate_tokens(:google_meet, tokens) do
+    granted = String.split(tokens[:scope] || "", " ", trim: true)
+
+    if GoogleConfig.scope(:meet) in granted do
+      :ok
+    else
+      Logger.info("Google Meet OAuth callback rejected: Meet scope not granted",
+        user_id: tokens[:user_id],
+        granted_scope: tokens[:scope]
+      )
+
+      {:error, :meet_scope_missing}
+    end
+  end
 
   defp persist(provider, tokens) do
     token_attrs =

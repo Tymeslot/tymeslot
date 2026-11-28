@@ -80,6 +80,7 @@ defmodule TymeslotWeb.Integrations.OAuthCallbackHandler do
   # generic failure worth an error-level log.
   @actionable_reasons [
     :calendar_scope_missing,
+    :meet_scope_missing,
     :missing_teams_fields,
     :missing_zoom_account_id,
     :provider_rate_limited
@@ -209,6 +210,13 @@ defmodule TymeslotWeb.Integrations.OAuthCallbackHandler do
       "dashboard_integrations",
       "%{service} wasn't connected because Calendar permission was not granted. Please try again and tick the box for \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" - Tymeslot needs this to create meetings and Google Meet links.",
       service: config.name
+    )
+  end
+
+  defp failure_message(:meet_scope_missing, _config) do
+    dgettext(
+      "dashboard_integrations",
+      "Google Meet wasn't connected because permission to create Google Meet meetings was not granted. Please try again and leave the Google Meet box ticked on Google's permission screen."
     )
   end
 

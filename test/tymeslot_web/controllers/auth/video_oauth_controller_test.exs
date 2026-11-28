@@ -11,6 +11,10 @@ defmodule TymeslotWeb.VideoOAuthControllerTest do
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Security.RateLimiter
 
+  # What Google grants a Meet connection; the callback refuses one without
+  # the Meet scope.
+  @meet_grant "openid email https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/meetings.space.created"
+
   import Tymeslot.AuthTestHelpers, only: [log_in_user: 2]
   import Tymeslot.OAuthFlowHelpers
 
@@ -133,7 +137,7 @@ defmodule TymeslotWeb.VideoOAuthControllerTest do
            access_token: "at",
            refresh_token: "rt",
            expires_at: DateTime.utc_now(),
-           scope: "scope"
+           scope: @meet_grant
          }}
       end)
 
@@ -225,7 +229,7 @@ defmodule TymeslotWeb.VideoOAuthControllerTest do
            access_token: "at",
            refresh_token: "rt",
            expires_at: DateTime.utc_now(),
-           scope: "scope"
+           scope: @meet_grant
          }}
       end)
 
@@ -258,6 +262,39 @@ defmodule TymeslotWeb.VideoOAuthControllerTest do
       assert Flash.get(conn.assigns.flash, :info) =~ "Google Meet connected successfully"
     end
 
+    test "google_callback (Meet) refuses a grant without the Meet scope and saves nothing",
+         %{conn: conn} do
+      user_id = 123
+      conn = authenticate_state_user(conn, user_id)
+
+      # The account owner unticked Meet on Google's consent screen.
+      :meck.expect(GoogleOAuthHelper, :exchange_code_for_tokens, fn "code", _uri, _opts ->
+        {:ok,
+         %{
+           user_id: user_id,
+           access_token: "at",
+           refresh_token: "rt",
+           expires_at: DateTime.utc_now(),
+           scope: "openid email https://www.googleapis.com/auth/calendar"
+         }}
+      end)
+
+      :meck.expect(VideoIntegrationQueries, :create, fn _attrs ->
+        flunk("a grant without the Meet scope must not create an integration")
+      end)
+
+      conn =
+        get(conn, ~p"/auth/google/video/callback", %{
+          "code" => "code",
+          "state" => signed(:google, user_id)
+        })
+
+      assert redirected_to(conn) == "/dashboard/integrations?tab=video"
+
+      assert Flash.get(conn.assigns.flash, :error) =~
+               "permission to create Google Meet meetings was not granted"
+    end
+
     test "google_callback (Meet) updates existing integration on re-authorization", %{conn: conn} do
       user_id = 123
       conn = authenticate_state_user(conn, user_id)
@@ -277,7 +314,7 @@ defmodule TymeslotWeb.VideoOAuthControllerTest do
            access_token: "new_at",
            refresh_token: "new_rt",
            expires_at: new_expires_at,
-           scope: "new_scope"
+           scope: @meet_grant
          }}
       end)
 
@@ -539,7 +576,7 @@ defmodule TymeslotWeb.VideoOAuthControllerTest do
            access_token: "at",
            refresh_token: "rt",
            expires_at: DateTime.utc_now(),
-           scope: "scope",
+           scope: @meet_grant,
            provider_account_id: "google-account"
          }}
       end)

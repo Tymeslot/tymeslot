@@ -491,3 +491,8 @@ msgstr "Тип зустрічі продубльовано й вимкнено. 
 #, elixir-autogen, elixir-format
 msgid "This meeting type uses a feature your current plan does not include, so it cannot be duplicated."
 msgstr "Цей тип зустрічі використовує функцію, якої немає у вашому поточному тарифі, тому його не можна продублювати."
+
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
+#, elixir-autogen, elixir-format
+msgid "Google Meet wasn't connected because permission to create Google Meet meetings was not granted. Please try again and leave the Google Meet box ticked on Google's permission screen."
+msgstr "Google Meet не підключено, оскільки не надано дозвіл на створення зустрічей у Google Meet. Спробуйте ще раз і залиште позначеним прапорець Google Meet на екрані дозволів Google."

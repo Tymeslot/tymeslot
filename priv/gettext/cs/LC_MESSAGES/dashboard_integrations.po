@@ -491,3 +491,8 @@ msgstr "Typ schůzky byl duplikován a vypnut. Zapněte ho, až bude připraven�
 #, elixir-autogen, elixir-format
 msgid "This meeting type uses a feature your current plan does not include, so it cannot be duplicated."
 msgstr "Tento typ schůzky využívá funkci, kterou váš aktuální tarif nezahrnuje, a proto ho nelze duplikovat."
+
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
+#, elixir-autogen, elixir-format
+msgid "Google Meet wasn't connected because permission to create Google Meet meetings was not granted. Please try again and leave the Google Meet box ticked on Google's permission screen."
+msgstr "Službu Google Meet se nepodařilo připojit, protože nebylo uděleno oprávnění k vytváření schůzek ve službě Google Meet. Zkuste to prosím znovu a na obrazovce oprávnění od Google nechte políčko Google Meet zaškrtnuté."

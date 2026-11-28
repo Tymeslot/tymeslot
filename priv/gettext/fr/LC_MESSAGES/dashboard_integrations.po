@@ -486,3 +486,8 @@ msgstr "Type de réunion dupliqué et désactivé. Activez-le quand il sera prê
 #, elixir-autogen, elixir-format
 msgid "This meeting type uses a feature your current plan does not include, so it cannot be duplicated."
 msgstr "Ce type de réunion utilise une fonctionnalité que votre forfait actuel n’inclut pas ; il ne peut donc pas être dupliqué."
+
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
+#, elixir-autogen, elixir-format
+msgid "Google Meet wasn't connected because permission to create Google Meet meetings was not granted. Please try again and leave the Google Meet box ticked on Google's permission screen."
+msgstr "Google Meet n’a pas été connecté car l’autorisation de créer des réunions Google Meet n’a pas été accordée. Veuillez réessayer et laisser la case Google Meet cochée sur l’écran d’autorisation de Google."
