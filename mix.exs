@@ -122,7 +122,7 @@ defmodule Tymeslot.MixProject do
       {:tz, "~> 0.28"},
       # QR codes are drawn server-side (booking-link email, onboarding).
       {:eqrcode, "~> 0.2"},
-      {:bcrypt_elixir, "~> 3.2"},
+      {:bcrypt_elixir, "~> 4.0"},
       {:mox, "~> 1.0", only: :test},
       {:meck, "~> 1.1", only: :test},
       {:ex_machina, "~> 2.8", only: :test},
