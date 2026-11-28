@@ -609,3 +609,8 @@ msgstr "Zoom fehlt die für das Verschieben von Meetings erforderliche Berechtig
 #, elixir-autogen, elixir-format
 msgid "Zoom token refresh failed after 401. Please reconnect your Zoom account."
 msgstr "Die Aktualisierung des Zoom-Tokens ist nach einem 401-Fehler fehlgeschlagen. Bitte verbinden Sie Ihr Zoom-Konto erneut."
+
+#: lib/tymeslot/integrations/video/providers/google_meet_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Google Meet was connected without permission to create meetings. Please reconnect your Google account and allow Google Meet access."
+msgstr "Google Meet wurde ohne die Berechtigung zum Erstellen von Meetings verbunden. Bitte verbinden Sie Ihr Google-Konto erneut und erlauben Sie den Zugriff auf Google Meet."

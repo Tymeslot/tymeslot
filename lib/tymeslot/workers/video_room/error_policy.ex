@@ -59,6 +59,7 @@ defmodule Tymeslot.Workers.VideoRoom.ErrorPolicy do
   # recorded against the discarded job.
   @terminal %{
     unauthorized: "Authentication failed",
+    insufficient_scope: "Video integration lacks a required permission",
     meeting_not_found: "Meeting not found",
     invalid_configuration: "Invalid configuration",
     video_integration_missing: "Video integration missing",
@@ -71,7 +72,8 @@ defmodule Tymeslot.Workers.VideoRoom.ErrorPolicy do
   # fault: the meeting is gone, or only the user can give it a video room. An
   # integration already flagged for reconnecting is one of these: its owner
   # was told when the provider first refused it, which is the failure
-  # reported (`:unauthorized`); every booking after that is refused here.
+  # reported (`:unauthorized`, `:insufficient_scope`); every booking after
+  # that is refused here.
   @expected_terminal [
     :meeting_not_found,
     :video_integration_missing,

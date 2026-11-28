@@ -299,6 +299,32 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderCreateRoomTest
     end
   end
 
+  describe "ProviderAdapter.create_meeting_room/2 with a grant missing the Meet scope" do
+    test "flags the integration and fails as insufficient_scope" do
+      on_exit(fn -> VideoCircuitBreaker.reset(:google_meet) end)
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, provider: "google_meet")
+
+      config =
+        Map.merge(valid_token_config(), %{integration_id: integration.id, user_id: user.id})
+
+      # The body Google returns for a token granted without meetings.space.created.
+      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 403,
+           body:
+             ~s({"error":{"code":403,"message":"Request had insufficient authentication scopes.","status":"PERMISSION_DENIED","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"ACCESS_TOKEN_SCOPE_INSUFFICIENT","domain":"googleapis.com"}]}})
+         }}
+      end)
+
+      assert {:error, :insufficient_scope} =
+               ProviderAdapter.create_meeting_room(:google_meet, config)
+
+      assert Repo.get!(VideoIntegrationSchema, integration.id).needs_reauth
+    end
+  end
+
   describe "finish_create_meeting_room/2" do
     test "makes the outbound Meet API call with the already-resolved config" do
       config = valid_token_config()

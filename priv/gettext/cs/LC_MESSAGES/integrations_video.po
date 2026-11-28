@@ -609,3 +609,8 @@ msgstr "Službě Zoom chybí oprávnění potřebné k přeplánování schůzek
 #, elixir-autogen, elixir-format
 msgid "Zoom token refresh failed after 401. Please reconnect your Zoom account."
 msgstr "Obnovení tokenu Zoom po chybě 401 se nezdařilo. Připojte prosím svůj účet Zoom znovu."
+
+#: lib/tymeslot/integrations/video/providers/google_meet_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Google Meet was connected without permission to create meetings. Please reconnect your Google account and allow Google Meet access."
+msgstr "Služba Google Meet byla připojena bez oprávnění k vytváření schůzek. Připojte prosím svůj účet Google znovu a povolte přístup ke službě Google Meet."

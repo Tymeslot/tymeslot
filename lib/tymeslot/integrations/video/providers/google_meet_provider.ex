@@ -13,7 +13,9 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   Requires the `https://www.googleapis.com/auth/meetings.space.created` OAuth
   scope **and** the *Google Meet API* enabled on the Google Cloud project — the
   scope alone is not sufficient (the API returns `403 SERVICE_DISABLED` until
-  the API is enabled in the Cloud console).
+  the API is enabled in the Cloud console). A grant without the scope is
+  refused at connection (`Tymeslot.Integrations.Video.OAuthCallback`), and one
+  stored before that check is flagged for reconnecting at its first refusal.
   """
 
   @behaviour Tymeslot.Integrations.Video.Providers.ProviderBehaviour
@@ -239,8 +241,9 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   # Creates a standalone Google Meet space via the Meet REST API. An empty body
   # provisions a space with default settings; no calendar event is created.
   #
-  # A 403 here is most often the Meet API being disabled for the Cloud project;
-  # Google says so in `error.message`, which the returned reason carries.
+  # A 403 is either the Meet API being disabled for the Cloud project, which
+  # Google says in `error.message` and the returned reason carries, or a grant
+  # without the Meet scope (see `scope_rejection/2`).
   defp create_meet_space(config) do
     headers = [
       HttpAuth.bearer(Map.get(config, :access_token)),
@@ -251,8 +254,49 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
     :post
     |> Config.http_client_module().request(url, "{}", headers, @create_request_options)
-    |> ApiResponse.handle_tagged(api_options())
+    |> ApiResponse.handle_tagged(api_options(custom: &scope_rejection(&1, config)))
     |> flag_on_unauthorized(config)
+  end
+
+  # Google's consent screen lets the account owner untick the Meet scope, and
+  # a token granted without it is refused with a 403 whose `ErrorInfo` reason
+  # is `ACCESS_TOKEN_SCOPE_INSUFFICIENT`. Refreshing keeps the grant as it is,
+  # so only the owner reconnecting can fix it: flag the integration and return
+  # a reason the room worker gives up on instead of retrying.
+  defp scope_rejection({:ok, %{status: 403, body: body}}, config) do
+    if scope_insufficient?(body) do
+      flag_missing_scope(config)
+      {:error, :insufficient_scope}
+    else
+      :default
+    end
+  end
+
+  defp scope_rejection(_response, _config), do: :default
+
+  defp scope_insufficient?(body) do
+    with {:ok, decoded} <- decode_error_body(body),
+         details when is_list(details) <- get_in(decoded, ["error", "details"]) do
+      Enum.any?(details, &match?(%{"reason" => "ACCESS_TOKEN_SCOPE_INSUFFICIENT"}, &1))
+    else
+      _other -> false
+    end
+  end
+
+  defp decode_error_body(body) when is_map(body), do: {:ok, body}
+  defp decode_error_body(body) when is_binary(body), do: Jason.decode(body)
+  defp decode_error_body(_body), do: :error
+
+  defp flag_missing_scope(config) do
+    NeedsReauth.flag(config,
+      label: "Google Meet",
+      event: "google_meet_missing_scope",
+      message:
+        dgettext_noop(
+          "integrations_video",
+          "Google Meet was connected without permission to create meetings. Please reconnect your Google account and allow Google Meet access."
+        )
+    )
   end
 
   # The access token was rejected even though it had survived token
@@ -304,7 +348,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
   defp no_conference_to_end(_response, _space_id), do: :default
 
-  defp api_options(opts \\ []) do
+  defp api_options(opts) do
     [label: "Google Meet", detail: &google_error_message/1] ++ opts
   end
 

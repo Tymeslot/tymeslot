@@ -80,7 +80,8 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     :video_integration_needs_reauth,
     :video_meeting_not_enabled,
     :invalid_configuration,
-    :unauthorized
+    :unauthorized,
+    :insufficient_scope
   ]
 
   # Deduplicate identical jobs while one is still pending, so a retried booking

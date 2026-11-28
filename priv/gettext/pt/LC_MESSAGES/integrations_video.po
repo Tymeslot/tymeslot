@@ -609,3 +609,8 @@ msgstr "O Zoom não tem a permissão necessária para remarcar reuniões. Recone
 #, elixir-autogen, elixir-format
 msgid "Zoom token refresh failed after 401. Please reconnect your Zoom account."
 msgstr "A renovação do token do Zoom falhou depois de um 401. Reconecte sua conta do Zoom."
+
+#: lib/tymeslot/integrations/video/providers/google_meet_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Google Meet was connected without permission to create meetings. Please reconnect your Google account and allow Google Meet access."
+msgstr "O Google Meet foi conectado sem permissão para criar reuniões. Reconecte sua conta do Google e permita o acesso ao Google Meet."

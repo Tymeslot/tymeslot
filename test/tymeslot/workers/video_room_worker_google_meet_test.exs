@@ -13,6 +13,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerGoogleMeetTest do
 
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.VideoRoomWorker
 
   setup :verify_on_exit!
@@ -138,6 +139,74 @@ defmodule Tymeslot.Workers.VideoRoomWorkerGoogleMeetTest do
       updated = Repo.get!(MeetingSchema, meeting.id)
       assert updated.video_room_id == "NgPxrxVDQF8B"
       assert updated.meeting_url == @meeting_url
+    end
+  end
+
+  # A grant without the Meet scope is refused identically on every attempt,
+  # so the booking goes out without a link at once and the owner is asked to
+  # reconnect, rather than the job spending all its attempts first.
+  describe "a Google Meet grant without the Meet scope" do
+    test "discards at the first refusal, announces without a link and asks the owner to reconnect" do
+      user = insert(:user)
+      _profile = insert(:profile, user: user)
+
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "google_meet",
+          oauth_scope: "https://www.googleapis.com/auth/calendar",
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+        )
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          video_integration_id: integration.id
+        )
+
+      stub(Tymeslot.CalendarMock, :get_booking_integration_info, fn _meeting ->
+        {:error, :no_integration}
+      end)
+
+      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        body = %{
+          "error" => %{
+            "code" => 403,
+            "message" => "Request had insufficient authentication scopes.",
+            "status" => "PERMISSION_DENIED",
+            "details" => [
+              %{
+                "@type" => "type.googleapis.com/google.rpc.ErrorInfo",
+                "reason" => "ACCESS_TOKEN_SCOPE_INSUFFICIENT"
+              }
+            ]
+          }
+        }
+
+        {:ok, %Req.Response{status: 403, body: Jason.encode!(body)}}
+      end)
+
+      capture_log(fn ->
+        assert {:discard, "Video integration lacks a required permission"} =
+                 perform_job(
+                   VideoRoomWorker,
+                   %{"meeting_id" => meeting.id, "announce" => true},
+                   attempt: 1
+                 )
+      end)
+
+      assert Repo.reload!(integration).needs_reauth
+      assert is_nil(Repo.reload!(meeting).video_room_id)
+      assert_enqueued(worker: EmailWorker, args: %{"action" => "send_confirmation_emails"})
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_integration_reauth_notification",
+          "integration_id" => integration.id
+        }
+      )
     end
   end
 end
