@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConnectionRow do
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.IntegrationCard
   alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Dashboard.CalendarSettings.CardNotice
+  alias TymeslotWeb.Dashboard.CalendarSettings.ContactsToggle
   alias TymeslotWeb.Dashboard.CalendarSettings.FeedControls
   alias TymeslotWeb.Dashboard.CalendarSettings.Helpers
   alias TymeslotWeb.Helpers.TimeAgo
@@ -184,6 +185,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConnectionRow do
             )}
           </button>
         </.tooltip>
+        <ContactsToggle.contacts_toggle integration={@integration} myself={@myself} />
         <FeedControls.feed_controls
           :if={@subscription?}
           integration={@integration}

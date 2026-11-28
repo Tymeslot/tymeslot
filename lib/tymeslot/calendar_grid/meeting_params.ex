@@ -49,7 +49,10 @@ defmodule Tymeslot.CalendarGrid.MeetingParams do
   The meeting `create` describes, with the string-keyed `fields` the panel
   holds (`"main_participant"`, `"guest_name"`, `"locale"`, `"reminders"`,
   the lead times the reminder picker holds, `"location_choice"`,
-  `"location_custom"`, and `"title"` as typed), for the organiser `user_id`.
+  `"location_custom"`, `"title"` as typed, and `"guest_names"`, the names
+  typed with the guests, by address), for the organiser `user_id`. The
+  invited guests' names go with them; `EventCreation` keeps only the valid
+  ones.
   """
   @spec build(CreateParams.t(), map(), pos_integer()) ::
           {:ok, map()} | {:error, field(), atom()}
@@ -64,7 +67,12 @@ defmodule Tymeslot.CalendarGrid.MeetingParams do
     with :ok <- people(guests, Guests.max_guests(), :too_many_guests),
          :ok <- own_title(fields["title"]),
          {:ok, shared} <- shared(create, fields, user_id) do
-      {:ok, Map.merge(shared, %{guest_emails: guests, managed_by_host: true})}
+      {:ok,
+       Map.merge(shared, %{
+         guest_emails: guests,
+         guest_names: guest_names(fields["guest_names"], guests),
+         managed_by_host: true
+       })}
     end
   end
 
@@ -74,7 +82,12 @@ defmodule Tymeslot.CalendarGrid.MeetingParams do
          {:ok, name} <- guest_name(fields["guest_name"]),
          {:ok, shared} <- shared(create, fields, user_id) do
       {:ok,
-       Map.merge(shared, %{attendee_name: name, attendee_email: guest, guest_emails: others})}
+       Map.merge(shared, %{
+         attendee_name: name,
+         attendee_email: guest,
+         guest_emails: others,
+         guest_names: guest_names(fields["guest_names"], others)
+       })}
     end
   end
 
@@ -111,6 +124,9 @@ defmodule Tymeslot.CalendarGrid.MeetingParams do
       {:error, :rate_limited, message} -> {:error, :rate_limited, message}
     end
   end
+
+  defp guest_names(names, emails) when is_map(names), do: Map.take(names, emails)
+  defp guest_names(_names, _emails), do: %{}
 
   defp people(guests, max, reason) do
     if length(guests) > max, do: {:error, :guests, reason}, else: :ok

@@ -40,8 +40,7 @@ defmodule Tymeslot.Polls.Invitations do
   }
 
   alias Tymeslot.Repo
-  alias Tymeslot.Security.FieldValidators.EmailValidator
-  alias Tymeslot.Security.FieldValidators.NameValidator
+  alias Tymeslot.Validation.AddressList
 
   @type entry :: %{email: String.t(), name: String.t() | nil}
   @type result :: %{
@@ -58,13 +57,6 @@ defmodule Tymeslot.Polls.Invitations do
           | :recipient_rate_limited
           | :host_rate_limited
 
-  # One entry is a run of anything but a separator, where a double-quoted
-  # stretch (an RFC 5322 display name, `"Hopper, Grace" <grace@example.com>`)
-  # may hold separators too. A quote never spans lines, so an unclosed one
-  # cannot swallow the entries after it.
-  @entry ~r/(?:"[^"\n\r]*"|[^\n\r,;])+/
-  @named ~r/^(.*?)\s*<\s*([^<>\s]+)\s*>$/
-
   @doc """
   Reads the host's list of addresses into entries, dropping duplicates.
 
@@ -80,20 +72,19 @@ defmodule Tymeslot.Polls.Invitations do
              | {:invalid_names, [String.t()]}
              | :too_many_invitees}
   def parse(text) when is_binary(text) do
-    entries =
-      @entry
-      |> Regex.scan(text)
-      |> Enum.map(fn [entry] -> String.trim(entry) end)
-      |> Enum.reject(&(&1 == ""))
-
-    parsed = Enum.map(entries, &{&1, parse_entry(&1)})
+    parsed = text |> AddressList.split() |> Enum.map(&{&1, AddressList.parse_entry(&1)})
 
     with :ok <-
-           refuse(:invalid_addresses, for({raw, entry} <- parsed, not valid?(entry), do: raw)),
+           refuse(
+             :invalid_addresses,
+             for({raw, entry} <- parsed, not AddressList.valid_address?(entry), do: raw)
+           ),
          :ok <-
            refuse(
              :invalid_names,
-             Enum.uniq(for {_raw, entry} <- parsed, not valid_name?(entry), do: entry.name)
+             Enum.uniq(
+               for {_raw, entry} <- parsed, not AddressList.valid_name?(entry), do: entry.name
+             )
            ) do
       unique(Enum.map(parsed, &elem(&1, 1)))
     end
@@ -258,29 +249,9 @@ defmodule Tymeslot.Polls.Invitations do
 
   # --- Parsing ---
 
-  defp parse_entry(raw) do
-    case Regex.run(@named, raw) do
-      [_raw, name, email] -> %{email: normalise(email), name: blank_to_nil(name)}
-      nil -> %{email: normalise(raw), name: nil}
-    end
-  end
-
-  defp normalise(email), do: email |> String.trim() |> String.downcase()
-
-  defp blank_to_nil(name) do
-    case name |> String.trim() |> String.trim("\"") |> String.trim() do
-      "" -> nil
-      trimmed -> trimmed
-    end
-  end
-
-  defp valid?(%{email: email}), do: EmailValidator.validate(email) == :ok
-
-  # The rule the participant's changeset applies, checked here so the host
-  # hears which name is wrong instead of the whole invitation failing.
-  defp valid_name?(%{name: nil}), do: true
-  defp valid_name?(%{name: name}), do: NameValidator.validate(name) == :ok
-
+  # Names are checked with the rule the participant's changeset applies
+  # (`AddressList.valid_name?/1`), so the host hears which name is wrong
+  # instead of the whole invitation failing.
   defp refuse(_reason, []), do: :ok
   defp refuse(reason, entries), do: {:error, {reason, entries}}
 

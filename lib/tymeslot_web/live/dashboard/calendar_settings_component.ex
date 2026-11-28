@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Profiles
   alias TymeslotWeb.Dashboard.CalendarSettings.ComponentView
+  alias TymeslotWeb.Dashboard.CalendarSettings.ContactsToggle
   alias TymeslotWeb.Helpers.IntegrationProviders
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
   alias TymeslotWeb.Live.Shared.Flash
@@ -163,6 +164,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
         {:noreply, socket}
     end
   end
+
+  def handle_event("toggle_use_for_contacts", %{"id" => id}, socket),
+    do: {:noreply, ContactsToggle.handle_toggle(socket, id, &load_integrations/1)}
 
   def handle_event("toggle_integration", %{"id" => id}, socket) do
     with_owned_integration(socket, id, &Calendar.toggle_integration/2, fn

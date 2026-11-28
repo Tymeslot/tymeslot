@@ -411,6 +411,11 @@ msgstr "Votre page de réservation n’accepte plus de réservations"
 msgid "Your booking page isn't taking bookings yet"
 msgstr "Votre page de réservation n’accepte pas encore de réservations"
 
+#: lib/tymeslot_web/components/dashboard/contact_suggestions.ex
+#, elixir-autogen, elixir-format
+msgid "Contacts suggested. Use the arrow keys to choose one."
+msgstr "Contacts suggérés. Utilisez les flèches pour en choisir un."
+
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
